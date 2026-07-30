@@ -1,0 +1,226 @@
+<style>
+:root{--vpg-primary:#0675FF;--vpg-dark:#071827;--vpg-white:#fff;--vpg-gray:#f8f9fa;--vpg-text:#4a5568;--vpg-radius:12px;--vpg-shadow:0 4px 24px rgba(0,0,0,0.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--vpg-text);line-height:1.6;overflow-x:hidden}
+.vpg-container{max-width:1200px;margin:0 auto;padding:0 20px}
+.vpg-section{padding:50px 0}
+.vpg-section-title{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:8px;text-align:center}
+.vpg-section-desc{font-size:1rem;color:var(--vpg-text);text-align:center;max-width:700px;margin:0 auto 32px;line-height:1.7}
+.vpg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.vpg-card{background:var(--vpg-white);border-radius:var(--vpg-radius);padding:24px;box-shadow:var(--vpg-shadow);transition:transform 0.3s,box-shadow 0.3s}
+.vpg-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.12)}
+.vpg-card h3{font-size:1.1rem;font-weight:600;color:var(--vpg-dark);margin-bottom:8px}
+.vpg-card p{font-size:0.9rem;color:var(--vpg-text);line-height:1.6}
+.vpg-hero{background:linear-gradient(135deg,#071827 0%,#0a2a44 50%,#071827 100%);padding:80px 0 60px;position:relative;overflow:hidden}
+.vpg-hero::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><circle cx="100" cy="100" r="400" fill="rgba(6,117,255,0.03)"/><circle cx="1100" cy="600" r="300" fill="rgba(6,117,255,0.04)"/></svg>') no-repeat;background-size:cover}
+.vpg-hero .vpg-container{position:relative;z-index:1;display:grid;grid-template-columns:1fr 420px;gap:40px;align-items:center}
+.vpg-hero-content h1{font-size:2.8rem;font-weight:800;color:var(--vpg-white);line-height:1.15;margin-bottom:8px}
+.vpg-hero-content .vpg-hero-subtitle{font-size:1.1rem;color:var(--vpg-primary);font-weight:600;margin-bottom:16px}
+.vpg-hero-content p{font-size:1rem;color:rgba(255,255,255,0.75);line-height:1.7;margin-bottom:28px;max-width:540px}
+.vpg-hero-buttons{display:flex;gap:12px}
+.vpg-btn{display:inline-flex;align-items:center;padding:12px 28px;border-radius:50px;font-size:0.9rem;font-weight:600;text-decoration:none;cursor:pointer;transition:all 0.3s;border:none;gap:8px}
+.vpg-btn-primary{background:var(--vpg-primary);color:var(--vpg-white)}
+.vpg-btn-primary:hover{background:#0055cc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(6,117,255,0.3)}
+.vpg-btn-outline{background:transparent;color:var(--vpg-white);border:2px solid rgba(255,255,255,0.3)}
+.vpg-btn-outline:hover{border-color:var(--vpg-white);background:rgba(255,255,255,0.1)}
+.vpg-form-card{background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:28px;-webkit-backdrop-filter:blur(16px)}
+.vpg-form-card h3{font-size:1.25rem;font-weight:700;color:var(--vpg-white);margin-bottom:20px;text-align:center}
+.vpg-form-group{margin-bottom:12px}
+.vpg-form-group input,.vpg-form-group textarea{width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--vpg-white);font-size:0.9rem;outline:none;transition:border 0.3s}
+.vpg-form-group input::placeholder,.vpg-form-group textarea::placeholder{color:rgba(255,255,255,0.4)}
+.vpg-form-group input:focus,.vpg-form-group textarea:focus{border-color:var(--vpg-primary)}
+.vpg-form-group textarea{height:80px;resize:vertical}
+.vpg-form-card .vpg-btn{width:100%;justify-content:center;padding:14px}
+.vpg-benefits{background:var(--vpg-white)}
+.vpg-benefits-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+.vpg-benefits-left h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px;text-align:left}
+.vpg-benefits-left>p{font-size:0.95rem;color:var(--vpg-text);line-height:1.7;margin-bottom:28px}
+.vpg-benefits-left .vpg-grid{gap:12px}
+.vpg-benefits-left .vpg-card{padding:20px;display:flex;gap:14px;align-items:start}
+.vpg-benefits-left .vpg-card .vpg-icon{width:40px;height:40px;border-radius:10px;background:rgba(6,117,255,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem}
+.vpg-benefits-left .vpg-card h3{font-size:0.95rem;margin-bottom:4px}
+.vpg-benefits-left .vpg-card p{font-size:0.85rem}
+.vpg-benefits-right{position:sticky;top:100px}
+.vpg-image-placeholder{width:100%;height:300px;border-radius:var(--vpg-radius);background:linear-gradient(135deg,#f0f4ff,#e8f0fe);display:flex;align-items:center;justify-content:center}
+.vpg-why-choose{background:linear-gradient(135deg,#071827,#0a2a44);position:relative;padding:50px 0}
+.vpg-why-choose .vpg-section-title{color:var(--vpg-white)}
+.vpg-why-choose .vpg-section-desc{color:rgba(255,255,255,0.75)}
+.vpg-why-choose .vpg-grid{gap:20px}
+.vpg-why-choose .vpg-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);text-align:center;padding:28px 20px}
+.vpg-why-choose .vpg-card h3{color:var(--vpg-white)}
+.vpg-why-choose .vpg-card p{color:rgba(255,255,255,0.7)}
+.vpg-services{background:var(--vpg-gray)}
+.vpg-services .vpg-card{text-align:center;padding:28px 20px}
+.vpg-tech{background:var(--vpg-white)}
+.vpg-tech-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.vpg-tech-left h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px;text-align:left}
+.vpg-tech-left>p{font-size:0.95rem;color:var(--vpg-text);margin-bottom:24px;line-height:1.7}
+.vpg-tech-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vpg-tech-list li{display:flex;align-items:center;gap:8px;font-size:0.9rem;color:var(--vpg-text);padding:8px 12px;background:var(--vpg-gray);border-radius:8px}
+.vpg-tech-list li::before{content:"✓";color:var(--vpg-primary);font-weight:700}
+.vpg-difference{background:var(--vpg-gray)}
+.vpg-diff-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.vpg-diff-image .vpg-image-placeholder{height:300px}
+.vpg-diff-content h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px}
+.vpg-diff-content p{font-size:0.95rem;color:var(--vpg-text);line-height:1.7;margin-bottom:28px}
+.vpg-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.vpg-stat{text-align:center;padding:16px;background:var(--vpg-white);border-radius:var(--vpg-radius);box-shadow:var(--vpg-shadow)}
+.vpg-stat-number{display:block;font-size:1.5rem;font-weight:800;color:var(--vpg-primary);margin-bottom:2px}
+.vpg-stat-label{font-size:0.8rem;color:var(--vpg-text)}
+.vpg-testimonials{background:var(--vpg-white)}
+.vpg-testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.vpg-testimonial-card{background:var(--vpg-gray);border-radius:var(--vpg-radius);padding:24px;box-shadow:var(--vpg-shadow)}
+.vpg-testimonial-stars{color:#f59e0b;font-size:1.1rem;margin-bottom:12px}
+.vpg-testimonial-text{font-size:0.95rem;color:var(--vpg-text);line-height:1.6;margin-bottom:16px;font-style:italic}
+.vpg-testimonial-author{display:flex;align-items:center;gap:10px}
+.vpg-testimonial-avatar{width:36px;height:36px;border-radius:50%;background:var(--vpg-primary);color:var(--vpg-white);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.8rem}
+.vpg-testimonial-author strong{display:block;font-size:0.9rem;color:var(--vpg-dark)}
+.vpg-testimonial-author span{font-size:0.75rem;color:var(--vpg-text)}
+.vpg-faq{background:var(--vpg-gray)}
+.vpg-faq-list{max-width:700px;margin:0 auto}
+.vpg-faq-item{background:var(--vpg-white);border-radius:var(--vpg-radius);padding:20px 24px;margin-bottom:10px;box-shadow:var(--vpg-shadow)}
+.vpg-faq-item strong{display:block;font-size:0.95rem;color:var(--vpg-dark);margin-bottom:6px}
+.vpg-faq-item p{font-size:0.9rem;color:var(--vpg-text);line-height:1.6}
+.vpg-trust{background:var(--vpg-white);padding:40px 0;text-align:center}
+.vpg-trust h3{font-size:0.9rem;color:var(--vpg-text);margin-bottom:24px;text-transform:uppercase;letter-spacing:2px;font-weight:500}
+.vpg-trust-logos{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;align-items:center}
+.vpg-trust-logo{padding:10px 20px;background:var(--vpg-gray);border-radius:8px;font-weight:600;color:var(--vpg-text);font-size:0.85rem}
+.vpg-cta{background:linear-gradient(135deg,#071827,#0a2a44);padding:60px 0;text-align:center}
+.vpg-cta h2{font-size:2rem;font-weight:700;color:var(--vpg-white);margin-bottom:12px}
+.vpg-cta p{font-size:1rem;color:rgba(255,255,255,0.75);max-width:600px;margin:0 auto 28px;line-height:1.7}
+
+@media(max-width:480px){
+.vpg-hero-content h1{font-size:1.5rem}
+.vpg-stats{grid-template-columns:1fr}
+}
+</style>
+
+<section class="vpg-hero">
+<div class="vpg-container">
+<div class="vpg-hero-content">
+<h1>{{hero_title}}</h1>
+<p class="vpg-hero-subtitle">{{hero_subtitle}}</p>
+<p>{{hero_description}}</p>
+<div class="vpg-hero-buttons">
+<a href="#benefits" class="vpg-btn vpg-btn-primary">Learn More</a>
+<a href="#contact" class="vpg-btn vpg-btn-outline">Get Started</a>
+</div>
+</div>
+<div class="vpg-form-card">
+<h3>Get A Free Consultation</h3>
+<form>
+<div class="vpg-form-group"><input type="text" placeholder="Full Name"></div>
+<div class="vpg-form-group"><input type="email" placeholder="Email Address"></div>
+<div class="vpg-form-group"><input type="tel" placeholder="Phone Number"></div>
+<div class="vpg-form-group"><input type="text" placeholder="Business Website"></div>
+<div class="vpg-form-group"><textarea placeholder="Tell us about your project..."></textarea></div>
+<button type="submit" class="vpg-btn vpg-btn-primary">Submit Now</button>
+</form>
+</div>
+</div>
+</section>
+
+<section id="benefits" class="vpg-section vpg-benefits">
+<div class="vpg-container">
+<div class="vpg-benefits-inner">
+<div class="vpg-benefits-left">
+<h2>Benefits Of Choosing {{service}} Services In {{city}}</h2>
+<p>{{benefits_description}}</p>
+<div class="vpg-grid">{{benefit_cards}}</div>
+</div>
+<div class="vpg-benefits-right">
+<div class="vpg-image-placeholder">
+<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="vpg-why-choose">
+<div class="vpg-container">
+<h2 class="vpg-section-title">Why Choose Vispan Solutions As Your {{service}} Partner In {{city}}</h2>
+<p class="vpg-section-desc">{{why_choose_description}}</p>
+<div class="vpg-grid">{{why_choose}}</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-services">
+<div class="vpg-container">
+<h2 class="vpg-section-title">Our {{service}} Services</h2>
+<p class="vpg-section-desc">{{services_description}}</p>
+<div class="vpg-grid">{{service_cards}}</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-tech">
+<div class="vpg-container">
+<div class="vpg-tech-inner">
+<div class="vpg-tech-left">
+<h2>Platforms & Technologies We Work With</h2>
+<p>{{technology_description}}</p>
+{{technology}}
+</div>
+<div class="vpg-tech-right">
+<div class="vpg-image-placeholder">
+<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-difference">
+<div class="vpg-container">
+<div class="vpg-diff-inner">
+<div class="vpg-diff-image">
+<div class="vpg-image-placeholder">
+<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+</div>
+<div class="vpg-diff-content">
+<h2>We Are Different From Others</h2>
+{{difference_content}}
+<div class="vpg-stats">{{stats}}</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-testimonials">
+<div class="vpg-container">
+<h2 class="vpg-section-title">What Our Clients Say</h2>
+<p class="vpg-section-desc">{{testimonials_description}}</p>
+<div class="vpg-testimonials-grid">{{testimonial}}</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-faq">
+<div class="vpg-container">
+<h2 class="vpg-section-title">Frequently Asked Questions</h2>
+<p class="vpg-section-desc">{{faq_description}}</p>
+<div class="vpg-faq-list">{{faq}}</div>
+</div>
+</section>
+
+<section class="vpg-section vpg-trust">
+<div class="vpg-container">
+<h3>Trusted By Industry Leaders</h3>
+<div class="vpg-trust-logos">
+<div class="vpg-trust-logo">Google Partner</div>
+<div class="vpg-trust-logo">Meta</div>
+<div class="vpg-trust-logo">HubSpot</div>
+<div class="vpg-trust-logo">WordPress</div>
+<div class="vpg-trust-logo">Shopify</div>
+</div>
+</div>
+</section>
+
+<section id="contact" class="vpg-cta">
+<div class="vpg-container">
+<h2>{{cta_title}}</h2>
+<p>{{cta_content}}</p>
+<a href="tel:{{phone}}" class="vpg-btn vpg-btn-primary">Call {{company_name}}</a>
+</div>
+</section>
+

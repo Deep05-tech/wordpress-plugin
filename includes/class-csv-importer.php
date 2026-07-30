@@ -1,0 +1,898 @@
+<?php
+
+defined('ABSPATH') || exit;
+
+
+class VCPG_CSV_Importer
+{
+
+
+    private $job_manager;
+
+    /*
+    ISO country codes we know how to render a full country name for.
+    Add to this as you add markets. Anything not listed falls back to
+    strtoupper(code), so a page is never blocked on this list, but it's
+    kept accurate for anything you actually use.
+    */
+    private $country_names = array(
+    
+        'in' => 'India',
+    
+        'us' => 'United States',
+    
+        'uk' => 'United Kingdom',
+    
+        'ca' => 'Canada',
+    
+        'au' => 'Australia',
+    
+    );
+    
+    
+    
+    /*
+    Country name to ISO code mapping
+    */
+    
+    private $country_codes = array(
+    
+        'india' => 'in',
+    
+        'united states' => 'us',
+    
+        'usa' => 'us',
+    
+        'united kingdom' => 'uk',
+    
+        'uk' => 'uk',
+    
+        'canada' => 'ca',
+    
+        'australia' => 'au',
+    
+    );
+
+    public function __construct($job_manager)
+    {
+
+        $this->job_manager = $job_manager;
+
+
+        add_action(
+            'admin_menu',
+            array(
+                $this,
+                'add_menu'
+            ),
+            99
+        );
+
+    }
+
+
+
+
+
+
+    public function add_menu()
+    {
+
+        add_submenu_page(
+
+            'vispan-city-generator',
+
+            'CSV Bulk Import',
+
+            'CSV Bulk Import',
+
+            'manage_options',
+
+            'vcpg-csv-import',
+
+            array(
+                $this,
+                'render_page'
+            )
+
+        );
+
+    }
+
+
+
+
+
+
+
+
+    public function render_page()
+    {
+
+
+        if(isset($_POST['upload_csv']) && check_admin_referer('vcpg_upload_csv'))
+        {
+
+            $this->upload_csv();
+
+        }
+
+
+        /*
+        CODE FIX: detect an incomplete batch left over from a previous
+        page load (e.g. the browser tab was navigated away from or
+        closed mid-run). If pending/processing jobs exist, we auto-
+        resume polling below instead of requiring a fresh CSV upload.
+        */
+
+        global $wpdb;
+
+        $jobs_table = $wpdb->prefix . 'vcpg_csv_jobs';
+
+        $current_batch = get_option('vcpg_current_batch');
+
+        $has_incomplete_batch = false;
+
+        if($current_batch)
+        {
+
+            $pending_count = $wpdb->get_var(
+
+                $wpdb->prepare(
+
+                    "
+                    SELECT COUNT(*)
+                    FROM $jobs_table
+                    WHERE batch_id=%s
+                    AND status IN ('pending','processing')
+                    ",
+
+                    $current_batch
+
+                )
+
+            );
+
+            $has_incomplete_batch = ((int) $pending_count) > 0;
+
+        }
+
+
+?>
+
+<div class="wrap">
+
+
+<h1>
+CSV Bulk Page Generator
+</h1>
+
+
+
+<form method="post" enctype="multipart/form-data">
+
+<?php wp_nonce_field('vcpg_upload_csv'); ?>
+
+
+<input 
+type="file"
+name="csv_file"
+accept=".csv"
+required
+>
+
+<p class="description">
+CSV columns, in order: <strong>country, state, city, service</strong> 
+(e.g. <code>United States,California,Los Angeles,Digital Marketing Agency</code>).
+</p>
+
+<br><br>
+
+
+<?php
+
+submit_button(
+    'Start Generation',
+    'primary',
+    'upload_csv'
+);
+
+?>
+
+
+</form>
+
+
+
+<hr>
+
+
+
+<h2>
+Generation Progress
+</h2>
+
+
+
+<div id="vcpg-progress">
+
+Waiting...
+
+</div>
+
+
+
+<br>
+
+
+<button 
+id="vcpg-stop"
+class="button button-secondary"
+style="display:none;"
+>
+
+Stop Generation
+
+</button>
+
+
+
+
+
+<script>
+
+jQuery(document).ready(function(){
+
+
+let running = false;
+
+
+
+function update_progress()
+{
+
+
+jQuery.post(
+
+ajaxurl,
+
+{
+    action:'vcpg_process_csv_job'
+},
+
+
+function(response)
+{
+
+
+if(!response.success)
+{
+
+    setTimeout(
+        update_progress,
+        3000
+    );
+
+    return;
+
+}
+
+
+
+let data=response.data;
+
+/*
+Show stop button while generation is running
+*/
+
+if(
+    parseInt(data.completed)
+    +
+    parseInt(data.failed)
+    <
+    parseInt(data.total)
+)
+{
+
+    jQuery('#vcpg-stop').show();
+
+}
+
+
+
+console.log(
+    "CSV Progress:",
+    data
+);
+
+
+
+
+
+if(data.stopped)
+{
+
+    running=false;
+
+
+    jQuery('#vcpg-progress').html(
+        'Process stopped.'
+    );
+
+
+    jQuery('#vcpg-stop').hide();
+
+
+    return;
+
+}
+
+
+
+
+
+jQuery('#vcpg-progress').html(
+
+'<strong>Total:</strong> '
++ data.total
+
++
+'<br><strong>Completed:</strong> '
++ data.completed
+
++
+'<br><strong>Processing:</strong> '
++ data.processing
+
++
+'<br><strong>Failed:</strong> '
++ data.failed
+
++
+'<br><br><strong>Current:</strong> '
++ (data.current || '')
+
+);
+
+
+
+
+
+/*
+Continue until everything is completed
+*/
+
+
+if(
+parseInt(data.completed)
++
+parseInt(data.failed)
+
+<
+parseInt(data.total)
+)
+
+{
+
+    running=true;
+
+
+    setTimeout(
+
+        update_progress,
+
+        2000
+
+    );
+
+
+}
+else
+{
+
+    running=false;
+
+
+    jQuery('#vcpg-stop').hide();
+
+
+    jQuery('#vcpg-progress').append(
+
+        '<br><br><strong>Generation Completed.</strong>'
+
+    );
+
+
+}
+
+
+
+
+},
+
+
+'json'
+
+
+);
+
+
+}
+
+
+
+
+
+
+
+
+/*
+Start automatically when page opens
+*/
+
+jQuery('#vcpg-stop').hide();
+
+update_progress();
+
+
+
+
+
+jQuery('#vcpg-stop').on(
+
+'click',
+
+function(e)
+
+{
+
+
+e.preventDefault();
+
+
+
+jQuery.post(
+
+ajaxurl,
+
+{
+
+action:'vcpg_stop_csv_job'
+
+},
+
+function(response)
+{
+
+
+running=false;
+
+
+jQuery('#vcpg-progress').html(
+
+'Process stopped.'
+
+);
+
+
+if(
+    jQuery('#vcpg-progress').text().includes('Total')
+)
+{
+    jQuery('#vcpg-stop').show();
+}
+else
+{
+    jQuery('#vcpg-stop').hide();
+}
+
+
+}
+
+);
+
+
+
+}
+
+
+
+);
+
+
+
+});
+
+</script>
+
+
+
+</div>
+
+
+<?php
+
+
+}
+
+
+
+
+
+
+
+
+
+private function upload_csv()
+{
+
+    global $wpdb;
+
+
+    $table = $wpdb->prefix . 'vcpg_csv_jobs';
+
+
+
+    /*
+    Clear previous queue
+    */
+
+    $wpdb->query(
+        "TRUNCATE TABLE $table"
+    );
+
+
+    /*
+    Reset stop flag
+    */
+
+    delete_option(
+        'vcpg_csv_stop'
+    );
+
+
+
+
+    if(
+        !isset($_FILES['csv_file'])
+        ||
+        empty($_FILES['csv_file']['tmp_name'])
+    )
+    {
+
+        echo '<div class="notice notice-error">';
+        echo '<p>No CSV file selected.</p>';
+        echo '</div>';
+
+        return;
+
+    }
+
+
+
+
+    $file = $_FILES['csv_file']['tmp_name'];
+
+
+
+
+    $handle = fopen(
+        $file,
+        'r'
+    );
+
+
+
+
+    if(!$handle)
+    {
+
+        echo '<div class="notice notice-error">';
+        echo '<p>Unable to read CSV file.</p>';
+        echo '</div>';
+
+        return;
+
+    }
+
+
+
+
+
+    /*
+    Detect delimiter
+    */
+
+
+    $first_line = fgets($handle);
+
+
+
+    rewind($handle);
+
+
+
+    $delimiter = ",";
+
+
+
+    if(
+        substr_count($first_line,';')
+        >
+        substr_count($first_line,',')
+    )
+    {
+
+        $delimiter = ";";
+
+    }
+
+
+
+
+
+
+    /*
+    Read header
+    */
+
+
+    $header = fgetcsv(
+        $handle,
+        0,
+        $delimiter,
+        '"',
+        '\\'
+    );
+
+
+
+
+
+    /*
+    Remove BOM
+    */
+
+    if(isset($header[0]))
+    {
+
+        $header[0] = preg_replace(
+
+            '/^\xEF\xBB\xBF/',
+
+            '',
+
+            $header[0]
+
+        );
+
+    }
+
+
+
+
+
+    $added = 0;
+
+    $skipped = 0;
+    
+    
+    $batch_id = 'batch_' . time();
+
+
+
+
+
+    while(
+
+        ($row = fgetcsv(
+
+            $handle,
+            0,
+            $delimiter,
+            '"',
+            '\\'
+
+        )) !== false
+
+    )
+    {
+
+
+
+        /*
+        Remove empty lines
+        */
+
+
+        if(
+            empty($row)
+            ||
+            (count($row) === 1 && trim($row[0]) === '')
+        )
+        {
+
+            continue;
+
+        }
+
+
+
+
+
+
+        $row = array_map(
+
+            'trim',
+
+            $row
+
+        );
+
+
+
+
+
+
+
+        $country = isset($row[0])
+
+            ? sanitize_text_field($row[0])
+
+            : '';
+
+
+
+        $state = isset($row[1])
+
+            ? sanitize_text_field($row[1])
+
+            : '';
+
+
+
+        $city = isset($row[2])
+
+            ? sanitize_text_field($row[2])
+
+            : '';
+
+
+
+        $service = isset($row[3])
+
+            ? sanitize_text_field($row[3])
+
+            : '';
+
+
+
+
+
+
+
+        if(
+            empty($country)
+            ||
+            empty($city)
+            ||
+            empty($service)
+        )
+        {
+
+            $skipped++;
+
+            continue;
+
+        }
+
+
+
+
+        /*
+        Generate country code automatically
+        */
+        
+        $country_key = strtolower(
+            trim($country)
+        );
+        
+        
+        $country_code = isset($this->country_codes[$country_key])
+        
+            ? $this->country_codes[$country_key]
+        
+            : sanitize_key($country);
+        
+        
+        
+        $result = $this->job_manager->add_job(
+                
+            $batch_id,
+                
+            $city,
+                
+            $service,
+                
+            $country_code,
+                
+            $country,
+                
+            $state
+                
+        );
+
+
+
+
+
+
+
+        if($result)
+        {
+
+            $added++;
+
+        }
+        else
+        {
+
+            $skipped++;
+
+        }
+
+
+
+
+    }
+
+
+
+
+    fclose($handle);
+
+
+    /*
+    CRITICAL FIX: register this batch so the AJAX job runner
+    (VCPG_CSV_Job_Manager::process_job) can find it. Previously this
+    was never called, so process_job() always read an empty
+    'vcpg_current_batch' option and exited before processing a
+    single row. This is the actual reason no pages were generated.
+    */
+
+    if($added > 0)
+    {
+
+        update_option(
+            'vcpg_current_batch',
+            $batch_id
+        );
+
+    }
+
+
+
+
+
+    echo '<div class="notice notice-success">';
+
+
+    echo '<p>';
+
+    echo $added.' CSV jobs added successfully.<br>';
+
+    echo $skipped.' rows skipped.';
+
+    echo '</p>';
+
+
+
+    echo '</div>';
+
+
+
+}
+
+
+
+}
