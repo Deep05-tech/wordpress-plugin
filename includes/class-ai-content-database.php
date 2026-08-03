@@ -6,6 +6,12 @@ defined('ABSPATH') || exit;
 class VCPG_AI_Content_Database
 {
 
+    /*
+    Content pipeline version. Bump this whenever the way content is generated
+    changes (e.g. new keyword logic, new sections) so stale cached content is
+    bypassed and regenerated with the new rules.
+    */
+    const CONTENT_VERSION = 'v4';
 
     public function __construct()
     {
@@ -15,6 +21,14 @@ class VCPG_AI_Content_Database
             array(
                 $this,
                 'create_table'
+            )
+        );
+
+        add_action(
+            'admin_init',
+            array(
+                $this,
+                'purge_stale_content'
             )
         );
 
@@ -64,6 +78,8 @@ class VCPG_AI_Content_Database
 
             ai_model VARCHAR(100) DEFAULT '',
 
+            content_source VARCHAR(20) DEFAULT 'api',
+
             prompt_version VARCHAR(50) DEFAULT 'v1',
 
 
@@ -104,6 +120,44 @@ class VCPG_AI_Content_Database
             $table_name
         );
 
+
+    }
+
+
+
+
+    /*
+    Delete cached content generated with an older pipeline version once per
+    version bump, so regenerating a page uses the current generation rules.
+    */
+
+    public function purge_stale_content()
+    {
+
+        global $wpdb;
+
+
+        $option = 'vcpg_content_version_purged';
+
+        $purged = get_option($option, '');
+
+        if($purged === self::CONTENT_VERSION)
+        {
+            return;
+        }
+
+
+        $table_name = $wpdb->prefix . 'vcpg_ai_content';
+
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM $table_name WHERE prompt_version <> %s",
+                self::CONTENT_VERSION
+            )
+        );
+
+
+        update_option($option, self::CONTENT_VERSION);
 
     }
 
@@ -238,6 +292,24 @@ class VCPG_AI_Content_Database
         }
 
 
+        if(
+            !in_array(
+                'content_source',
+                $existing
+            )
+        )
+        {
+
+            $wpdb->query(
+
+                "ALTER TABLE $table_name 
+                ADD content_source VARCHAR(20) DEFAULT 'api'"
+
+            );
+
+        }
+
+
 
 
 
@@ -298,6 +370,23 @@ class VCPG_AI_Content_Database
 
                 "ALTER TABLE $table_name
                 ADD used_phrases LONGTEXT"
+
+            );
+
+        }
+
+        if(
+            !in_array(
+                'used_title_words',
+                $existing
+            )
+        )
+        {
+
+            $wpdb->query(
+
+                "ALTER TABLE $table_name
+                ADD used_title_words LONGTEXT"
 
             );
 
@@ -375,6 +464,7 @@ class VCPG_AI_Content_Database
                 WHERE service=%s
                 AND city=%s
                 AND country=%s
+                AND prompt_version=%s
                 LIMIT 1
                 ",
 
@@ -382,7 +472,9 @@ class VCPG_AI_Content_Database
 
                 $data['city'],
 
-                $data['country']
+                $data['country'],
+
+                self::CONTENT_VERSION
 
             )
 
@@ -398,7 +490,7 @@ class VCPG_AI_Content_Database
 
 
 
-    public function save_content($data,$content,$quality_score=0,$status='generated')
+    public function save_content($data,$content,$quality_score=0,$status='generated',$content_source='api')
     {
 
         global $wpdb;
@@ -438,6 +530,8 @@ class VCPG_AI_Content_Database
 
                 'used_phrases'=>$this->extract_phrases($content),
 
+                'used_title_words'=>json_encode($this->extract_title_words($content)),
+
 
                 'quality_score'=>$quality_score,
 
@@ -448,7 +542,10 @@ class VCPG_AI_Content_Database
                 'ai_model'=>'gpt-4.1-mini',
 
 
-                'prompt_version'=>'v2'
+                'content_source'=>($content_source === 'fallback') ? 'fallback' : 'api',
+
+
+                'prompt_version'=>self::CONTENT_VERSION
 
 
             )
@@ -519,7 +616,34 @@ class VCPG_AI_Content_Database
 
     }
 
-    public function get_recent_content_patterns($limit = 40)
+    public function get_service_content_count($service)
+    {
+
+        global $wpdb;
+
+
+        $table_name = $wpdb->prefix . 'vcpg_ai_content';
+
+
+        return (int)$wpdb->get_var(
+
+            $wpdb->prepare(
+
+                "
+                SELECT COUNT(*)
+                FROM $table_name
+                WHERE service=%s
+                ",
+
+                $service
+
+            )
+
+        );
+
+    }
+
+    public function get_recent_content_patterns($limit = 200)
     {
 
         global $wpdb;
@@ -543,6 +667,8 @@ class VCPG_AI_Content_Database
 
                 used_phrases,
 
+                used_title_words,
+
                 content_hash
 
                 FROM $table_name
@@ -563,156 +689,74 @@ class VCPG_AI_Content_Database
 
     private function extract_phrases($content)
     {
-    
-    
-        $text = json_encode($content);
-    
-    
+        $texts = array();
+        if(is_array($content))
+        {
+            array_walk_recursive($content, function($v) use (&$texts) {
+                if(is_string($v))
+                {
+                    $texts[] = $v;
+                }
+            });
+        }
+        $text = implode(' ', $texts);
         $text = wp_strip_all_tags($text);
-    
-    
         $text = strtolower($text);
-    
-    
-    
-        /*
-        Remove unnecessary characters
-        */
-    
-        $text = preg_replace(
-            '/[^a-z0-9\s]/',
-            '',
-            $text
-        );
-    
-    
-    
-        $words = preg_split(
-            '/\s+/',
-            $text
-        );
-    
-    
-    
-        $words = array_filter(
-    
-            $words,
-    
-            function($word)
-            {
-    
-                return strlen($word) >= 4;
-    
-            }
-    
-        );
-    
-    
-    
+
+        $text = preg_replace('/[^a-z0-9\s]/', '', $text);
+
+        $words = preg_split('/\s+/', $text);
+        $words = array_filter($words, function($word) {
+            return strlen($word) >= 4;
+        });
         $words = array_values($words);
-    
-    
-    
+
         $phrases = array();
-    
-    
-    
-        /*
-        Create 2-word phrases (section starters)
-        */
-    
-        for(
-            $i = 0;
-            $i < count($words)-1;
-            $i++
-        )
+
+        for($i = 0; $i < count($words)-1; $i++)
         {
-    
-            $phrase =
-    
-                $words[$i]
-                .' '.
-                $words[$i+1];
-    
-    
-            $phrases[] = $phrase;
-    
-    
+            $phrases[] = $words[$i] . ' ' . $words[$i+1];
         }
-    
-    
-    
-        /*
-        Create 3-word phrases
-        */
-    
-        for(
-            $i = 0;
-            $i < count($words)-2;
-            $i++
-        )
+
+        for($i = 0; $i < count($words)-2; $i++)
         {
-    
-            $phrase =
-    
-                $words[$i]
-                .' '.
-                $words[$i+1]
-                .' '.
-                $words[$i+2];
-    
-    
-            $phrases[] = $phrase;
-    
-    
+            $phrases[] = $words[$i] . ' ' . $words[$i+1] . ' ' . $words[$i+2];
         }
-    
-    
-    
-        /*
-        Create 4-word phrases
-        */
-    
-        for(
-            $i = 0;
-            $i < count($words)-3;
-            $i++
-        )
+
+        for($i = 0; $i < count($words)-3; $i++)
         {
-    
-            $phrase =
-    
-                $words[$i]
-                .' '.
-                $words[$i+1]
-                .' '.
-                $words[$i+2]
-                .' '.
-                $words[$i+3];
-    
-    
-            $phrases[] = $phrase;
-    
+            $phrases[] = $words[$i] . ' ' . $words[$i+1] . ' ' . $words[$i+2] . ' ' . $words[$i+3];
         }
-    
-    
-    
-    
-        return json_encode(
-    
-            array_slice(
-    
-                array_unique($phrases),
-    
-                0,
-    
-                150
-    
-            )
-    
-        );
-    
-    
+
+        return json_encode(array_slice(array_unique($phrases), 0, 300));
+    }
+
+    public function extract_title_words($content)
+    {
+        if(!is_array($content))
+        {
+            return array();
+        }
+        $title_fields = array('hero_title', 'hero_subtitle', 'about_title', 'cta_title', 'difference_content');
+        $words = array();
+        foreach($title_fields as $field)
+        {
+            if(isset($content[$field]) && is_string($content[$field]))
+            {
+                $text = strtolower(wp_strip_all_tags($content[$field]));
+                $text = preg_replace('/[^a-z0-9\s]/', '', $text);
+                $parts = preg_split('/\s+/', $text);
+                foreach($parts as $w)
+                {
+                    $w = trim($w);
+                    if(strlen($w) >= 4)
+                    {
+                        $words[] = $w;
+                    }
+                }
+            }
+        }
+        return array_unique($words);
     }
 
     public function compare_content_similarity($new_content)

@@ -82,11 +82,16 @@ class VCPG_Template_Manager
             $stored = $wpdb->get_var("SELECT content FROM $table_name ORDER BY id DESC LIMIT 1");
             if(
                 $stored &&
-                (strpos($stored, '{{hero_title}}') === false ||
+                (strpos($stored, 'vp-hero-city-label') === false ||
+                 strpos($stored, 'vp-topbar') === false ||
                  strpos($stored, '<style>') === false ||
-                 strpos($stored, '{{hero_subtitle}}') === false ||
-                 strpos($stored, '{{benefits_description}}') === false ||
-                 strpos($stored, '<footer') !== false)
+                 strpos($stored, '{{about_title}}') === false ||
+                 strpos($stored, '{{local_insight}}') === false ||
+                 strpos($stored, '{{process_steps}}') === false ||
+                 strpos($stored, '{{services_title}}') === false ||
+                 strpos($stored, '{{case_studies}}') === false ||
+                 strpos($stored, '{{case_studies_description}}') === false ||
+                 strpos($stored, 'VCPG-TEMPLATE-V4') === false)
             )
             {
                 $wpdb->update(

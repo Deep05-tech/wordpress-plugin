@@ -1,226 +1,419 @@
+<!-- VCPG-TEMPLATE-V4 -->
 <style>
-:root{--vpg-primary:#0675FF;--vpg-dark:#071827;--vpg-white:#fff;--vpg-gray:#f8f9fa;--vpg-text:#4a5568;--vpg-radius:12px;--vpg-shadow:0 4px 24px rgba(0,0,0,0.08)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--vpg-text);line-height:1.6;overflow-x:hidden}
-.vpg-container{max-width:1200px;margin:0 auto;padding:0 20px}
-.vpg-section{padding:50px 0}
-.vpg-section-title{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:8px;text-align:center}
-.vpg-section-desc{font-size:1rem;color:var(--vpg-text);text-align:center;max-width:700px;margin:0 auto 32px;line-height:1.7}
-.vpg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
-.vpg-card{background:var(--vpg-white);border-radius:var(--vpg-radius);padding:24px;box-shadow:var(--vpg-shadow);transition:transform 0.3s,box-shadow 0.3s}
-.vpg-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.12)}
-.vpg-card h3{font-size:1.1rem;font-weight:600;color:var(--vpg-dark);margin-bottom:8px}
-.vpg-card p{font-size:0.9rem;color:var(--vpg-text);line-height:1.6}
-.vpg-hero{background:linear-gradient(135deg,#071827 0%,#0a2a44 50%,#071827 100%);padding:80px 0 60px;position:relative;overflow:hidden}
-.vpg-hero::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><circle cx="100" cy="100" r="400" fill="rgba(6,117,255,0.03)"/><circle cx="1100" cy="600" r="300" fill="rgba(6,117,255,0.04)"/></svg>') no-repeat;background-size:cover}
-.vpg-hero .vpg-container{position:relative;z-index:1;display:grid;grid-template-columns:1fr 420px;gap:40px;align-items:center}
-.vpg-hero-content h1{font-size:2.8rem;font-weight:800;color:var(--vpg-white);line-height:1.15;margin-bottom:8px}
-.vpg-hero-content .vpg-hero-subtitle{font-size:1.1rem;color:var(--vpg-primary);font-weight:600;margin-bottom:16px}
-.vpg-hero-content p{font-size:1rem;color:rgba(255,255,255,0.75);line-height:1.7;margin-bottom:28px;max-width:540px}
-.vpg-hero-buttons{display:flex;gap:12px}
-.vpg-btn{display:inline-flex;align-items:center;padding:12px 28px;border-radius:50px;font-size:0.9rem;font-weight:600;text-decoration:none;cursor:pointer;transition:all 0.3s;border:none;gap:8px}
-.vpg-btn-primary{background:var(--vpg-primary);color:var(--vpg-white)}
-.vpg-btn-primary:hover{background:#0055cc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(6,117,255,0.3)}
-.vpg-btn-outline{background:transparent;color:var(--vpg-white);border:2px solid rgba(255,255,255,0.3)}
-.vpg-btn-outline:hover{border-color:var(--vpg-white);background:rgba(255,255,255,0.1)}
-.vpg-form-card{background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:28px;-webkit-backdrop-filter:blur(16px)}
-.vpg-form-card h3{font-size:1.25rem;font-weight:700;color:var(--vpg-white);margin-bottom:20px;text-align:center}
-.vpg-form-group{margin-bottom:12px}
-.vpg-form-group input,.vpg-form-group textarea{width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--vpg-white);font-size:0.9rem;outline:none;transition:border 0.3s}
-.vpg-form-group input::placeholder,.vpg-form-group textarea::placeholder{color:rgba(255,255,255,0.4)}
-.vpg-form-group input:focus,.vpg-form-group textarea:focus{border-color:var(--vpg-primary)}
-.vpg-form-group textarea{height:80px;resize:vertical}
-.vpg-form-card .vpg-btn{width:100%;justify-content:center;padding:14px}
-.vpg-benefits{background:var(--vpg-white)}
-.vpg-benefits-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
-.vpg-benefits-left h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px;text-align:left}
-.vpg-benefits-left>p{font-size:0.95rem;color:var(--vpg-text);line-height:1.7;margin-bottom:28px}
-.vpg-benefits-left .vpg-grid{gap:12px}
-.vpg-benefits-left .vpg-card{padding:20px;display:flex;gap:14px;align-items:start}
-.vpg-benefits-left .vpg-card .vpg-icon{width:40px;height:40px;border-radius:10px;background:rgba(6,117,255,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem}
-.vpg-benefits-left .vpg-card h3{font-size:0.95rem;margin-bottom:4px}
-.vpg-benefits-left .vpg-card p{font-size:0.85rem}
-.vpg-benefits-right{position:sticky;top:100px}
-.vpg-image-placeholder{width:100%;height:300px;border-radius:var(--vpg-radius);background:linear-gradient(135deg,#f0f4ff,#e8f0fe);display:flex;align-items:center;justify-content:center}
-.vpg-why-choose{background:linear-gradient(135deg,#071827,#0a2a44);position:relative;padding:50px 0}
-.vpg-why-choose .vpg-section-title{color:var(--vpg-white)}
-.vpg-why-choose .vpg-section-desc{color:rgba(255,255,255,0.75)}
-.vpg-why-choose .vpg-grid{gap:20px}
-.vpg-why-choose .vpg-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);text-align:center;padding:28px 20px}
-.vpg-why-choose .vpg-card h3{color:var(--vpg-white)}
-.vpg-why-choose .vpg-card p{color:rgba(255,255,255,0.7)}
-.vpg-services{background:var(--vpg-gray)}
-.vpg-services .vpg-card{text-align:center;padding:28px 20px}
-.vpg-tech{background:var(--vpg-white)}
-.vpg-tech-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-.vpg-tech-left h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px;text-align:left}
-.vpg-tech-left>p{font-size:0.95rem;color:var(--vpg-text);margin-bottom:24px;line-height:1.7}
-.vpg-tech-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.vpg-tech-list li{display:flex;align-items:center;gap:8px;font-size:0.9rem;color:var(--vpg-text);padding:8px 12px;background:var(--vpg-gray);border-radius:8px}
-.vpg-tech-list li::before{content:"✓";color:var(--vpg-primary);font-weight:700}
-.vpg-difference{background:var(--vpg-gray)}
-.vpg-diff-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-.vpg-diff-image .vpg-image-placeholder{height:300px}
-.vpg-diff-content h2{font-size:2rem;font-weight:700;color:var(--vpg-dark);margin-bottom:12px}
-.vpg-diff-content p{font-size:0.95rem;color:var(--vpg-text);line-height:1.7;margin-bottom:28px}
-.vpg-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.vpg-stat{text-align:center;padding:16px;background:var(--vpg-white);border-radius:var(--vpg-radius);box-shadow:var(--vpg-shadow)}
-.vpg-stat-number{display:block;font-size:1.5rem;font-weight:800;color:var(--vpg-primary);margin-bottom:2px}
-.vpg-stat-label{font-size:0.8rem;color:var(--vpg-text)}
-.vpg-testimonials{background:var(--vpg-white)}
-.vpg-testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
-.vpg-testimonial-card{background:var(--vpg-gray);border-radius:var(--vpg-radius);padding:24px;box-shadow:var(--vpg-shadow)}
-.vpg-testimonial-stars{color:#f59e0b;font-size:1.1rem;margin-bottom:12px}
-.vpg-testimonial-text{font-size:0.95rem;color:var(--vpg-text);line-height:1.6;margin-bottom:16px;font-style:italic}
-.vpg-testimonial-author{display:flex;align-items:center;gap:10px}
-.vpg-testimonial-avatar{width:36px;height:36px;border-radius:50%;background:var(--vpg-primary);color:var(--vpg-white);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.8rem}
-.vpg-testimonial-author strong{display:block;font-size:0.9rem;color:var(--vpg-dark)}
-.vpg-testimonial-author span{font-size:0.75rem;color:var(--vpg-text)}
-.vpg-faq{background:var(--vpg-gray)}
-.vpg-faq-list{max-width:700px;margin:0 auto}
-.vpg-faq-item{background:var(--vpg-white);border-radius:var(--vpg-radius);padding:20px 24px;margin-bottom:10px;box-shadow:var(--vpg-shadow)}
-.vpg-faq-item strong{display:block;font-size:0.95rem;color:var(--vpg-dark);margin-bottom:6px}
-.vpg-faq-item p{font-size:0.9rem;color:var(--vpg-text);line-height:1.6}
-.vpg-trust{background:var(--vpg-white);padding:40px 0;text-align:center}
-.vpg-trust h3{font-size:0.9rem;color:var(--vpg-text);margin-bottom:24px;text-transform:uppercase;letter-spacing:2px;font-weight:500}
-.vpg-trust-logos{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;align-items:center}
-.vpg-trust-logo{padding:10px 20px;background:var(--vpg-gray);border-radius:8px;font-weight:600;color:var(--vpg-text);font-size:0.85rem}
-.vpg-cta{background:linear-gradient(135deg,#071827,#0a2a44);padding:60px 0;text-align:center}
-.vpg-cta h2{font-size:2rem;font-weight:700;color:var(--vpg-white);margin-bottom:12px}
-.vpg-cta p{font-size:1rem;color:rgba(255,255,255,0.75);max-width:600px;margin:0 auto 28px;line-height:1.7}
+:root {
+  --vp-primary: #0B63F6;
+  --vp-primary-dark: #094bc4;
+  --vp-primary-light: rgba(11, 99, 246, 0.08);
+  --vp-primary-glow: rgba(11, 99, 246, 0.2);
+  --vp-dark: #081828;
+  --vp-dark-2: #0f2640;
+  --vp-white: #FFFFFF;
+  --vp-bg: #F7F9FC;
+  --vp-bg-2: #EEF2F7;
+  --vp-text: #4A5678;
+  --vp-text-light: #8899B4;
+  --vp-border: #E2E8F0;
+  --vp-success: #10B981;
+  --vp-radius: 12px;
+  --vp-radius-lg: 20px;
+  --vp-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  --vp-shadow-lg: 0 12px 48px rgba(0,0,0,0.1);
+  --vp-shadow-glow: 0 8px 32px rgba(11, 99, 246, 0.2);
+  --vp-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --vp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
 
-@media(max-width:480px){
-.vpg-hero-content h1{font-size:1.5rem}
-.vpg-stats{grid-template-columns:1fr}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--vp-font);
+  color: var(--vp-text);
+  line-height: 1.6;
+  background: var(--vp-white);
+  -webkit-font-smoothing: antialiased;
+}
+
+.vp-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.vp-section { padding: 90px 0; }
+.vp-label { display: inline-block; font-size: 0.8rem; font-weight: 700; color: var(--vp-primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+.vp-title { font-size: 2.5rem; font-weight: 800; color: var(--vp-dark); line-height: 1.15; margin-bottom: 16px; }
+.vp-desc { font-size: 1.05rem; color: var(--vp-text); line-height: 1.7; max-width: 680px; }
+.vp-title-center { text-align: center; }
+.vp-desc-center { margin-left: auto; margin-right: auto; text-align: center; }
+.vp-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.vp-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.vp-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+.vp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 32px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; text-decoration: none; cursor: pointer; transition: var(--vp-transition); border: none; line-height: 1; }
+.vp-btn-primary { background: var(--vp-primary); color: var(--vp-white); }
+.vp-btn-primary:hover { background: var(--vp-primary-dark); transform: translateY(-2px); box-shadow: var(--vp-shadow-glow); }
+.vp-btn-outline { background: transparent; color: var(--vp-dark); border: 2px solid var(--vp-border); }
+.vp-btn-outline:hover { border-color: var(--vp-primary); color: var(--vp-primary); }
+.vp-btn-lg { padding: 18px 40px; font-size: 1rem; }
+
+.vp-card { background: var(--vp-white); border-radius: var(--vp-radius-lg); padding: 32px; box-shadow: var(--vp-shadow); transition: var(--vp-transition); border: 1px solid var(--vp-border); }
+.vp-card:hover { transform: translateY(-4px); box-shadow: var(--vp-shadow-lg); }
+.vp-card-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--vp-primary-light); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; flex-shrink: 0; font-size: 1.4rem; }
+.vp-card h3 { font-size: 1.1rem; font-weight: 700; color: var(--vp-dark); margin-bottom: 8px; }
+.vp-card p { font-size: 0.92rem; color: var(--vp-text); line-height: 1.7; }
+
+/* ============ TOP BAR ============ */
+.vp-topbar { background: var(--vp-dark); padding: 10px 0; }
+.vp-topbar-inner { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+.vp-topbar a { color: rgba(255,255,255,0.6); text-decoration: none; }
+.vp-topbar a:hover { color: var(--vp-white); }
+.vp-topbar-left { display: flex; gap: 24px; align-items: center; }
+.vp-topbar-right { display: flex; gap: 24px; align-items: center; }
+.vp-topbar-phone { color: var(--vp-white) !important; font-weight: 600; }
+
+/* ============ HERO ============ */
+.vp-hero { padding: 100px 0 80px; background: var(--vp-white); }
+.vp-hero .vp-container { display: grid; grid-template-columns: 1fr 440px; gap: 60px; align-items: start; }
+.vp-hero-title-wrap { margin-bottom: 8px; }
+.vp-hero-city-label { font-size: 0.85rem; font-weight: 700; color: var(--vp-primary); text-transform: uppercase; letter-spacing: 3px; display: block; margin-bottom: 8px; }
+.vp-hero h1 { font-size: 3.5rem; font-weight: 900; color: var(--vp-dark); line-height: 1.05; letter-spacing: -0.02em; }
+.vp-hero h1 .highlight { color: var(--vp-primary); }
+.vp-hero-read-more { margin-top: 20px; }
+.vp-hero-read-more summary { cursor: pointer; font-weight: 600; color: var(--vp-primary); font-size: 0.95rem; padding: 4px 0; }
+.vp-hero-read-more summary::marker { color: var(--vp-primary); }
+.vp-hero-read-more p { margin-top: 16px; font-size: 1rem; color: var(--vp-text); line-height: 1.8; }
+.vp-hero-actions { margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* Hero Form */
+.vp-hero-form { background: var(--vp-bg); border-radius: var(--vp-radius-lg); padding: 36px; border: 1px solid var(--vp-border); }
+.vp-hero-form h3 { font-size: 1.2rem; font-weight: 700; color: var(--vp-dark); margin-bottom: 24px; }
+.vp-form-group { margin-bottom: 14px; }
+.vp-form-group input, .vp-form-group textarea, .vp-form-group select {
+  width: 100%; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--vp-border);
+  background: var(--vp-white); color: var(--vp-dark); font-size: 0.9rem; font-family: var(--vp-font);
+  outline: none; transition: var(--vp-transition);
+}
+.vp-form-group input:focus, .vp-form-group textarea:focus { border-color: var(--vp-primary); box-shadow: 0 0 0 3px var(--vp-primary-light); }
+.vp-form-group textarea { height: 80px; resize: vertical; }
+.vp-hero-form .vp-btn { width: 100%; justify-content: center; padding: 15px; margin-top: 4px; }
+
+/* Trust Bar */
+.vp-trust-bar { display: flex; gap: 32px; margin-top: 40px; flex-wrap: wrap; }
+.vp-trust-item { display: flex; align-items: center; gap: 8px; }
+.vp-trust-item .num { font-size: 1.5rem; font-weight: 800; color: var(--vp-primary); }
+.vp-trust-item .lbl { font-size: 0.82rem; color: var(--vp-text-light); }
+
+/* ============ ABOUT ============ */
+.vp-about { background: var(--vp-bg); }
+.vp-about-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.vp-about-content h2 { font-size: 2.2rem; font-weight: 800; color: var(--vp-dark); margin-bottom: 20px; }
+.vp-about-content p { font-size: 1rem; color: var(--vp-text); line-height: 1.8; margin-bottom: 20px; }
+.vp-about-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+.vp-about-stat { text-align: center; padding: 20px; background: var(--vp-white); border-radius: var(--vp-radius); }
+.vp-about-stat .num { font-size: 1.8rem; font-weight: 900; color: var(--vp-primary); display: block; }
+.vp-about-stat .lbl { font-size: 0.8rem; color: var(--vp-text-light); text-transform: uppercase; letter-spacing: 1px; }
+.vp-about-image { width: 100%; height: 400px; border-radius: var(--vp-radius-lg); background: linear-gradient(135deg, var(--vp-bg-2), var(--vp-bg)); display: flex; align-items: center; justify-content: center; }
+
+/* ============ SERVICES ============ */
+.vp-services { background: var(--vp-white); }
+.vp-services .vp-card { text-align: center; padding: 40px 28px; }
+
+/* ============ WHY CHOOSE ============ */
+.vp-why-choose { background: var(--vp-bg); }
+.vp-why-choose .vp-card { text-align: center; padding: 36px 24px; }
+.vp-why-choose .vp-card-icon { margin: 0 auto 18px; }
+
+/* ============ LOCAL INSIGHT ============ */
+.vp-local { background: var(--vp-white); }
+.vp-local-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.vp-local-content h2 { font-size: 2rem; font-weight: 800; color: var(--vp-dark); margin-bottom: 20px; }
+.vp-local-content p { font-size: 1rem; color: var(--vp-text); line-height: 1.8; margin-bottom: 16px; }
+.vp-local-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.vp-local-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--vp-bg); border-radius: 10px; font-size: 0.9rem; color: var(--vp-dark); font-weight: 500; }
+.vp-local-item::before { content: '→'; color: var(--vp-primary); font-weight: 700; }
+.vp-local-image { width: 100%; height: 360px; border-radius: var(--vp-radius-lg); background: linear-gradient(135deg, var(--vp-bg), var(--vp-bg-2)); display: flex; align-items: center; justify-content: center; }
+
+/* ============ PROCESS ============ */
+.vp-process { background: var(--vp-bg); }
+.vp-process-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 48px; }
+.vp-process-card { text-align: center; padding: 36px 20px; background: var(--vp-white); border-radius: var(--vp-radius-lg); box-shadow: var(--vp-shadow); transition: var(--vp-transition); }
+.vp-process-card:hover { transform: translateY(-4px); box-shadow: var(--vp-shadow-lg); }
+.vp-process-num { font-size: 3rem; font-weight: 900; color: var(--vp-primary-light); line-height: 1; margin-bottom: 16px; }
+.vp-process-card h4 { font-size: 1rem; font-weight: 700; color: var(--vp-dark); margin-bottom: 8px; }
+.vp-process-card p { font-size: 0.85rem; color: var(--vp-text); line-height: 1.6; }
+
+/* ============ STATS ============ */
+.vp-stats-section { background: var(--vp-dark); position: relative; }
+.vp-stats-section .vp-title { color: var(--vp-white); }
+.vp-stats-section .vp-desc { color: rgba(255,255,255,0.7); }
+.vp-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 40px; }
+.vp-stat-card { text-align: center; padding: 32px 20px; }
+.vp-stat-card .num { font-size: 2.8rem; font-weight: 900; color: var(--vp-primary); display: block; line-height: 1; margin-bottom: 8px; }
+.vp-stat-card .lbl { font-size: 0.9rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ============ TESTIMONIALS ============ */
+.vp-testimonials { background: var(--vp-bg); }
+.vp-testimonials-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 40px; }
+.vp-testi-card { background: var(--vp-white); border-radius: var(--vp-radius-lg); padding: 32px; box-shadow: var(--vp-shadow); }
+.vp-testi-stars { color: #F59E0B; font-size: 1rem; margin-bottom: 16px; letter-spacing: 2px; }
+.vp-testi-text { font-size: 0.95rem; color: var(--vp-text); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+.vp-testi-author { display: flex; align-items: center; gap: 12px; }
+.vp-testi-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--vp-primary); color: var(--vp-white); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+.vp-testi-author strong { display: block; font-size: 0.92rem; color: var(--vp-dark); }
+.vp-testi-author span { font-size: 0.8rem; color: var(--vp-text-light); }
+
+/* ============ FAQ ============ */
+.vp-faq { background: var(--vp-white); }
+.vp-faq-list { max-width: 760px; margin: 40px auto 0; }
+.vp-faq-item { background: var(--vp-bg); border-radius: var(--vp-radius); margin-bottom: 10px; overflow: hidden; }
+.vp-faq-item summary { padding: 20px 24px; font-weight: 600; font-size: 0.95rem; color: var(--vp-dark); cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; transition: var(--vp-transition); }
+.vp-faq-item summary::-webkit-details-marker { display: none; }
+.vp-faq-item summary::after { content: '+'; font-size: 1.2rem; color: var(--vp-primary); transition: transform 0.3s; }
+.vp-faq-item[open] summary::after { content: '−'; }
+.vp-faq-item summary:hover { background: var(--vp-bg-2); }
+.vp-faq-a { padding: 0 24px 20px; }
+.vp-faq-a p { font-size: 0.9rem; color: var(--vp-text); line-height: 1.7; }
+
+/* ============ CASE STUDIES ============ */
+.vp-cases { background: var(--vp-bg); }
+.vp-case-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+.vp-case-card { display: flex; flex-direction: column; background: var(--vp-white); border: 1px solid var(--vp-border); border-radius: var(--vp-radius); padding: 26px; transition: var(--vp-transition); }
+.vp-case-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(11,99,246,0.08); border-color: var(--vp-primary); }
+.vp-case-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; }
+.vp-case-client { font-size: 1.02rem; font-weight: 800; color: var(--vp-dark); }
+.vp-case-industry { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--vp-primary); background: var(--vp-primary-light); padding: 5px 10px; border-radius: 50px; white-space: nowrap; }
+.vp-case-result { font-size: 2rem; font-weight: 900; color: var(--vp-primary); line-height: 1.1; margin-bottom: 10px; }
+.vp-case-summary { font-size: 0.88rem; color: var(--vp-text); line-height: 1.65; margin: 0; }
+
+/* ============ CTA ============ */
+.vp-cta { background: var(--vp-dark); padding: 90px 0; text-align: center; }
+.vp-cta h2 { font-size: 2.5rem; font-weight: 800; color: var(--vp-white); margin-bottom: 16px; }
+.vp-cta p { font-size: 1.1rem; color: rgba(255,255,255,0.7); max-width: 600px; margin: 0 auto 32px; line-height: 1.7; }
+.vp-cta-actions { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1024px) {
+  .vp-hero .vp-container { grid-template-columns: 1fr; gap: 40px; }
+  .vp-hero h1 { font-size: 2.6rem; }
+  .vp-hero-form { max-width: 480px; margin: 0 auto; }
+  .vp-about-inner { grid-template-columns: 1fr; gap: 40px; }
+  .vp-local-inner { grid-template-columns: 1fr; gap: 40px; }
+  .vp-process-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .vp-section { padding: 60px 0; }
+  .vp-title { font-size: 1.8rem; }
+  .vp-hero { padding: 60px 0 40px; }
+  .vp-hero h1 { font-size: 2rem; }
+  .vp-grid-3 { grid-template-columns: 1fr; }
+  .vp-grid-2 { grid-template-columns: 1fr; }
+  .vp-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .vp-process-grid { grid-template-columns: 1fr; }
+  .vp-testimonials-grid { grid-template-columns: 1fr; }
+  .vp-case-grid { grid-template-columns: 1fr; }
+  .vp-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .vp-local-grid { grid-template-columns: 1fr; }
+  .vp-about-stats { grid-template-columns: 1fr; }
+  .vp-topbar-inner { flex-direction: column; gap: 6px; }
+  .vp-hero-actions { flex-direction: column; }
+  .vp-trust-bar { gap: 16px; }
+}
+
+@media (max-width: 480px) {
+  .vp-hero h1 { font-size: 1.6rem; }
+  .vp-stats-grid { grid-template-columns: 1fr 1fr; }
+  .vp-stat-card .num { font-size: 2rem; }
 }
 </style>
 
-<section class="vpg-hero">
-<div class="vpg-container">
-<div class="vpg-hero-content">
-<h1>{{hero_title}}</h1>
-<p class="vpg-hero-subtitle">{{hero_subtitle}}</p>
-<p>{{hero_description}}</p>
-<div class="vpg-hero-buttons">
-<a href="#benefits" class="vpg-btn vpg-btn-primary">Learn More</a>
-<a href="#contact" class="vpg-btn vpg-btn-outline">Get Started</a>
+<!-- ============ TOP BAR ============ -->
+<div class="vp-topbar">
+  <div class="vp-container">
+    <div class="vp-topbar-inner">
+      <div class="vp-topbar-left">
+        <a href="tel:{{phone}}"><strong class="vp-topbar-phone">{{phone}}</strong></a>
+        <a href="mailto:{{email}}">{{email}}</a>
+      </div>
+      <div class="vp-topbar-right">
+        <a href="#contact">Get Free Proposal</a>
+        <a href="#">Client Login</a>
+      </div>
+    </div>
+  </div>
 </div>
-</div>
-<div class="vpg-form-card">
-<h3>Get A Free Consultation</h3>
-<form>
-<div class="vpg-form-group"><input type="text" placeholder="Full Name"></div>
-<div class="vpg-form-group"><input type="email" placeholder="Email Address"></div>
-<div class="vpg-form-group"><input type="tel" placeholder="Phone Number"></div>
-<div class="vpg-form-group"><input type="text" placeholder="Business Website"></div>
-<div class="vpg-form-group"><textarea placeholder="Tell us about your project..."></textarea></div>
-<button type="submit" class="vpg-btn vpg-btn-primary">Submit Now</button>
-</form>
-</div>
-</div>
+
+<!-- ============ HERO ============ -->
+<section class="vp-hero">
+  <div class="vp-container">
+    <div class="vp-hero-content">
+      <span class="vp-hero-city-label">{{city}} {{service}}</span>
+      <h1>{{hero_title}}</h1>
+      <details class="vp-hero-read-more">
+        <summary>Read More</summary>
+        <p>{{hero_description}}</p>
+      </details>
+      <div class="vp-hero-actions">
+        <a href="#contact" class="vp-btn vp-btn-primary vp-btn-lg">Get My Free Proposal</a>
+        <a href="#services" class="vp-btn vp-btn-outline vp-btn-lg">View Our Services</a>
+      </div>
+      <div class="vp-trust-bar">
+        {{stats}}
+      </div>
+    </div>
+    <div class="vp-hero-form">
+      <h3>Get Your Free Digital Marketing Proposal</h3>
+      <form>
+        <div class="vp-form-group"><input type="text" placeholder="Your Name" required></div>
+        <div class="vp-form-group"><input type="email" placeholder="Email Address" required></div>
+        <div class="vp-form-group"><input type="tel" placeholder="Phone Number"></div>
+        <div class="vp-form-group"><input type="text" placeholder="Company / Website"></div>
+        <div class="vp-form-group"><textarea placeholder="Tell us about your project..."></textarea></div>
+        <button type="submit" class="vp-btn vp-btn-primary">Get My Free Proposal</button>
+      </form>
+    </div>
+  </div>
 </section>
 
-<section id="benefits" class="vpg-section vpg-benefits">
-<div class="vpg-container">
-<div class="vpg-benefits-inner">
-<div class="vpg-benefits-left">
-<h2>Benefits Of Choosing {{service}} Services In {{city}}</h2>
-<p>{{benefits_description}}</p>
-<div class="vpg-grid">{{benefit_cards}}</div>
-</div>
-<div class="vpg-benefits-right">
-<div class="vpg-image-placeholder">
-<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</div>
-</div>
-</div>
-</div>
+<!-- ============ ABOUT ============ -->
+<section class="vp-section vp-about" id="about">
+  <div class="vp-container">
+    <div class="vp-about-inner">
+      <div class="vp-about-content">
+        <span class="vp-label">About The Agency</span>
+        <h2>{{about_title}}</h2>
+        <p>{{about_content}}</p>
+        <div class="vp-about-stats">
+          <div class="vp-about-stat">
+            <span class="num">20+</span>
+            <span class="lbl">Years Experience</span>
+          </div>
+          <div class="vp-about-stat">
+            <span class="num">500+</span>
+            <span class="lbl">Clients Served</span>
+          </div>
+          <div class="vp-about-stat">
+            <span class="num">95%</span>
+            <span class="lbl">Retention Rate</span>
+          </div>
+        </div>
+      </div>
+      <div class="vp-about-visual">
+        <div class="vp-about-image">
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+            <rect width="120" height="120" rx="16" fill="#0B63F6" fill-opacity="0.08"/>
+            <path d="M40 80L55 65L65 75L85 45" stroke="#0B63F6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="35" cy="35" r="8" fill="#0B63F6" fill-opacity="0.15"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<section class="vpg-why-choose">
-<div class="vpg-container">
-<h2 class="vpg-section-title">Why Choose Vispan Solutions As Your {{service}} Partner In {{city}}</h2>
-<p class="vpg-section-desc">{{why_choose_description}}</p>
-<div class="vpg-grid">{{why_choose}}</div>
-</div>
+<!-- ============ SERVICES ============ -->
+<section class="vp-section vp-services" id="services">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">What We Offer</span>
+    <h2 class="vp-title vp-title-center">{{services_title}}</h2>
+    <p class="vp-desc vp-desc-center" style="margin-bottom:40px;">{{services_description}}</p>
+    <div class="vp-grid-3">{{service_cards}}</div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-services">
-<div class="vpg-container">
-<h2 class="vpg-section-title">Our {{service}} Services</h2>
-<p class="vpg-section-desc">{{services_description}}</p>
-<div class="vpg-grid">{{service_cards}}</div>
-</div>
+<!-- ============ WHY CHOOSE ============ -->
+<section class="vp-section vp-why-choose" id="why-choose">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">Why Choose Us</span>
+    <h2 class="vp-title vp-title-center">Why Choose {{company_name}} For {{service}}?</h2>
+    <p class="vp-desc vp-desc-center" style="margin-bottom:40px;">{{why_choose_description}}</p>
+    <div class="vp-grid-4">{{why_choose}}</div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-tech">
-<div class="vpg-container">
-<div class="vpg-tech-inner">
-<div class="vpg-tech-left">
-<h2>Platforms & Technologies We Work With</h2>
-<p>{{technology_description}}</p>
-{{technology}}
-</div>
-<div class="vpg-tech-right">
-<div class="vpg-image-placeholder">
-<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</div>
-</div>
-</div>
-</div>
+<!-- ============ LOCAL INSIGHT ============ -->
+<section class="vp-section vp-local">
+  <div class="vp-container">
+    <div class="vp-local-inner">
+      <div class="vp-local-content">
+        <span class="vp-label">Local Market Expertise</span>
+        <h2>Helping Businesses Grow In {{city}}, {{state}}</h2>
+        <p>{{local_insight}}</p>
+        <div class="vp-local-grid">
+          <div class="vp-local-item">Local Consumer Behavior</div>
+          <div class="vp-local-item">Market Competition Analysis</div>
+          <div class="vp-local-item">Industry-Specific Challenges</div>
+          <div class="vp-local-item">Growth Opportunities</div>
+        </div>
+      </div>
+      <div class="vp-local-visual">
+        <div class="vp-local-image">
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+            <rect width="120" height="120" rx="16" fill="#0B63F6" fill-opacity="0.08"/>
+            <circle cx="60" cy="50" r="18" stroke="#0B63F6" stroke-width="3" fill="none"/>
+            <path d="M60 68L60 85M50 75L70 75" stroke="#0B63F6" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-difference">
-<div class="vpg-container">
-<div class="vpg-diff-inner">
-<div class="vpg-diff-image">
-<div class="vpg-image-placeholder">
-<svg viewBox="0 0 80 80" width="80" height="80"><rect width="80" height="80" rx="12" fill="#0675FF" opacity="0.1"/><path d="M25 40 L37 52 L55 28" stroke="#0675FF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</div>
-</div>
-<div class="vpg-diff-content">
-<h2>We Are Different From Others</h2>
-{{difference_content}}
-<div class="vpg-stats">{{stats}}</div>
-</div>
-</div>
-</div>
+<!-- ============ PROCESS ============ -->
+<section class="vp-section vp-process">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">How It Works</span>
+    <h2 class="vp-title vp-title-center">{{process_title}}</h2>
+    <p class="vp-desc vp-desc-center" style="margin-bottom:0;">{{process_description}}</p>
+    <div class="vp-process-grid">{{process_steps}}</div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-testimonials">
-<div class="vpg-container">
-<h2 class="vpg-section-title">What Our Clients Say</h2>
-<p class="vpg-section-desc">{{testimonials_description}}</p>
-<div class="vpg-testimonials-grid">{{testimonial}}</div>
-</div>
+<!-- ============ RESULTS / STATS ============ -->
+<section class="vp-section vp-stats-section">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center" style="color:rgba(255,255,255,0.4);">Our Results</span>
+    <h2 class="vp-title vp-title-center">Proven Results For Our Clients</h2>
+    <p class="vp-desc vp-desc-center">Sustainable growth is achievable with the right partner.</p>
+    <div class="vp-stats-grid">{{stats}}</div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-faq">
-<div class="vpg-container">
-<h2 class="vpg-section-title">Frequently Asked Questions</h2>
-<p class="vpg-section-desc">{{faq_description}}</p>
-<div class="vpg-faq-list">{{faq}}</div>
-</div>
+<!-- ============ TESTIMONIALS ============ -->
+<section class="vp-section vp-testimonials">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">Testimonials</span>
+    <h2 class="vp-title vp-title-center">What Our Clients Say</h2>
+    <p class="vp-desc vp-desc-center" style="margin-bottom:40px;">{{testimonials_description}}</p>
+    <div class="vp-testimonials-grid">{{testimonial}}</div>
+  </div>
 </section>
 
-<section class="vpg-section vpg-trust">
-<div class="vpg-container">
-<h3>Trusted By Industry Leaders</h3>
-<div class="vpg-trust-logos">
-<div class="vpg-trust-logo">Google Partner</div>
-<div class="vpg-trust-logo">Meta</div>
-<div class="vpg-trust-logo">HubSpot</div>
-<div class="vpg-trust-logo">WordPress</div>
-<div class="vpg-trust-logo">Shopify</div>
-</div>
-</div>
+<!-- ============ FAQ ============ -->
+<section class="vp-section vp-faq">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">FAQ</span>
+    <h2 class="vp-title vp-title-center">Frequently Asked Questions</h2>
+    <p class="vp-desc vp-desc-center">{{faq_description}}</p>
+    <div class="vp-faq-list">{{faq}}</div>
+  </div>
 </section>
 
-<section id="contact" class="vpg-cta">
-<div class="vpg-container">
-<h2>{{cta_title}}</h2>
-<p>{{cta_content}}</p>
-<a href="tel:{{phone}}" class="vpg-btn vpg-btn-primary">Call {{company_name}}</a>
-</div>
+<!-- ============ CASE STUDIES ============ -->
+<section class="vp-section vp-cases">
+  <div class="vp-container">
+    <span class="vp-label vp-title-center">Case Studies</span>
+    <h2 class="vp-title vp-title-center">Success Stories That Speak for Themselves</h2>
+    <p class="vp-desc vp-desc-center" style="margin-bottom:0;">{{case_studies_description}}</p>
+    <div class="vp-case-grid">{{case_studies}}</div>
+  </div>
 </section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="vp-cta" id="contact">
+  <div class="vp-container">
+    <h2>{{cta_title}}</h2>
+    <p>{{cta_content}}</p>
+    <div class="vp-cta-actions">
+      <a href="#" class="vp-btn vp-btn-primary vp-btn-lg">Get Your Free Proposal</a>
+    </div>
+  </div>
+</section>
+
 

@@ -19,9 +19,14 @@ class VCPG_SEO_Generator
             $location .= ', ' . $state;
         }
 
+        $meta_title = $service . ' in ' . $location . ' | Vispan Solutions';
+        if(isset($data['page_title']) && !empty($data['page_title']))
+        {
+            $meta_title = wp_strip_all_tags($data['page_title']) . ' | Vispan Solutions';
+        }
+
         return array(
-            'meta_title' =>
-                $service . ' in ' . $location . ' | Vispan Solutions',
+            'meta_title' => $meta_title,
 
             'meta_description' =>
                 'Looking for ' . $service . ' in ' . $location .

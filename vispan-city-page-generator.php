@@ -21,6 +21,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-ai-content-generator.ph
 require_once plugin_dir_path(__FILE__) . 'includes/class-seo-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-page-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-template-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-keyword-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-csv-job-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-csv-importer.php';
 
@@ -35,7 +36,8 @@ $openai_provider  = new VCPG_OpenAI_Provider();
 $quality_checker  = new VCPG_AI_Quality_Checker($openai_provider);
 $ai_generator     = new VCPG_AI_Content_Generator($ai_database, $openai_provider, $quality_checker);
 $seo_generator    = new VCPG_SEO_Generator();
-$page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator);
+$keyword_manager  = new VCPG_Keyword_Manager();
+$page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator, $keyword_manager);
 new VCPG_Template_Manager();
 
 /*
@@ -177,6 +179,15 @@ function vcpg_add_submenus()
         'vcpg_templates_page'
     );
 
+    add_submenu_page(
+        'vispan-city-generator',
+        'OpenAI Status',
+        'OpenAI Status',
+        'manage_options',
+        'vcpg-openai-status',
+        'vcpg_openai_status_page'
+    );
+
     /*
     NOTE: "CSV Bulk Import" is intentionally NOT registered here.
     VCPG_CSV_Importer already registers it in its own constructor
@@ -241,6 +252,161 @@ function vcpg_templates_page()
 </table>
 <?php submit_button('Save Template', 'primary', 'save_template'); ?>
 </form>
+</div>
+
+<?php
+}
+
+function vcpg_openai_status_page()
+{
+    global $wpdb;
+
+    $provider = new VCPG_OpenAI_Provider();
+
+    $test_result = null;
+
+    if(isset($_POST['vcpg_test_openai']) && check_admin_referer('vcpg_test_openai'))
+    {
+        $test_result = $provider->test_connection();
+    }
+
+    if(isset($_POST['vcpg_save_key']) && check_admin_referer('vcpg_save_key'))
+    {
+        $new_key = sanitize_text_field(wp_unslash($_POST['openai_key']));
+        update_option('vcpg_openai_api_key', trim($new_key));
+        echo '<div class="notice notice-success"><p>API key saved. (It is stored in the WordPress options table.)</p></div>';
+    }
+
+    if(isset($_POST['vcpg_reset_data']) && check_admin_referer('vcpg_reset_data'))
+    {
+        $confirmed = isset($_POST['vcpg_confirm_reset']) && $_POST['vcpg_confirm_reset'] === 'yes';
+
+        if($confirmed)
+        {
+            $tables = array('vcpg_ai_content', 'vcpg_cities', 'vcpg_csv_jobs', 'vcpg_keywords');
+
+            foreach($tables as $t)
+            {
+                $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}$t");
+            }
+
+            delete_option('vcpg_content_version_purged');
+            delete_option('vcpg_keywords_purged');
+
+            echo '<div class="notice notice-success"><p>VCPG database reset. Cached content, city data, CSV jobs, and keywords were cleared. Your generated pages, API key, and template were kept.</p></div>';
+        }
+        else
+        {
+            echo '<div class="notice notice-error"><p>Nothing was reset — you must type <strong>yes</strong> in the confirmation box.</p></div>';
+        }
+    }
+
+    $configured = $provider->is_configured();
+
+    $table = $wpdb->prefix . 'vcpg_ai_content';
+
+    $recent = $wpdb->get_results(
+        "SELECT id, service, city, state, content_source, created_at
+         FROM $table
+         ORDER BY id DESC
+         LIMIT 30"
+    );
+?>
+
+<div class="wrap">
+<h1>OpenAI Status</h1>
+
+<table class="widefat striped" style="max-width:720px;">
+<tbody>
+<tr>
+<th>API Key Configured</th>
+<td>
+<?php if($configured): ?>
+    <span style="color:#00a32a; font-weight:700;">Yes</span> — content can be generated with OpenAI.
+<?php else: ?>
+    <span style="color:#d63638; font-weight:700;">NO — this is why pages generate instantly.</span><br>
+    When no key is set, the plugin silently falls back to pre-written template content and does NOT call OpenAI.
+<?php endif; ?>
+</td>
+</tr>
+<tr>
+<th>Save / Update API Key</th>
+<td>
+<form method="post">
+<?php wp_nonce_field('vcpg_save_key'); ?>
+<input type="password" name="openai_key" value="" placeholder="sk-..." style="min-width:320px;">
+<?php submit_button('Save Key', 'secondary', 'vcpg_save_key'); ?>
+</form>
+<p class="description">Stored in the WordPress options table. This lets you configure the API key from the dashboard — no file access needed.</p>
+</td>
+</tr>
+<tr>
+<th>Test Connection</th>
+<td>
+<form method="post">
+<?php wp_nonce_field('vcpg_test_openai'); ?>
+<?php submit_button('Test OpenAI Connection', 'primary', 'vcpg_test_openai'); ?>
+</form>
+<?php if($test_result !== null): ?>
+    <?php if($test_result['ok']): ?>
+        <div class="notice notice-success inline"><p><?php echo esc_html($test_result['msg']); ?></p></div>
+    <?php else: ?>
+        <div class="notice notice-error inline"><p><?php echo esc_html($test_result['msg']); ?></p></div>
+    <?php endif; ?>
+<?php endif; ?>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2>How to check if a generated page used the API</h2>
+<ol>
+<li>Run <strong>Test Connection</strong> above. If it fails, the API never runs, so all pages are fallback.</li>
+<li>Generate ONE page and time it. API pages take roughly 30–120 seconds; fallback pages take a couple of seconds.</li>
+<li>Compare the page's hero title. Fallback titles are fixed templates like <em>"Award-Winning {Service} Serving {City} Businesses"</em> or <em>"{City} {Service} — Data-Backed Strategies for Measurable Growth"</em>. API content is unique and tailored.</li>
+</ol>
+
+<h2>Recent Content Records</h2>
+<p class="description">Records are stamped with <strong>API</strong> when generated by OpenAI and <strong>Fallback</strong> when OpenAI failed. (Records created before this update may not show an accurate source.)</p>
+<table class="widefat striped">
+<thead>
+<tr><th>ID</th><th>Service</th><th>City</th><th>State</th><th>Source</th><th>Created</th></tr>
+</thead>
+<tbody>
+<?php if(!empty($recent)): foreach($recent as $r): ?>
+<tr>
+<td><?php echo (int)$r->id; ?></td>
+<td><?php echo esc_html($r->service); ?></td>
+<td><?php echo esc_html($r->city); ?></td>
+<td><?php echo esc_html($r->state); ?></td>
+<td>
+<?php if($r->content_source === 'fallback'): ?>
+    <span style="color:#d63638; font-weight:700;">Fallback</span>
+<?php else: ?>
+    <span style="color:#00a32a; font-weight:700;">API</span>
+<?php endif; ?>
+</td>
+<td><?php echo esc_html($r->created_at); ?></td>
+</tr>
+<?php endforeach; else: ?>
+<tr><td colspan="6">No content records yet.</td></tr>
+<?php endif; ?>
+</tbody>
+</table>
+
+<h2>Database Reset</h2>
+<p class="description">Clears the plugin's database values only. This resets:
+cached AI content, the city database, CSV jobs, and keywords.
+Your <strong>generated pages are NOT deleted</strong> — your <strong>OpenAI API key</strong> and <strong>template</strong> are also kept.</p>
+<form method="post" onsubmit="return confirm('This clears all VCPG database values. Generated pages are not touched. Continue?');">
+<?php wp_nonce_field('vcpg_reset_data'); ?>
+<p>
+<label for="vcpg_confirm_reset">Type <strong>yes</strong> to confirm:</label>
+<input type="text" id="vcpg_confirm_reset" name="vcpg_confirm_reset" style="min-width:120px;">
+</p>
+<?php submit_button('Reset Database', 'delete', 'vcpg_reset_data'); ?>
+</form>
+
 </div>
 
 <?php

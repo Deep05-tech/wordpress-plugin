@@ -52,6 +52,48 @@ class VCPG_OpenAI_Provider
 
 
 
+    public function is_configured()
+    {
+        return !empty($this->api_key);
+    }
+
+
+    /*
+    Make a tiny real API call to verify the key works and the live server can
+    reach OpenAI. Returns an array with 'ok' (bool) and 'msg' (string).
+    */
+
+    public function test_connection()
+    {
+
+        if(empty($this->api_key))
+        {
+            return array(
+                'ok' => false,
+                'msg' => 'API key is not configured. Set VCPG_OPENAI_API_KEY in wp-config.php or save a key below.'
+            );
+        }
+
+        $response = $this->generate(
+            'Reply with only this exact JSON: {"ok":true}'
+        );
+
+        if($response === false || !is_string($response))
+        {
+            return array(
+                'ok' => false,
+                'msg' => 'The OpenAI request failed on the live server (see debug.log for OPENAI ERROR). Usually: key invalid, or the server cannot reach api.openai.com.'
+            );
+        }
+
+        return array(
+            'ok' => true,
+            'msg' => 'Connection successful. OpenAI responded: ' . substr(trim($response), 0, 80)
+        );
+    }
+
+
+
     public function generate($prompt)
     {
 
@@ -111,14 +153,18 @@ class VCPG_OpenAI_Provider
                         ),
 
 
-                        'temperature' => 0.7
+                        'temperature' => 0.8,
+
+                        'max_tokens' => 16384,
+
+                        'response_format' => array('type' => 'json_object')
 
                     )
 
                 ),
 
 
-                'timeout' => 60
+                'timeout' => 120
 
             )
 

@@ -13,12 +13,15 @@ class VCPG_Page_Generator
 
     private $seo_generator;
 
+    private $keyword_manager;
+
 
 
     public function __construct(
         $ai_generator,
         $city_manager,
-        $seo_generator
+        $seo_generator,
+        $keyword_manager = null
     )
     {
 
@@ -27,6 +30,8 @@ class VCPG_Page_Generator
         $this->city_manager = $city_manager;
 
         $this->seo_generator = $seo_generator;
+
+        $this->keyword_manager = $keyword_manager;
 
     }
 
@@ -53,18 +58,6 @@ class VCPG_Page_Generator
         $country_code = isset($data['country_code'])
             ? sanitize_key($data['country_code'])
             : '';
-            error_log(
-                'FINAL URL DATA: '.print_r(
-                    array(
-                        'country_code'=>$country_code,
-                        'country'=>$country,
-                        'state'=>$state,
-                        'city'=>$city,
-                        'slug'=>$page_slug
-                    ),
-                    true
-                )
-            );
 
 
 
@@ -143,6 +136,7 @@ class VCPG_Page_Generator
                 AND city = %s
                 AND state = %s
                 AND country = %s
+                AND prompt_version = %s
                 LIMIT 1
                 ",
 
@@ -152,7 +146,9 @@ class VCPG_Page_Generator
 
                 $state,
 
-                $country
+                $country,
+
+                VCPG_AI_Content_Database::CONTENT_VERSION
 
             )
 
@@ -211,31 +207,22 @@ class VCPG_Page_Generator
 
 
         /*
-        Page Title
+        Page Title — "{Service} in {State}" (state-first, falls back to city)
         */
 
-        $page_title = 'Best '.$data['service'].' in '.$data['city'];
-
-        if(!empty($state))
-        {
-
-            $page_title .= ', ' . trim($state);
-
-        }
+        $page_title = $this->build_page_title(
+            $service,
+            $city,
+            $state
+        );
 
 
-        $slug_text = 
-            'best ' .
-            $service .
-            ' in ' .
-            $city;
-
+        $slug_text = $service . ' in ' . $city;
 
         if(!empty($state))
         {
             $slug_text .= ' ' . $state;
         }
-
 
         $page_slug = sanitize_title($slug_text);
 
@@ -276,6 +263,27 @@ class VCPG_Page_Generator
 
 
         /*
+        Assign Target Keywords — real Google search terms this page must cover.
+        Unused keywords are picked first so every keyword gets used across pages.
+        */
+
+        $target_keywords = array();
+
+        if($this->keyword_manager)
+        {
+            $target_keywords = $this->keyword_manager->get_keywords_for_page(
+                $service,
+                $city,
+                $state,
+                50
+            );
+
+            $data['target_keywords'] = $target_keywords;
+        }
+
+
+
+        /*
         Generate AI Content
         */
 
@@ -292,13 +300,12 @@ class VCPG_Page_Generator
 
                 'country' => $country,
 
-                'country_code' => $country_code
+                'country_code' => $country_code,
+
+                'target_keywords' => $target_keywords
 
             )
-
         );
-
-
 
 
 
@@ -383,6 +390,8 @@ class VCPG_Page_Generator
         */
 
 
+        $data['page_title'] = $page_title;
+
         $seo_data = array();
 
 
@@ -404,8 +413,6 @@ class VCPG_Page_Generator
         /*
         Generate Template Content
         */
-
-        $data['page_title'] = $page_title;
 
         $content = $this->get_template_content(
 
@@ -476,6 +483,19 @@ class VCPG_Page_Generator
             '_vcpg_page',
             '1'
         );
+
+        /*
+        Mark the assigned keywords as covered by this page so the
+        next generated page picks a fresh batch of unused keywords.
+        */
+
+        if($this->keyword_manager && !empty($target_keywords))
+        {
+            $this->keyword_manager->mark_keywords_used(
+                $target_keywords,
+                $page_id
+            );
+        }
 
         /*
         Save SEO Metadata
@@ -714,12 +734,15 @@ class VCPG_Page_Generator
             '{{hero_title}}',
             '{{hero_subtitle}}',
             '{{hero_description}}',
+            '{{about_title}}',
+            '{{about_content}}',
             '{{benefits_description}}',
             '{{benefit_cards}}',
             '{{why_choose}}',
             '{{why_choose_description}}',
             '{{service_cards}}',
             '{{services_description}}',
+            '{{local_insight}}',
             '{{technology}}',
             '{{technology_description}}',
             '{{faq}}',
@@ -729,11 +752,16 @@ class VCPG_Page_Generator
             '{{stats}}',
             '{{testimonial}}',
             '{{testimonials_description}}',
-            '{{difference_content}}'
+            '{{difference_content}}',
+            '{{process_title}}',
+            '{{process_description}}',
+            '{{process_steps}}',
+            '{{services_title}}',
+            '{{case_studies_description}}',
+            '{{case_studies}}'
         );
 
-        $replace = array(
-            isset($data['service']) ? $data['service'] : '',
+        $replace = array(            isset($data['service']) ? $data['service'] : '',
             isset($data['city']) ? $data['city'] : '',
             isset($data['state']) ? $data['state'] : '',
             isset($data['country']) ? $data['country'] : '',
@@ -746,12 +774,15 @@ class VCPG_Page_Generator
             isset($data['hero_title']) ? $data['hero_title'] : '',
             isset($data['hero_subtitle']) ? $data['hero_subtitle'] : '',
             isset($data['hero_description']) ? $data['hero_description'] : '',
+            isset($data['about_title']) ? $data['about_title'] : 'About '.(isset($data['company_name']) ? $data['company_name'] : 'Vispan Solutions'),
+            isset($data['about_content']) ? $data['about_content'] : '',
             isset($data['benefits_description']) ? $data['benefits_description'] : '',
             $this->generate_benefit_cards($data),
             $this->generate_why_choose($data),
             isset($data['why_choose_description']) ? $data['why_choose_description'] : '',
             $this->generate_service_cards($data),
             isset($data['services_description']) ? $data['services_description'] : '',
+            isset($data['local_insight']) ? $data['local_insight'] : '',
             $this->generate_technology($data),
             isset($data['technology_description']) ? $data['technology_description'] : '',
             $this->generate_faq($data),
@@ -761,10 +792,153 @@ class VCPG_Page_Generator
             $this->generate_stats($data),
             $this->generate_testimonial($data),
             isset($data['testimonials_description']) ? $data['testimonials_description'] : '',
-            isset($data['difference_content']) ? $data['difference_content'] : ''
+            isset($data['difference_content']) ? $data['difference_content'] : '',
+            isset($data['process_title']) ? $data['process_title'] : 'Our Proven Process',
+            isset($data['process_description']) ? $data['process_description'] : 'A proven methodology that drives measurable growth.',
+            $this->generate_process_steps($data),
+            $this->generate_services_title($data),
+            isset($data['case_studies_description']) ? $data['case_studies_description'] : 'We deliver measurable outcomes for businesses across industries, no matter where they are.',
+            $this->generate_case_studies($data)
         );
 
         return str_replace($search, $replace, $content);
+    }
+
+    private function generate_services_title($data)
+    {
+        $svc = isset($data['service']) ? trim($data['service']) : '';
+        if(empty($svc))
+        {
+            return 'Our Services';
+        }
+        $clean = preg_replace('/\s+Services$/i', '', $svc);
+        return 'Our ' . $clean . ' Services';
+    }
+
+    private function build_page_title($service, $city, $state)
+    {
+        $title = $this->vcpg_title_case($service);
+
+        $location = '';
+
+        if(!empty($state))
+        {
+            $location = $state;
+        }
+        elseif(!empty($city))
+        {
+            $location = $city;
+        }
+
+        if(!empty($location))
+        {
+            $title .= ' in ' . $this->vcpg_title_case($location);
+        }
+
+        return $title;
+    }
+
+    private function vcpg_title_case($text)
+    {
+        $text = trim($text);
+
+        if($text === '')
+        {
+            return '';
+        }
+
+        $words = preg_split('/\s+/', $text);
+        $output = array();
+
+        foreach($words as $word)
+        {
+            $word = trim($word);
+
+            if($word === '')
+            {
+                continue;
+            }
+
+            if(strlen($word) <= 4 && strtoupper($word) === $word)
+            {
+                $output[] = $word;
+            }
+            else
+            {
+                $output[] = ucfirst(strtolower($word));
+            }
+        }
+
+        return implode(' ', $output);
+    }
+
+    private function generate_case_studies($data)
+    {
+        $items = isset($data['case_studies']) && is_array($data['case_studies'])
+            ? $data['case_studies']
+            : array();
+
+        if(empty($items))
+        {
+            return '';
+        }
+
+        $html = '';
+
+        foreach($items as $item)
+        {
+            if(!is_array($item))
+            {
+                continue;
+            }
+
+            $client   = isset($item['client']) ? esc_html($item['client']) : '';
+            $industry = isset($item['industry']) ? esc_html($item['industry']) : '';
+            $result   = isset($item['result']) ? esc_html($item['result']) : '';
+            $summary  = isset($item['summary']) ? wp_kses_post($item['summary']) : '';
+
+            if(empty($client) && empty($result) && empty($summary))
+            {
+                continue;
+            }
+
+            $html .= '<div class="vp-case-card">';
+            $html .= '<div class="vp-case-top">';
+            $html .= '<span class="vp-case-client">' . $client . '</span>';
+            if(!empty($industry))
+            {
+                $html .= '<span class="vp-case-industry">' . $industry . '</span>';
+            }
+            $html .= '</div>';
+            $html .= '<div class="vp-case-result">' . $result . '</div>';
+            $html .= '<p class="vp-case-summary">' . $summary . '</p>';
+            $html .= '</div>';
+        }
+
+        return $html;
+    }
+
+    private function generate_process_steps($data)
+    {
+        if(isset($data['process']) && is_array($data['process']))
+        {
+            $html = '';
+            $count = 1;
+            foreach($data['process'] as $step)
+            {
+                $title = isset($step['title']) ? esc_html($step['title']) : '';
+                $desc = isset($step['description']) ? wp_kses_post($step['description']) : '';
+                $num = str_pad((string)$count, 2, '0', STR_PAD_LEFT);
+                $html .= '<div class="vp-process-card">';
+                $html .= '<div class="vp-process-num">' . $num . '</div>';
+                $html .= '<h4>' . $title . '</h4>';
+                $html .= '<p>' . $desc . '</p>';
+                $html .= '</div>';
+                $count++;
+            }
+            return $html;
+        }
+        return '';
     }
 
     private function generate_service_cards($data)
@@ -893,14 +1067,12 @@ class VCPG_Page_Generator
         $html = '';
         foreach($data['faq'] as $item)
         {
-            if(isset($item['question']))
-            {
-                $html .= '<p><strong>' . esc_html($item['question']) . '</strong></p>';
-            }
-            if(isset($item['answer']))
-            {
-                $html .= '<p>' . wp_kses_post($item['answer']) . '</p>';
-            }
+            $question = isset($item['question']) ? esc_html($item['question']) : '';
+            $answer = isset($item['answer']) ? wp_kses_post($item['answer']) : '';
+            $html .= '<details class="vp-faq-item">
+                <summary class="vp-faq-q">' . $question . '</summary>
+                <div class="vp-faq-a">' . $answer . '</div>
+            </details>';
         }
         return $html;
     }

@@ -181,10 +181,54 @@ class VCPG_AI_Quality_Checker
 
 
 
+        /*
+        About Content Check
+        */
+
+
+        if(isset($content['about_content']) && is_string($content['about_content']))
+        {
+
+            $about_words = str_word_count(strip_tags($content['about_content']));
+
+            if($about_words < 100)
+            {
+
+                $score -= 5;
+
+                $issues[] = 'About content too short ('.$about_words.' words)';
+
+            }
+
+        }
+
+
+        /*
+        Local Insight Check
+        */
+
+
+        if(isset($content['local_insight']) && is_string($content['local_insight']))
+        {
+
+            $local_words = str_word_count(strip_tags($content['local_insight']));
+
+            if($local_words < 100)
+            {
+
+                $score -= 5;
+
+                $issues[] = 'Local insight too short ('.$local_words.' words)';
+
+            }
+
+        }
+
 
         /*
         Services Structure Check
         */
+
 
         if(
             empty($content['services'])
@@ -370,6 +414,99 @@ class VCPG_AI_Quality_Checker
 
 
 
+
+
+        /*
+        Total Word Count Check (2000-3000 target)
+        */
+
+        $all_text = '';
+        foreach($content as $key => $value)
+        {
+            if(is_string($value))
+            {
+                $all_text .= ' ' . $value;
+            }
+            elseif(is_array($value))
+            {
+                foreach($value as $item)
+                {
+                    if(is_string($item))
+                    {
+                        $all_text .= ' ' . $item;
+                    }
+                    elseif(is_array($item))
+                    {
+                        foreach($item as $sub)
+                        {
+                            if(is_string($sub))
+                            {
+                                $all_text .= ' ' . $sub;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $total_words = str_word_count(
+            strip_tags($all_text)
+        );
+
+        error_log(
+            "TOTAL WORD COUNT: ".$total_words
+        );
+
+        if($total_words < 1500)
+        {
+            $score -= 20;
+            $issues[] = 'Content too short: '.$total_words.' words (target 2000-3000)';
+        }
+        elseif($total_words < 2000)
+        {
+            $score -= 10;
+            $issues[] = 'Content below target: '.$total_words.' words (target 2000-3000)';
+        }
+
+
+        /*
+        Keyword Diversity Check
+        */
+
+        $keyword_categories = array(
+            'trust' => array('best', 'top', 'leading', 'trusted', 'premium', 'certified', 'experienced', 'reliable', 'proven', 'award-winning', 'strategic', 'specialized', 'recognized', 'established'),
+            'growth' => array('growth', 'scale', 'expand', 'increase', 'boost', 'improve', 'generate', 'drive', 'maximize', 'accelerate', 'revenue', 'results'),
+            'marketing' => array('digital', 'online', 'performance', 'brand', 'strategy', 'conversion', 'analytics', 'engagement', 'optimization'),
+            'seo' => array('seo', 'search', 'ranking', 'visibility', 'traffic', 'organic', 'google', 'authority', 'content'),
+            'audience' => array('local', 'small', 'business', 'enterprise', 'startup', 'service')
+        );
+
+        $keywords_found = 0;
+        $keyword_total = 0;
+
+        foreach($keyword_categories as $category => $keywords)
+        {
+            $cat_found = 0;
+            foreach($keywords as $keyword)
+            {
+                if(strpos($full_content, $keyword) !== false)
+                {
+                    $cat_found++;
+                }
+            }
+            $keywords_found += $cat_found;
+            $keyword_total += count($keywords);
+
+            if($cat_found < 2)
+            {
+                $score -= 3;
+                $issues[] = 'Missing ' . $category . ' keywords (found ' . $cat_found . '/' . count($keywords) . ')';
+            }
+        }
+
+        error_log(
+            "KEYWORDS FOUND: ".$keywords_found."/".$keyword_total
+        );
 
 
         if($score < 0)
