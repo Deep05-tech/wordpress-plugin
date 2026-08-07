@@ -19,6 +19,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-openai-provider.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ai-quality-checker.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ai-content-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-seo-generator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-elementor-template-builder.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-static-elements.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-elementor-renderer.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-page-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-template-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-keyword-manager.php';
@@ -37,7 +40,8 @@ $quality_checker  = new VCPG_AI_Quality_Checker($openai_provider);
 $ai_generator     = new VCPG_AI_Content_Generator($ai_database, $openai_provider, $quality_checker);
 $seo_generator    = new VCPG_SEO_Generator();
 $keyword_manager  = new VCPG_Keyword_Manager();
-$page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator, $keyword_manager);
+$elementor_builder = new VCPG_Elementor_Template_Builder();
+$page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator, $keyword_manager, $elementor_builder);
 new VCPG_Template_Manager();
 
 /*
@@ -58,13 +62,20 @@ function vcpg_capture_page_styles()
     }
 }
 
-add_action('wp_head', 'vcpg_output_styles');
+add_action('wp_head', 'vcpg_output_styles', 99999);
 function vcpg_output_styles()
 {
     if(!empty($GLOBALS['vcpg_inline_styles']))
     {
         echo $GLOBALS['vcpg_inline_styles'];
     }
+
+    echo '<style id="vcpg-brand-overrides">
+    html body footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
+    html body footer.vp-footer a:hover { color: #FFFFFF !important; }
+    html body .vp-footer a[href^="tel:"] { color: #FFFFFF !important; font-weight: 700 !important; }
+    html body .vp-footer a[href^="mailto:"] { color: #38BDF8 !important; font-weight: 600 !important; }
+    </style>';
 }
 
 add_filter('the_content', 'vcpg_protect_styles', 1);

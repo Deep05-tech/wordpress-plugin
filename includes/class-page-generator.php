@@ -15,13 +15,16 @@ class VCPG_Page_Generator
 
     private $keyword_manager;
 
+    private $elementor_builder;
+
 
 
     public function __construct(
         $ai_generator,
         $city_manager,
         $seo_generator,
-        $keyword_manager = null
+        $keyword_manager = null,
+        $elementor_builder = null
     )
     {
 
@@ -32,6 +35,10 @@ class VCPG_Page_Generator
         $this->seo_generator = $seo_generator;
 
         $this->keyword_manager = $keyword_manager;
+
+        $this->elementor_builder = $elementor_builder
+            ? $elementor_builder
+            : new VCPG_Elementor_Template_Builder();
 
     }
 
@@ -54,6 +61,12 @@ class VCPG_Page_Generator
         error_log(
             'PAGE GENERATOR DATA: '.print_r($data,true)
         );
+
+        /*
+        Output mode — 'html' (default) preserves the existing post_content path.
+        'elementor' writes to _elementor_data postmeta instead.
+        */
+        $mode = get_option( 'vcpg_output_mode', 'html' );
 
         $country_code = isset($data['country_code'])
             ? sanitize_key($data['country_code'])
@@ -105,9 +118,9 @@ class VCPG_Page_Generator
         );
 
 
-        $service_keyword = sanitize_title(
-            $data['service_keyword']
-        );
+        $service_keyword = isset($data['service_keyword'])
+            ? sanitize_title($data['service_keyword'])
+            : sanitize_title($service);
 
 
 
@@ -153,25 +166,6 @@ class VCPG_Page_Generator
             )
 
         );
-
-
-
-
-
-        if($existing_content)
-        {
-
-            return array(
-
-                'status'=>false,
-
-                'message'=>'Page already exists',
-
-                'page_id'=>''
-
-            );
-
-        }
 
 
 
@@ -245,17 +239,83 @@ class VCPG_Page_Generator
 
         if($existing_page)
         {
+            $data['page_title'] = $page_title;
+
+            if ( $mode === 'elementor' ) {
+
+                $renderer       = new VCPG_Elementor_Renderer();
+                $tpl_content    = $renderer->load_template_content();
+                $elementor_content = $tpl_content !== null
+                    ? $renderer->build_elementor_content( $tpl_content, $data )
+                    : null;
+
+                if ( $elementor_content === null ) {
+                    // Renderer returned null — fall back to HTML mode for this page.
+                    error_log( 'VCPG create_page (update): Elementor renderer returned null, falling back to HTML mode.' );
+                    $html_content = $this->elementor_builder->build_html( $data );
+                    wp_update_post( array(
+                        'ID'           => $existing_page->ID,
+                        'post_content' => $html_content,
+                    ) );
+                } else {
+                    wp_update_post( array(
+                        'ID'           => $existing_page->ID,
+                        'post_content' => '',
+                    ) );
+                    update_post_meta( $existing_page->ID, '_elementor_data', wp_slash( wp_json_encode( $elementor_content ) ) );
+                    update_post_meta( $existing_page->ID, '_elementor_edit_mode', 'builder' );
+                    update_post_meta( $existing_page->ID, '_elementor_template_type', 'wp-page' );
+                    update_post_meta( $existing_page->ID, '_elementor_version', defined( 'ELEMENTOR_VERSION' ) ? ELEMENTOR_VERSION : '3.23.0' );
+                    update_post_meta( $existing_page->ID, '_wp_page_template', 'default' );
+                    try {
+                        if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
+                            ( new \Elementor\Core\Files\CSS\Post( $existing_page->ID ) )->update();
+                        }
+                    } catch ( \Throwable $css_err ) {
+                        error_log( 'VCPG Elementor CSS regen failed (update): ' . $css_err->getMessage() );
+                    }
+                }
+
+            } else {
+
+                // html mode — identical to previous behaviour
+                $elementor_content = $this->get_template_content( $data );
+                $html_content      = $this->elementor_builder->build_html( $data );
+
+                wp_update_post( array(
+                    'ID'           => $existing_page->ID,
+                    'post_content' => $html_content
+                ) );
+
+                update_post_meta( $existing_page->ID, '_elementor_data', wp_slash( wp_json_encode( $elementor_content ) ) );
+                update_post_meta( $existing_page->ID, '_elementor_edit_mode', 'builder' );
+                update_post_meta( $existing_page->ID, '_elementor_template_type', 'wp-page' );
+                update_post_meta( $existing_page->ID, '_elementor_version', '3.23.0' );
+                update_post_meta( $existing_page->ID, '_wp_page_template', 'default' );
+
+                if( class_exists( '\Elementor\Plugin' ) && isset( \Elementor\Plugin::$instance->documents ) )
+                {
+                    $doc = \Elementor\Plugin::$instance->documents->get( $existing_page->ID );
+                    if( $doc )
+                    {
+                        $doc->save( array( 'elements' => $elementor_content ) );
+                    }
+                    if( isset( \Elementor\Plugin::$instance->files_manager ) )
+                    {
+                        \Elementor\Plugin::$instance->files_manager->clear_cache();
+                    }
+                }
+
+            } // end mode switch
+
+            update_post_meta( $existing_page->ID, '_vcpg_page', '1' );
+            clean_post_cache( $existing_page->ID );
 
             return array(
-
-                'status'=>false,
-
-                'message'=>'WordPress page already exists',
-
-                'page_id'=>$existing_page->ID
-
+                'status'  => true,
+                'message' => 'Existing WordPress page (ID: ' . $existing_page->ID . ') was updated with the latest Elementor template!',
+                'page_id' => $existing_page->ID
             );
-
         }
 
 
@@ -414,44 +474,42 @@ class VCPG_Page_Generator
         Generate Template Content
         */
 
-        $content = $this->get_template_content(
+        if ( $mode === 'elementor' ) {
 
-            $data
+            $renderer    = new VCPG_Elementor_Renderer();
+            $tpl_content = $renderer->load_template_content();
 
-        );
+            if ( $tpl_content !== null ) {
+                $elementor_content = $renderer->build_elementor_content( $tpl_content, $data );
+            } else {
+                $elementor_content = null;
+            }
 
+            if ( $elementor_content === null ) {
+                // Renderer returned null — fall back to HTML mode for this page.
+                error_log( 'VCPG create_page (insert): Elementor renderer returned null, falling back to HTML mode.' );
+                $mode = 'html';
+            }
 
+        }
 
+        if ( $mode === 'html' ) {
+            $elementor_content = $this->get_template_content( $data );
+        }
 
-
-        /*
-        Create City Page
-        */
-
+        $html_content = ( $mode === 'html' )
+            ? $this->elementor_builder->build_html( $data )
+            : '';
 
         $page_id = wp_insert_post(
-
             array(
-
-                'post_title' => $page_title,
-
-
-                'post_name' => $page_slug,
-
-
-                'post_content' => $content,
-
-
-                'post_status' => 'publish',
-
-
-                'post_type' => 'page',
-
-
-                'post_parent' => $country_page_id
-
+                'post_title'   => $page_title,
+                'post_name'    => $page_slug,
+                'post_content' => $html_content,
+                'post_status'  => 'publish',
+                'post_type'    => 'page',
+                'post_parent'  => $country_page_id
             )
-
         );
 
 
@@ -483,6 +541,78 @@ class VCPG_Page_Generator
             '_vcpg_page',
             '1'
         );
+
+        /*
+        Save Elementor builder data so the page renders as a
+        fully editable Elementor landing page when Elementor is active.
+        */
+
+        if ( $mode === 'elementor' && !empty( $elementor_content ) ) {
+
+            $elementor_version = defined( 'ELEMENTOR_VERSION' )
+                ? ELEMENTOR_VERSION
+                : '3.23.0';
+
+            update_post_meta( $page_id, '_elementor_edit_mode',     'builder' );
+            update_post_meta( $page_id, '_elementor_data',          wp_slash( wp_json_encode( $elementor_content ) ) );
+            update_post_meta( $page_id, '_elementor_template_type', 'wp-page' );
+            update_post_meta( $page_id, '_elementor_version',       $elementor_version );
+            update_post_meta( $page_id, '_wp_page_template',        'default' );
+
+            try {
+                if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
+                    ( new \Elementor\Core\Files\CSS\Post( $page_id ) )->update();
+                }
+            } catch ( \Throwable $css_err ) {
+                error_log( 'VCPG Elementor CSS regen failed (insert): ' . $css_err->getMessage() );
+            }
+
+        } elseif ( $mode === 'html' && !empty( $elementor_content ) ) {
+
+            // html mode — identical to previous behaviour
+            $elementor_version = defined('ELEMENTOR_VERSION')
+                ? ELEMENTOR_VERSION
+                : '3.23.0';
+
+            update_post_meta(
+                $page_id,
+                '_elementor_edit_mode',
+                'builder'
+            );
+
+            update_post_meta(
+                $page_id,
+                '_elementor_data',
+                wp_slash(wp_json_encode($elementor_content))
+            );
+
+            update_post_meta(
+                $page_id,
+                '_elementor_template_type',
+                'wp-page'
+            );
+
+            update_post_meta(
+                $page_id,
+                '_elementor_version',
+                $elementor_version
+            );
+
+            update_post_meta($page_id, '_wp_page_template', 'default');
+
+            if(class_exists('\Elementor\Plugin') && isset(\Elementor\Plugin::$instance->documents))
+            {
+                $doc = \Elementor\Plugin::$instance->documents->get($page_id);
+                if($doc)
+                {
+                    $doc->save(array('elements' => $elementor_content));
+                }
+                if(isset(\Elementor\Plugin::$instance->files_manager))
+                {
+                    \Elementor\Plugin::$instance->files_manager->clear_cache();
+                }
+            }
+        }
 
         /*
         Mark the assigned keywords as covered by this page so the
@@ -705,103 +835,12 @@ class VCPG_Page_Generator
 
     public function get_template_content($data)
     {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'vcpg_templates';
-
-        $template = $wpdb->get_row(
-            "SELECT * FROM $table_name ORDER BY id DESC LIMIT 1"
-        );
-
-        if(!$template)
+        if(!$this->elementor_builder)
         {
-            return $this->default_template();
+            return array();
         }
 
-        $content = $template->content;
-
-        $search = array(
-            '{{service}}',
-            '{{city}}',
-            '{{state}}',
-            '{{country}}',
-            '{{country_code}}',
-            '{{company_name}}',
-            '{{logo}}',
-            '{{website}}',
-            '{{phone}}',
-            '{{email}}',
-            '{{hero_title}}',
-            '{{hero_subtitle}}',
-            '{{hero_description}}',
-            '{{about_title}}',
-            '{{about_content}}',
-            '{{benefits_description}}',
-            '{{benefit_cards}}',
-            '{{why_choose}}',
-            '{{why_choose_description}}',
-            '{{service_cards}}',
-            '{{services_description}}',
-            '{{local_insight}}',
-            '{{technology}}',
-            '{{technology_description}}',
-            '{{faq}}',
-            '{{faq_description}}',
-            '{{cta_title}}',
-            '{{cta_content}}',
-            '{{stats}}',
-            '{{testimonial}}',
-            '{{testimonials_description}}',
-            '{{difference_content}}',
-            '{{process_title}}',
-            '{{process_description}}',
-            '{{process_steps}}',
-            '{{services_title}}',
-            '{{case_studies_description}}',
-            '{{case_studies}}'
-        );
-
-        $replace = array(            isset($data['service']) ? $data['service'] : '',
-            isset($data['city']) ? $data['city'] : '',
-            isset($data['state']) ? $data['state'] : '',
-            isset($data['country']) ? $data['country'] : '',
-            isset($data['country_code']) ? $data['country_code'] : '',
-            'Vispan Solutions',
-            'Vispan Solutions',
-            'https://vispansolutions.com',
-            '+91 XXXXX XXXXX',
-            'info@vispansolutions.com',
-            isset($data['hero_title']) ? $data['hero_title'] : '',
-            isset($data['hero_subtitle']) ? $data['hero_subtitle'] : '',
-            isset($data['hero_description']) ? $data['hero_description'] : '',
-            isset($data['about_title']) ? $data['about_title'] : 'About '.(isset($data['company_name']) ? $data['company_name'] : 'Vispan Solutions'),
-            isset($data['about_content']) ? $data['about_content'] : '',
-            isset($data['benefits_description']) ? $data['benefits_description'] : '',
-            $this->generate_benefit_cards($data),
-            $this->generate_why_choose($data),
-            isset($data['why_choose_description']) ? $data['why_choose_description'] : '',
-            $this->generate_service_cards($data),
-            isset($data['services_description']) ? $data['services_description'] : '',
-            isset($data['local_insight']) ? $data['local_insight'] : '',
-            $this->generate_technology($data),
-            isset($data['technology_description']) ? $data['technology_description'] : '',
-            $this->generate_faq($data),
-            isset($data['faq_description']) ? $data['faq_description'] : '',
-            isset($data['cta_title']) ? $data['cta_title'] : '',
-            isset($data['cta_content']) ? $data['cta_content'] : '',
-            $this->generate_stats($data),
-            $this->generate_testimonial($data),
-            isset($data['testimonials_description']) ? $data['testimonials_description'] : '',
-            isset($data['difference_content']) ? $data['difference_content'] : '',
-            isset($data['process_title']) ? $data['process_title'] : 'Our Proven Process',
-            isset($data['process_description']) ? $data['process_description'] : 'A proven methodology that drives measurable growth.',
-            $this->generate_process_steps($data),
-            $this->generate_services_title($data),
-            isset($data['case_studies_description']) ? $data['case_studies_description'] : 'We deliver measurable outcomes for businesses across industries, no matter where they are.',
-            $this->generate_case_studies($data)
-        );
-
-        return str_replace($search, $replace, $content);
+        return $this->elementor_builder->build($data);
     }
 
     private function generate_services_title($data)
@@ -872,7 +911,7 @@ class VCPG_Page_Generator
         return implode(' ', $output);
     }
 
-    private function generate_case_studies($data)
+    public static function generate_case_studies($data)
     {
         $items = isset($data['case_studies']) && is_array($data['case_studies'])
             ? $data['case_studies']
@@ -902,23 +941,23 @@ class VCPG_Page_Generator
                 continue;
             }
 
-            $html .= '<div class="vp-case-card">';
-            $html .= '<div class="vp-case-top">';
-            $html .= '<span class="vp-case-client">' . $client . '</span>';
+            $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;padding:28px;box-shadow:0 10px 25px rgba(0,0,0,0.05);display:flex;flex-direction:column;text-align:left;">';
+            $html .= '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+            $html .= '<span style="font-weight:700;color:#0A3663;font-size:1.05rem;">' . $client . '</span>';
             if(!empty($industry))
             {
-                $html .= '<span class="vp-case-industry">' . $industry . '</span>';
+                $html .= '<span style="background:#F1F5F9;color:#475569;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;">' . $industry . '</span>';
             }
             $html .= '</div>';
-            $html .= '<div class="vp-case-result">' . $result . '</div>';
-            $html .= '<p class="vp-case-summary">' . $summary . '</p>';
+            $html .= '<div style="color:#0B63F6;font-size:1.25rem;font-weight:800;margin-bottom:10px;">' . $result . '</div>';
+            $html .= '<p style="color:#475569;font-size:0.88rem;line-height:1.65;margin:0;">' . $summary . '</p>';
             $html .= '</div>';
         }
 
         return $html;
     }
 
-    private function generate_process_steps($data)
+    public static function generate_process_steps($data)
     {
         if(isset($data['process']) && is_array($data['process']))
         {
@@ -929,10 +968,10 @@ class VCPG_Page_Generator
                 $title = isset($step['title']) ? esc_html($step['title']) : '';
                 $desc = isset($step['description']) ? wp_kses_post($step['description']) : '';
                 $num = str_pad((string)$count, 2, '0', STR_PAD_LEFT);
-                $html .= '<div class="vp-process-card">';
-                $html .= '<div class="vp-process-num">' . $num . '</div>';
-                $html .= '<h4>' . $title . '</h4>';
-                $html .= '<p>' . $desc . '</p>';
+                $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.04);text-align:left;">';
+                $html .= '<div style="font-size:1.4rem;font-weight:900;color:#0B63F6;background:#EFF6FF;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">' . $num . '</div>';
+                $html .= '<h4 style="margin:0 0 8px;font-size:1.05rem;font-weight:700;color:#0A3663;">' . $title . '</h4>';
+                $html .= '<p style="color:#475569;font-size:0.88rem;line-height:1.6;margin:0;">' . $desc . '</p>';
                 $html .= '</div>';
                 $count++;
             }
@@ -941,7 +980,7 @@ class VCPG_Page_Generator
         return '';
     }
 
-    private function generate_service_cards($data)
+    public static function generate_service_cards($data)
     {
         if(isset($data['services']) && is_array($data['services']))
         {
@@ -950,9 +989,10 @@ class VCPG_Page_Generator
             {
                 $title = isset($service['title']) ? esc_html($service['title']) : '';
                 $desc = isset($service['description']) ? wp_kses_post($service['description']) : '';
-                $html .= '<div class="vpg-card">';
-                $html .= '<h3>' . $title . '</h3>';
-                $html .= '<p>' . $desc . '</p>';
+                $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;box-shadow:0 10px 25px rgba(0,0,0,0.05);display:flex;flex-direction:column;height:100%;text-align:left;">';
+                $html .= '<div style="font-size:1.6rem;margin-bottom:14px;color:#0B63F6;background:#EFF6FF;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;">⚙️</div>';
+                $html .= '<h3 style="margin:0 0 8px;font-size:1.15rem;font-weight:700;color:#0A3663;">' . $title . '</h3>';
+                $html .= '<p style="color:#475569;font-size:0.9rem;line-height:1.65;margin:0;">' . $desc . '</p>';
                 $html .= '</div>';
             }
             return $html;
@@ -960,7 +1000,7 @@ class VCPG_Page_Generator
         return isset($data['service_list']) ? $data['service_list'] : '';
     }
 
-    private function generate_benefit_cards($data)
+    public static function generate_benefit_cards($data)
     {
         if(isset($data['benefits']) && is_array($data['benefits']))
         {
@@ -969,10 +1009,10 @@ class VCPG_Page_Generator
             {
                 $title = isset($benefit['title']) ? esc_html($benefit['title']) : '';
                 $desc = isset($benefit['description']) ? wp_kses_post($benefit['description']) : '';
-                $html .= '<div class="vpg-card">';
-                $html .= '<div class="vpg-icon">✦</div>';
-                $html .= '<h3>' . $title . '</h3>';
-                $html .= '<p>' . $desc . '</p>';
+                $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.04);display:flex;flex-direction:column;text-align:left;">';
+                $html .= '<div style="font-size:1.2rem;color:#0B63F6;background:#EFF6FF;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">✦</div>';
+                $html .= '<h3 style="margin:0 0 6px;font-size:1.05rem;font-weight:700;color:#0A3663;">' . $title . '</h3>';
+                $html .= '<p style="color:#475569;font-size:0.88rem;line-height:1.6;margin:0;">' . $desc . '</p>';
                 $html .= '</div>';
             }
             return $html;
@@ -980,7 +1020,7 @@ class VCPG_Page_Generator
         return '';
     }
 
-    private function generate_why_choose($data)
+    public static function generate_why_choose($data)
     {
         if(isset($data['why_choose']) && is_array($data['why_choose']))
         {
@@ -989,10 +1029,10 @@ class VCPG_Page_Generator
             {
                 $title = isset($item['title']) ? esc_html($item['title']) : '';
                 $desc = isset($item['description']) ? wp_kses_post($item['description']) : '';
-                $html .= '<div class="vpg-card">';
-                $html .= '<div class="vpg-icon">✦</div>';
-                $html .= '<h3>' . $title . '</h3>';
-                $html .= '<p>' . $desc . '</p>';
+                $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.04);display:flex;flex-direction:column;text-align:left;">';
+                $html .= '<div style="font-size:1.2rem;color:#0B63F6;background:#EFF6FF;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">✦</div>';
+                $html .= '<h3 style="margin:0 0 6px;font-size:1.05rem;font-weight:700;color:#0A3663;">' . $title . '</h3>';
+                $html .= '<p style="color:#475569;font-size:0.88rem;line-height:1.6;margin:0;">' . $desc . '</p>';
                 $html .= '</div>';
             }
             return $html;
@@ -1025,29 +1065,26 @@ class VCPG_Page_Generator
         return '<p>Template file not found. Please ensure templates/premium-template.html exists.</p>';
     }
 
-    private function generate_technology($data)
+    public static function generate_technology($data)
     {
         if(isset($data['technology']) && is_array($data['technology']))
         {
-            $html = '<ul class="vpg-tech-list">';
+            $html = '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
             foreach($data['technology'] as $tech)
             {
-                if(is_string($tech))
+                $val = is_string($tech) ? $tech : (is_array($tech) && isset($tech['name']) ? $tech['name'] : '');
+                if(!empty($val))
                 {
-                    $html .= '<li>' . esc_html($tech) . '</li>';
-                }
-                elseif(is_array($tech) && isset($tech['name']))
-                {
-                    $html .= '<li>' . esc_html($tech['name']) . '</li>';
+                    $html .= '<span style="background:#F1F5F9;color:#0A3663;border:1px solid #CBD5E1;padding:8px 18px;border-radius:20px;font-weight:600;font-size:0.88rem;">' . esc_html($val) . '</span>';
                 }
             }
-            $html .= '</ul>';
+            $html .= '</div>';
             return $html;
         }
         return '';
     }
 
-    private function generate_faq($data)
+    public static function generate_faq($data)
     {
         if(!isset($data['faq']))
         {
@@ -1069,37 +1106,38 @@ class VCPG_Page_Generator
         {
             $question = isset($item['question']) ? esc_html($item['question']) : '';
             $answer = isset($item['answer']) ? wp_kses_post($item['answer']) : '';
-            $html .= '<details class="vp-faq-item">
-                <summary class="vp-faq-q">' . $question . '</summary>
-                <div class="vp-faq-a">' . $answer . '</div>
-            </details>';
+            $html .= '<details style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.02);overflow:hidden;">';
+            $html .= '<summary style="color:#0A3663;font-weight:700;font-size:1.02rem;padding:16px 20px;cursor:pointer;outline:none;">' . $question . '</summary>';
+            $html .= '<div style="color:#475569;font-size:0.92rem;line-height:1.65;padding:0 20px 18px;border-top:1px solid #F1F5F9;margin-top:4px;">' . $answer . '</div>';
+            $html .= '</details>';
         }
         return $html;
     }
 
-    private function generate_stats($data)
+    public static function generate_stats($data)
     {
         if(isset($data['stats']) && is_array($data['stats']))
         {
-            $html = '';
+            $html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">';
             foreach($data['stats'] as $stat)
             {
                 if(is_array($stat))
                 {
                     $number = isset($stat['number']) ? esc_html($stat['number']) : '';
                     $label = isset($stat['label']) ? esc_html($stat['label']) : '';
-                    $html .= '<div class="vpg-stat">';
-                    $html .= '<span class="vpg-stat-number">' . $number . '</span>';
-                    $html .= '<span class="vpg-stat-label">' . $label . '</span>';
+                    $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.04);text-align:center;">';
+                    $html .= '<span style="display:block;color:#0A3663;font-size:2.2rem;font-weight:900;line-height:1;">' . $number . '</span>';
+                    $html .= '<span style="display:block;color:#475569;font-size:0.88rem;font-weight:600;margin-top:6px;">' . $label . '</span>';
                     $html .= '</div>';
                 }
             }
+            $html .= '</div>';
             return $html;
         }
         return '';
     }
 
-    private function generate_testimonial($data)
+    public static function generate_testimonial($data)
     {
         if(isset($data['testimonials']) && is_array($data['testimonials']))
         {
@@ -1110,14 +1148,14 @@ class VCPG_Page_Generator
                 $role = isset($item['role']) ? esc_html($item['role']) : '';
                 $content = isset($item['content']) ? wp_kses_post($item['content']) : '';
                 $initials = $name ? implode('', array_map(function($n) { return strtoupper($n[0]); }, explode(' ', $name))) : '?';
-                $html .= '<div class="vpg-testimonial-card">';
-                $html .= '<div class="vpg-testimonial-stars">★★★★★</div>';
-                $html .= '<p class="vpg-testimonial-text">"' . $content . '"</p>';
-                $html .= '<div class="vpg-testimonial-author">';
-                $html .= '<div class="vpg-testimonial-avatar">' . $initials . '</div>';
+                $html .= '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.04);margin-bottom:16px;text-align:left;">';
+                $html .= '<div style="color:#F59E0B;font-size:1.2rem;margin-bottom:10px;">★★★★★</div>';
+                $html .= '<p style="color:#334155;font-size:0.95rem;line-height:1.6;font-style:italic;margin-bottom:14px;">"' . $content . '"</p>';
+                $html .= '<div style="display:flex;align-items:center;gap:12px;">';
+                $html .= '<div style="width:40px;height:40px;border-radius:50%;background:#0A3663;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;">' . $initials . '</div>';
                 $html .= '<div>';
-                $html .= '<strong>' . $name . '</strong>';
-                $html .= '<span>' . $role . '</span>';
+                $html .= '<strong style="display:block;color:#0A3663;font-size:0.92rem;">' . $name . '</strong>';
+                $html .= '<span style="color:#64748B;font-size:0.8rem;">' . $role . '</span>';
                 $html .= '</div>';
                 $html .= '</div>';
                 $html .= '</div>';

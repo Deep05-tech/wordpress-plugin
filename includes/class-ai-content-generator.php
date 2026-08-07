@@ -284,8 +284,42 @@ class VCPG_AI_Content_Generator
         \"cta_content\":\"\",
         \"process_title\":\"\",
         \"process_description\":\"\",
-        \"process\":[{\"title\":\"\",\"description\":\"\"}]
+        \"process\":[{\"title\":\"\",\"description\":\"\"}],
+        \"intro_title\":\"\",
+        \"intro_content\":\"\",
+        \"services_heading\":\"\",
+        \"why_choose_heading\":\"\",
+        \"consultation_title\":\"\",
+        \"contact_title\":\"\",
+        \"cta_description\":\"\",
+        \"cta_button\":\"\"
         }
+
+        ARRAY ITEM COUNT REQUIREMENTS (MUST produce exact counts for grid slot alignment):
+        - services: EXACTLY 6 items
+        - benefits: EXACTLY 4 items
+        - why_choose: EXACTLY 4 items
+        - stats: EXACTLY 4 items
+        - process: EXACTLY 4 items
+        - case_studies: EXACTLY 3 items
+        - testimonials: EXACTLY 3 items
+        - faq: EXACTLY 6 items
+        - technology: EXACTLY 6 items
+
+        ADDITIONAL FIELD REQUIREMENTS:
+        - intro_title: Short h2 heading for the intro / \"Why You Need This\" section. 8-14 words. Include the service and city. Do NOT repeat the hero_title wording.
+        - intro_content: EXACTLY 200-220 words divided into 4 detailed paragraphs explaining why the practice or business needs online marketing in that city.
+        - services_heading: Short h2 heading introducing the services grid (e.g., \"Digital Marketing Services in Los Angeles\"). Distinct from services_description.
+        - why_choose_heading: Short h2 heading for the Why Choose Us section (e.g., \"Why Choose Vispan as Your Digital Marketing Partner?\"). Distinct from why_choose_description.
+        - consultation_title: Short h3 heading for the hero-section consultation form card (e.g., \"Get A Free Consultation\").
+        - contact_title: Short h2 heading for the standalone contact / proposal section (e.g., \"Request A Marketing Proposal\").
+        - cta_description: 150-250 words. Closing call-to-action body copy. May overlap thematically with cta_content but must be DIFFERENT wording. Do NOT start with \"Contact us\", \"Reach out\", \"Ready to\", \"If you are looking for\".
+        - cta_button: 3-6 word button label (e.g., \"Get a Free Quote\", \"Start Growing Today\", \"Book Your Strategy Call\").
+
+        NOTE: hero_bg, about_image, services_bg, cta_image are image fields managed
+        separately and do NOT need to be produced by this model.
+        // TODO: wire hero_bg / about_image / services_bg / cta_image to fal.ai
+        //       image generation — see class-openai-provider.php sibling class.
 
         CASE STUDY REQUIREMENTS:
         - Generate 3 case_studies featuring realistic-but-generic client names (avoid real brand names)
@@ -1162,7 +1196,17 @@ class VCPG_AI_Content_Generator
                 'process_title' => $process_titles[$combo_idx],
                 'process_description' => $process_descriptions[$deep_idx],
                 'process' => $process_arrays[$angle_idx],
+                // New Elementor-mode fields — fallback values
+                'intro_title'        => 'Get ' . $svc_name . ' in ' . $city . ': Why Your Business Needs Online Marketing',
+                'intro_content'      => $local_insight_templates[$angle_idx],
+                'services_heading'   => 'Services of ' . $svc_name . ' in ' . $city,
+                'why_choose_heading' => 'Why Choose Us as ' . $svc_name . ' Partner?',
+                'consultation_title' => 'Get A Free Consultation',
+                'contact_title'      => 'Request A Marketing Proposal',
+                'cta_description'    => $cta_opener[$svc_idx] . $cta_body[$angle_idx] . $cta_closer[$city_idx],
+                'cta_button'         => 'Get a Free Quote',
             );
+
 
 
         }
