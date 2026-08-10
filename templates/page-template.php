@@ -32,6 +32,7 @@ html.lenis, html.lenis body {
 
 /* Custom Interactive Cursor Styles */
 .vcpg-custom-cursor-dot {
+  display: none !important;
   width: 8px;
   height: 8px;
   background-color: #FFFFFF;
@@ -45,6 +46,7 @@ html.lenis, html.lenis body {
   transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease;
 }
 .vcpg-custom-cursor-outline {
+  display: none !important;
   width: 40px;
   height: 40px;
   border: 1.5px solid rgba(255, 255, 255, 0.6);
@@ -255,6 +257,7 @@ requestAnimationFrame(raf);
 
 // Custom Interactive Cursor Script
 document.addEventListener('DOMContentLoaded', () => {
+  return; // Temporarily paused trailing mouse-follow cursor
   const dot = document.querySelector('.vcpg-custom-cursor-dot');
   const outline = document.querySelector('.vcpg-custom-cursor-outline');
   

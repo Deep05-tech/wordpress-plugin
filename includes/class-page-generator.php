@@ -113,14 +113,16 @@ class VCPG_Page_Generator
 
 
 
-        $service = sanitize_text_field(
-            $data['service']
-        );
+        $service_variations = $this->get_service_variations($service);
+        $variation_seed = $city . '|' . $state;
+        $hash = md5($variation_seed);
+        $index = hexdec(substr($hash, 0, 4)) % count($service_variations);
+        $selected_service = $service_variations[$index];
 
+        $service = $selected_service;
+        $data['service'] = $selected_service;
 
-        $service_keyword = isset($data['service_keyword'])
-            ? sanitize_title($data['service_keyword'])
-            : sanitize_title($service);
+        $service_keyword = sanitize_title($selected_service);
 
 
 
@@ -852,6 +854,77 @@ class VCPG_Page_Generator
         }
         $clean = preg_replace('/\s+Services$/i', '', $svc);
         return 'Our ' . $clean . ' Services';
+    }
+
+    private function get_service_variations($service)
+    {
+        $service = trim($service);
+        $variations = array($service);
+
+        // Pattern 1: Contains "Marketing Agency" (case insensitive)
+        if (preg_match('/^(.*)\bmarketing\s+agency$/i', $service, $matches)) {
+            $base = trim($matches[1]);
+            $variations[] = $base . ' Marketing Services';
+            $variations[] = $base . ' SEO Agency';
+            $variations[] = $base . ' Advertising Agency';
+            $variations[] = $base . ' Digital Marketing';
+            $variations[] = $base . ' Growth Partner';
+            $variations[] = $base . ' SEO Specialists';
+            $variations[] = $base . ' Marketing Solutions';
+            $variations[] = $base . ' Lead Generation';
+            $variations[] = $base . ' SEO Experts';
+            $variations[] = $base . ' Online Marketing';
+            if (stripos($base, 'law') !== false || stripos($base, 'legal') !== false || stripos($base, 'attorney') !== false) {
+                $variations[] = 'Legal Marketing Agency';
+                $variations[] = 'Attorney Marketing Services';
+                $variations[] = 'Lawyer SEO Agency';
+                $variations[] = 'Law Firm SEO Experts';
+                $variations[] = 'Legal Advertising Specialists';
+                $variations[] = 'Lawyer Lead Generation';
+                $variations[] = 'Law Firm Digital Growth';
+            }
+        }
+        // Pattern 2: Contains "SEO Agency"
+        elseif (preg_match('/^(.*)\bseo\s+agency$/i', $service, $matches)) {
+            $base = trim($matches[1]);
+            $variations[] = $base . ' SEO Services';
+            $variations[] = $base . ' SEO Experts';
+            $variations[] = $base . ' Search Engine Optimization';
+            $variations[] = $base . ' Search Marketing';
+            $variations[] = $base . ' Organic Traffic Agency';
+            $variations[] = $base . ' SEO Specialists';
+            $variations[] = $base . ' SEO Solutions';
+            $variations[] = $base . ' Local SEO Agency';
+        }
+        // Pattern 3: General Fallback
+        else {
+            $variations[] = $service . ' Services';
+            $variations[] = $service . ' Agency';
+            $variations[] = $service . ' Experts';
+            $variations[] = $service . ' Specialists';
+            $variations[] = $service . ' Solutions';
+            $variations[] = $service . ' Company';
+            $variations[] = $service . ' Consulting';
+            $variations[] = $service . ' Partner';
+            $variations[] = 'Professional ' . $service;
+            $variations[] = 'Top ' . $service;
+        }
+
+        // Filter out duplicate variations and the original service name
+        $unique_vars = array();
+        $seen = array();
+        $seen[strtolower(trim($service))] = true; // Exclude original service
+        foreach ($variations as $var) {
+            $key = strtolower(trim($var));
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique_vars[] = $var;
+            }
+        }
+        if (empty($unique_vars)) {
+            $unique_vars[] = $service;
+        }
+        return $unique_vars;
     }
 
     private function build_page_title($service, $city, $state)
