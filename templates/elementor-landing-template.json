@@ -730,6 +730,16 @@
             "settings": {
                 "background_color": "#071526",
                 "background_background": "classic",
+                "background_image": {
+                    "url": "{{contact_bg}}",
+                    "id": "",
+                    "source": "url"
+                },
+                "background_position": "center center",
+                "background_repeat": "no-repeat",
+                "background_size": "cover",
+                "background_overlay_background": "classic",
+                "background_overlay_color": "rgba(7, 21, 38, 0.7)",
                 "padding": {
                     "unit": "px",
                     "top": "60",

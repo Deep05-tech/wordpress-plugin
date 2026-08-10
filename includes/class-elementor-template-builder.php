@@ -210,7 +210,7 @@ class VCPG_Elementor_Template_Builder
         $cta_description_html = implode('', $cta_html_paras);
 
         $logo_uri         = $this->svg_uri($this->logo_svg());
-        $hero_bg_uri      = $this->get_asset_url('section-1.webp');
+        $hero_bg_uri      = $this->get_asset_url('hero-bg.png');
         $services_bg_uri  = $this->get_asset_url('section-5.jpg');
         $about_uri        = $this->get_asset_url('section-3.webp');
         $cta_bg_uri       = $this->get_asset_url('section-5.jpg');
@@ -469,26 +469,21 @@ class VCPG_Elementor_Template_Builder
 
         // Tab Panels Box
         $html .= '  <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:4px;padding:36px 40px;box-shadow:0 2px 10px rgba(0,0,0,0.02);text-align:left;">';
-        
-        // Panel 0
-        $html .= '    <div class="vcpg-tab-panel" style="display:block;">';
-        $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">Vispan Solutions integrates cutting-edge machine learning models to forecast trends and optimize targeting, ensuring campaigns adapt dynamically to changing local consumer behaviors and market conditions in ' . $city . '.</p>';
-        $html .= '    </div>';
 
-        // Panel 1
-        $html .= '    <div class="vcpg-tab-panel" style="display:none;">';
-        $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">Our team brings deep domain expertise across SEO, PPC, branding, and content creation tailored specifically to the ' . $city . ' market, ensuring your business stays ahead of local competitors.</p>';
-        $html .= '    </div>';
+        // Generate keyword-rich panel text (50-60 words each)
+        $panel_texts = array(
+            'Vispan Solutions integrates cutting-edge machine learning models to forecast trends and optimize targeting, ensuring campaigns adapt dynamically to changing local consumer behaviors and market conditions in ' . $city . '. Our data-driven digital marketing strategy leverages advanced analytics, conversion optimization, and performance tracking to deliver measurable ROI for businesses seeking top-rated online marketing solutions.',
+            'Our team brings deep domain expertise across SEO, PPC, social media marketing, branding, and content creation tailored specifically to the ' . $city . ' market. As a trusted digital marketing agency, we combine local search optimization, Google Ads management, and strategic campaign planning to ensure your business stays ahead of local competitors.',
+            'From website optimization and paid ad acquisition to reputation management and email marketing, we manage every touchpoint of your digital presence. Our comprehensive approach includes conversion rate optimization, lead generation, social media management, and search engine marketing — delivering end-to-end strategy with precision for ' . $city . ' businesses.',
+            'Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards, Google Analytics reporting, and actionable growth insights to maximize your ROI. Our advanced marketing analytics cover cost-per-acquisition, customer lifetime value, and multi-channel attribution modeling for ' . $city . ' businesses.',
+        );
 
-        // Panel 2
-        $html .= '    <div class="vcpg-tab-panel" style="display:none;">';
-        $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">From website optimization to paid ad acquisition and reputation management, we manage every touchpoint of your online presence with end-to-end strategy and precision.</p>';
-        $html .= '    </div>';
-
-        // Panel 3
-        $html .= '    <div class="vcpg-tab-panel" style="display:none;">';
-        $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards and actionable growth insights to maximize your ROI.</p>';
-        $html .= '    </div>';
+        for ($i = 0; $i < 4; $i++) {
+            $display = ($i === 0) ? 'block' : 'none';
+            $html .= '    <div class="vcpg-tab-panel" style="display:' . $display . ';">';
+            $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">' . $panel_texts[$i] . '</p>';
+            $html .= '    </div>';
+        }
 
         $html .= '  </div>';
 
@@ -516,6 +511,318 @@ function vcpgSwitchTab(idx) {
 </script>';
         $html .= '</div>';
         return $html;
+    }
+
+    /**
+     * Generate 1000+ service-specific keyword phrases for SEO density.
+     * Keywords are combinations of base terms, modifiers, geo-variations,
+     * and action prefixes tailored to the service type and city.
+     */
+    private function generate_keyword_pool($data)
+    {
+        $city = isset($data['city']) ? $data['city'] : 'Los Angeles';
+        $state = isset($data['state']) ? $data['state'] : 'California';
+        $service = isset($data['service']) ? $data['service'] : 'Digital Marketing';
+        $svc_lower = strtolower($service);
+
+        // --- Base service keywords (vary by service type) ---
+        $common_bases = array(
+            $svc_lower, $svc_lower . ' agency', $svc_lower . ' company',
+            $svc_lower . ' firm', $svc_lower . ' services', $svc_lower . ' solutions',
+            $svc_lower . ' consultant', $svc_lower . ' expert', $svc_lower . ' specialist',
+            $svc_lower . ' provider', $svc_lower . ' team', $svc_lower . ' partner',
+        );
+
+        // Service-specific sub-keywords
+        $service_keywords = $this->get_service_keyword_list($svc_lower);
+
+        // Marketing general keywords
+        $marketing_bases = array(
+            'online marketing', 'internet marketing', 'digital advertising',
+            'brand marketing', 'performance marketing', 'growth marketing',
+            'marketing automation', 'marketing analytics', 'marketing strategy',
+            'lead generation', 'conversion optimization', 'customer acquisition',
+            'digital strategy', 'online advertising', 'digital presence',
+            'online branding', 'digital branding', 'web marketing',
+            'inbound marketing', 'outbound marketing', 'content marketing',
+            'email marketing', 'video marketing', 'mobile marketing',
+            'affiliate marketing', 'influencer marketing', 'remarketing',
+            'retargeting', 'programmatic advertising', 'native advertising',
+            'display advertising', 'search engine marketing', 'paid search',
+            'organic search', 'local search', 'voice search optimization',
+        );
+
+        // Combine all base keywords
+        $all_bases = array_merge($common_bases, $service_keywords, $marketing_bases);
+        $all_bases = array_unique($all_bases);
+
+        // --- Modifiers ---
+        $modifiers = array(
+            'best', 'top', 'leading', 'trusted', 'professional', 'expert',
+            'affordable', 'premium', 'certified', 'experienced', 'reliable',
+            'proven', 'award-winning', 'strategic', 'specialized', 'result-driven',
+            'data-driven', 'innovative', 'custom', 'advanced', 'comprehensive',
+            'effective', 'modern', 'smart', 'targeted', 'scalable',
+            'top-rated', 'reputable', 'established', 'recognized', 'full-service',
+        );
+
+        // --- Geo variations ---
+        $geo_variations = array(
+            'in ' . $city,
+            $city . ' ' . $state,
+            'near ' . $city,
+            $city . ' area',
+            'for ' . $city . ' businesses',
+            $city,
+        );
+
+        // --- Action prefixes ---
+        $action_prefixes = array(
+            'hire', 'find', 'get', 'book', 'contact',
+            'compare', 'choose', 'discover', 'explore',
+        );
+
+        // --- Suffix phrases ---
+        $suffixes = array(
+            'for small business', 'for startups', 'for enterprises',
+            'for local business', 'for ecommerce', 'for healthcare',
+            'for real estate', 'for restaurants', 'for B2B',
+            'for B2C', 'for service providers', 'for professionals',
+            'near me', 'that delivers results', 'with proven ROI',
+            'with free consultation', 'with guaranteed results',
+        );
+
+        $keywords = array();
+
+        // Pattern 1: modifier + base + geo  (e.g., "best digital marketing agency in Los Angeles")
+        foreach ($modifiers as $mod) {
+            foreach ($all_bases as $base) {
+                foreach ($geo_variations as $geo) {
+                    $keywords[] = $mod . ' ' . $base . ' ' . $geo;
+                    if (count($keywords) >= 500) break 3;
+                }
+            }
+        }
+
+        // Pattern 2: base + geo  (e.g., "digital marketing agency Los Angeles California")
+        foreach ($all_bases as $base) {
+            foreach ($geo_variations as $geo) {
+                $keywords[] = $base . ' ' . $geo;
+            }
+        }
+
+        // Pattern 3: action + modifier + base + geo  (e.g., "hire best SEO expert in Los Angeles")
+        foreach ($action_prefixes as $action) {
+            foreach ($modifiers as $mod) {
+                foreach ($common_bases as $base) {
+                    $geo = $geo_variations[array_rand($geo_variations)];
+                    $keywords[] = $action . ' ' . $mod . ' ' . $base . ' ' . $geo;
+                    if (count($keywords) >= 900) break 3;
+                }
+            }
+        }
+
+        // Pattern 4: base + suffix  (e.g., "digital marketing for small business")
+        foreach ($all_bases as $base) {
+            foreach ($suffixes as $suffix) {
+                $keywords[] = $base . ' ' . $suffix;
+            }
+        }
+
+        // Pattern 5: modifier + base + suffix  (e.g., "affordable SEO services for startups")
+        foreach ($modifiers as $mod) {
+            foreach ($common_bases as $base) {
+                $suffix = $suffixes[array_rand($suffixes)];
+                $keywords[] = $mod . ' ' . $base . ' ' . $suffix;
+            }
+        }
+
+        // Pattern 6: city-specific long-tail  (e.g., "Los Angeles digital marketing agency near me")
+        $longtail_templates = array(
+            $city . ' ' . $svc_lower . ' agency near me',
+            $city . ' ' . $svc_lower . ' company reviews',
+            $city . ' ' . $svc_lower . ' pricing',
+            $city . ' ' . $svc_lower . ' packages',
+            $city . ' ' . $svc_lower . ' cost',
+            $city . ' ' . $svc_lower . ' quotes',
+            $city . ' ' . $svc_lower . ' consultation',
+            $city . ' ' . $svc_lower . ' free audit',
+            'how much does ' . $svc_lower . ' cost in ' . $city,
+            'why hire a ' . $svc_lower . ' agency in ' . $city,
+            $svc_lower . ' ROI for ' . $city . ' businesses',
+            $svc_lower . ' trends in ' . $city . ' ' . date('Y'),
+            $svc_lower . ' case studies ' . $city,
+            $svc_lower . ' success stories ' . $city,
+            $city . ' ' . $state . ' ' . $svc_lower . ' experts',
+            'local ' . $svc_lower . ' ' . $city,
+            $svc_lower . ' for ' . $city . ' startups',
+            $svc_lower . ' for ' . $city . ' small business',
+            $svc_lower . ' agency ' . $city . ' ' . $state,
+            'white label ' . $svc_lower . ' ' . $city,
+            'outsource ' . $svc_lower . ' ' . $city,
+            $svc_lower . ' proposal ' . $city,
+            $svc_lower . ' strategy ' . $city,
+            $svc_lower . ' audit ' . $city,
+            $svc_lower . ' report ' . $city,
+        );
+        $keywords = array_merge($keywords, $longtail_templates);
+
+        // Deduplicate and clean
+        $keywords = array_map('strtolower', $keywords);
+        $keywords = array_map('trim', $keywords);
+        $keywords = array_unique($keywords);
+        $keywords = array_values($keywords);
+
+        // Shuffle for natural distribution
+        shuffle($keywords);
+
+        // Ensure minimum 1000
+        if (count($keywords) < 1000) {
+            // Generate additional geo combinations to hit 1000
+            $extra_geos = array(
+                'around ' . $city, 'close to ' . $city, $city . ' metro',
+                $city . ' downtown', $city . ' county', 'greater ' . $city,
+                $state . ' ' . $city, $city . ' and surrounding areas',
+            );
+            foreach ($extra_geos as $eg) {
+                foreach ($all_bases as $base) {
+                    $keywords[] = $base . ' ' . $eg;
+                    if (count($keywords) >= 1200) break 2;
+                }
+            }
+            $keywords = array_unique($keywords);
+            $keywords = array_values($keywords);
+            shuffle($keywords);
+        }
+
+        return $keywords;
+    }
+
+    /**
+     * Return an array of sub-service keyword phrases specific to the service type.
+     */
+    private function get_service_keyword_list($service_lower)
+    {
+        $seo_keywords = array(
+            'seo', 'search engine optimization', 'local seo', 'technical seo',
+            'on-page seo', 'off-page seo', 'link building', 'keyword research',
+            'google maps optimization', 'citation building', 'seo audit',
+            'seo consulting', 'national seo', 'enterprise seo', 'ecommerce seo',
+            'content seo', 'seo strategy', 'organic traffic', 'google ranking',
+            'serp optimization', 'backlink building', 'domain authority',
+            'page speed optimization', 'core web vitals', 'schema markup',
+            'google my business optimization', 'local pack ranking',
+            'seo for dentists', 'seo for lawyers', 'seo for doctors',
+            'seo for contractors', 'seo for restaurants', 'seo for real estate',
+            'monthly seo services', 'seo management', 'seo packages',
+            'white hat seo', 'organic search optimization', 'google penalty recovery',
+            'mobile seo', 'voice search seo', 'video seo', 'image seo',
+            'seo competitor analysis', 'keyword mapping', 'content optimization',
+            'meta tag optimization', 'title tag optimization', 'internal linking',
+            'xml sitemap', 'robots.txt optimization', 'canonical tags',
+        );
+
+        $ppc_keywords = array(
+            'ppc', 'pay per click', 'google ads', 'google adwords',
+            'facebook ads', 'instagram ads', 'linkedin ads', 'youtube ads',
+            'display advertising', 'remarketing', 'retargeting',
+            'shopping ads', 'ppc management', 'ppc agency', 'paid search',
+            'ad campaign management', 'bid management', 'quality score optimization',
+            'landing page optimization', 'ad copywriting', 'conversion tracking',
+            'cost per click optimization', 'cost per acquisition', 'roas optimization',
+            'google shopping', 'performance max campaigns', 'responsive search ads',
+            'dynamic search ads', 'call-only ads', 'app install campaigns',
+            'ppc audit', 'ppc strategy', 'negative keyword management',
+            'ad extensions', 'audience targeting', 'lookalike audiences',
+            'custom audiences', 'geo-targeted ads', 'dayparting',
+            'ad scheduling', 'a/b testing ads', 'ad creative optimization',
+            'microsoft ads', 'bing ads', 'amazon ads', 'tiktok ads',
+            'twitter ads', 'pinterest ads', 'snapchat ads', 'programmatic ads',
+        );
+
+        $social_keywords = array(
+            'social media marketing', 'social media management', 'social media strategy',
+            'social media advertising', 'facebook marketing', 'instagram marketing',
+            'linkedin marketing', 'twitter marketing', 'tiktok marketing',
+            'youtube marketing', 'pinterest marketing', 'social media content',
+            'social media branding', 'community management', 'social media analytics',
+            'influencer marketing', 'social media campaigns', 'social media audit',
+            'social media optimization', 'social media engagement',
+            'social media for business', 'social media posting', 'content calendar',
+            'social media scheduling', 'organic social media', 'paid social media',
+            'social media roi', 'social media reputation', 'social listening',
+            'user-generated content', 'social commerce', 'shoppable posts',
+            'reels marketing', 'stories marketing', 'live streaming marketing',
+            'social media customer service', 'brand awareness campaigns',
+        );
+
+        $web_design_keywords = array(
+            'web design', 'website design', 'website development', 'web development',
+            'responsive web design', 'mobile-first design', 'ecommerce website',
+            'wordpress development', 'shopify development', 'custom web design',
+            'landing page design', 'ui/ux design', 'website redesign',
+            'website maintenance', 'website hosting', 'website speed optimization',
+            'website security', 'ssl certificate', 'website migration',
+            'website analytics setup', 'conversion-focused design',
+            'cms development', 'website copywriting', 'website seo',
+            'portfolio website', 'corporate website', 'small business website',
+            'website accessibility', 'ada compliant website', 'website audit',
+            'website consulting', 'website support', 'website updates',
+            'website backup', 'domain registration', 'website builder',
+        );
+
+        $content_keywords = array(
+            'content marketing', 'content strategy', 'blog writing',
+            'article writing', 'copywriting', 'seo content writing',
+            'content creation', 'content distribution', 'content optimization',
+            'content calendar', 'editorial planning', 'thought leadership',
+            'whitepapers', 'case studies', 'ebooks', 'infographics',
+            'video content', 'podcast production', 'email newsletters',
+            'press releases', 'ghostwriting', 'technical writing',
+            'brand storytelling', 'content audit', 'content gap analysis',
+            'pillar page strategy', 'topic cluster strategy', 'evergreen content',
+            'content repurposing', 'content performance tracking',
+        );
+
+        $general_digital = array(
+            'digital marketing', 'online marketing', 'internet marketing',
+            'digital strategy', 'marketing consulting', 'brand strategy',
+            'competitive analysis', 'market research', 'customer journey mapping',
+            'conversion rate optimization', 'cro', 'analytics setup',
+            'google analytics', 'google tag manager', 'heatmap analysis',
+            'funnel optimization', 'lead nurturing', 'email marketing',
+            'marketing automation', 'crm integration', 'hubspot marketing',
+            'salesforce marketing', 'mailchimp marketing', 'drip campaigns',
+            'reputation management', 'online reputation', 'review management',
+            'google reviews', 'yelp marketing', 'public relations',
+            'crisis management', 'brand monitoring', 'media buying',
+        );
+
+        // Combine based on service type detection
+        $all_keywords = $general_digital;
+
+        if (stripos($service_lower, 'seo') !== false || stripos($service_lower, 'search') !== false) {
+            $all_keywords = array_merge($all_keywords, $seo_keywords);
+        }
+        if (stripos($service_lower, 'ppc') !== false || stripos($service_lower, 'ads') !== false || stripos($service_lower, 'advertising') !== false || stripos($service_lower, 'paid') !== false) {
+            $all_keywords = array_merge($all_keywords, $ppc_keywords);
+        }
+        if (stripos($service_lower, 'social') !== false || stripos($service_lower, 'media') !== false) {
+            $all_keywords = array_merge($all_keywords, $social_keywords);
+        }
+        if (stripos($service_lower, 'web') !== false || stripos($service_lower, 'design') !== false || stripos($service_lower, 'development') !== false) {
+            $all_keywords = array_merge($all_keywords, $web_design_keywords);
+        }
+        if (stripos($service_lower, 'content') !== false || stripos($service_lower, 'writing') !== false || stripos($service_lower, 'blog') !== false) {
+            $all_keywords = array_merge($all_keywords, $content_keywords);
+        }
+
+        // For generic "digital marketing" or unmatched services, include everything
+        if (stripos($service_lower, 'digital marketing') !== false || stripos($service_lower, 'marketing agency') !== false) {
+            $all_keywords = array_merge($all_keywords, $seo_keywords, $ppc_keywords, $social_keywords, $web_design_keywords, $content_keywords);
+        }
+
+        return array_unique($all_keywords);
     }
 
     private function testimonial_html($data)
