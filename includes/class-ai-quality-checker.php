@@ -509,6 +509,91 @@ class VCPG_AI_Quality_Checker
         );
 
 
+        /*
+        Strict Keyword Density Check (Max 3% for individual and overall terms)
+        */
+        $clean_all_text = strtolower(strip_tags($all_text));
+        
+        // Clean text: replace non-alphanumeric (except space and dash) with spaces to preserve word boundaries
+        $words_text = preg_replace('/[^\w\s\-]/u', ' ', $clean_all_text);
+        $words_text = preg_replace('/\s+/', ' ', $words_text);
+        $words_text = trim($words_text);
+        
+        $words_array = array_filter(explode(' ', $words_text));
+        $total_words_count = count($words_array);
+        $density_passed = true;
+        
+        if ($total_words_count > 0) {
+            // 1. Individual word density check (excluding common stop words)
+            $stop_words = array(
+                'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'this', 'with', 'for', 'on', 'as', 'at', 'by', 'it', 'an', 'be', 'are', 'was', 'were', 'or', 'from', 'your', 'our', 'we', 'us', 'you', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its', 'about', 'more', 'how', 'why', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'then', 'else', 'than', 'so', 'up', 'down', 'out', 'into', 'over', 'under', 'again', 'further', 'once', 'here', 'there', 'when', 'where', 'all', 'any', 'both', 'each', 'few', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
+            );
+            
+            $word_counts = array_count_values($words_array);
+            foreach ($word_counts as $word => $count) {
+                if (strlen($word) < 3) {
+                    continue; // ignore very short words
+                }
+                if (in_array($word, $stop_words)) {
+                    continue;
+                }
+                
+                $density = ($count / $total_words_count) * 100;
+                if ($density > 3.0) {
+                    $score -= 20;
+                    $density_passed = false;
+                    $issues[] = "Individual keyword density for '" . $word . "' is too high: " . round($density, 2) . "% (max 3%)";
+                }
+            }
+            
+            // 2. Phrase density check for target keywords and the service name
+            $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+                ? array_values(array_filter($data['target_keywords']))
+                : array();
+            
+            $phrases_to_check = array_merge(array($data['service']), $target_keywords);
+            $phrases_to_check = array_unique(array_map('strtolower', array_filter($phrases_to_check)));
+            
+            $total_phrase_words_matched = 0;
+            
+            foreach ($phrases_to_check as $phrase) {
+                $phrase = trim($phrase);
+                if (empty($phrase)) {
+                    continue;
+                }
+                
+                // Count occurrences using word boundary matching to ensure we don't match parts of words
+                $regex = '/\b' . preg_quote($phrase, '/') . '\b/i';
+                $matches = array();
+                $count = preg_match_all($regex, $clean_all_text, $matches);
+                
+                if ($count > 0) {
+                    $phrase_word_count = count(array_filter(explode(' ', preg_replace('/[^\w\s\-]/u', ' ', $phrase))));
+                    if ($phrase_word_count === 0) {
+                        $phrase_word_count = 1;
+                    }
+                    $density = ($count * $phrase_word_count / $total_words_count) * 100;
+                    
+                    $total_phrase_words_matched += ($count * $phrase_word_count);
+                    
+                    if ($density > 3.0) {
+                        $score -= 20;
+                        $density_passed = false;
+                        $issues[] = "Keyword density for phrase '" . $phrase . "' is too high: " . round($density, 2) . "% (max 3%)";
+                    }
+                }
+            }
+            
+            // 3. Overall target keywords combined density check
+            $overall_density = ($total_phrase_words_matched / $total_words_count) * 100;
+            if ($overall_density > 3.0) {
+                $score -= 20;
+                $density_passed = false;
+                $issues[] = "Overall target keyword density is too high: " . round($overall_density, 2) . "% (max 3%)";
+            }
+        }
+
+
         if($score < 0)
         {
 
@@ -538,11 +623,11 @@ class VCPG_AI_Quality_Checker
 
         return array(
 
-            'approved'=>$score >= 85,
+            'approved'=>($score >= 85 && $density_passed),
 
             'score'=>$score,
 
-            'issues'=>$score >= 85 ? array() : $issues,
+            'issues'=>($score >= 85 && $density_passed) ? array() : $issues,
 
             'content'=>$content
 
@@ -838,6 +923,151 @@ class VCPG_AI_Quality_Checker
 
     }
 
+    public function sanitize_density($content, $data)
+    {
+        $all_text = '';
+        foreach($content as $key => $value)
+        {
+            if(is_string($value))
+            {
+                $all_text .= ' ' . $value;
+            }
+            elseif(is_array($value))
+            {
+                foreach($value as $item)
+                {
+                    if(is_string($item))
+                    {
+                        $all_text .= ' ' . $item;
+                    }
+                    elseif(is_array($item))
+                    {
+                        foreach($item as $sub)
+                        {
+                            if(is_string($sub))
+                            {
+                                $all_text .= ' ' . $sub;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
+        $clean_all_text = strtolower(strip_tags($all_text));
+        
+        $words_text = preg_replace('/[^\w\s\-]/u', ' ', $clean_all_text);
+        $words_text = preg_replace('/\s+/', ' ', $words_text);
+        $words_text = trim($words_text);
+        
+        $words_array = array_filter(explode(' ', $words_text));
+        $total_words_count = count($words_array);
+        
+        if ($total_words_count <= 0) {
+            return $content;
+        }
+
+        $synonyms_map = array(
+            'digital'    => array('online', 'web', 'interactive', 'virtual'),
+            'marketing'  => array('promotions', 'advertising', 'outreach', 'branding'),
+            'seo'        => array('search visibility', 'optimization', 'rankings'),
+            'ads'        => array('campaigns', 'promotions', 'paid search'),
+            'services'   => array('solutions', 'offerings', 'programs', 'capabilities'),
+            'firm'       => array('agency', 'company', 'organization', 'business'),
+            'practice'   => array('office', 'facility', 'center', 'clinic'),
+            'clinic'     => array('facility', 'center', 'practice', 'office'),
+            'patients'   => array('individuals', 'visitors', 'clients', 'members'),
+            'clients'    => array('customers', 'patrons', 'partners', 'visitors'),
+            'customers'  => array('clients', 'buyers', 'patrons', 'consumers'),
+            'business'   => array('company', 'enterprise', 'organization', 'agency'),
+        );
+
+        $stop_words = array(
+            'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'this', 'with', 'for', 'on', 'as', 'at', 'by', 'it', 'an', 'be', 'are', 'was', 'were', 'or', 'from', 'your', 'our', 'we', 'us', 'you', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its', 'about', 'more', 'how', 'why', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'then', 'else', 'than', 'so', 'up', 'down', 'out', 'into', 'over', 'under', 'again', 'further', 'once', 'here', 'there', 'when', 'where', 'all', 'any', 'both', 'each', 'few', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
+        );
+        
+        $word_counts = array_count_values($words_array);
+        foreach ($word_counts as $word => $count) {
+            if (strlen($word) < 3 || in_array($word, $stop_words)) {
+                continue;
+            }
+            
+            $density = ($count / $total_words_count) * 100;
+            if ($count >= 5 && $density > 2.8) {
+                $target_count = floor(0.025 * $total_words_count);
+                $replacements_needed = $count - $target_count;
+                if ($replacements_needed > 0) {
+                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
+                    $this->replace_text_recursive($content, $word, $syns, $replacements_needed);
+                }
+            }
+        }
+
+        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+            ? array_values(array_filter($data['target_keywords']))
+            : array();
+        
+        $phrases_to_check = array_merge(array($data['service']), $target_keywords);
+        $phrases_to_check = array_unique(array_map('strtolower', array_filter($phrases_to_check)));
+        
+        foreach ($phrases_to_check as $phrase) {
+            $phrase = trim($phrase);
+            if (empty($phrase)) {
+                continue;
+            }
+            
+            $regex = '/\b' . preg_quote($phrase, '/') . '\b/i';
+            $matches = array();
+            $count = preg_match_all($regex, $clean_all_text, $matches);
+            
+            if ($count > 0) {
+                $phrase_word_count = count(array_filter(explode(' ', preg_replace('/[^\w\s\-]/u', ' ', $phrase))));
+                if ($phrase_word_count === 0) {
+                    $phrase_word_count = 1;
+                }
+                $density = ($count * $phrase_word_count / $total_words_count) * 100;
+                
+                if ($count >= 5 && $density > 2.8) {
+                    $target_count = floor((0.025 * $total_words_count) / $phrase_word_count);
+                    $replacements_needed = $count - $target_count;
+                    if ($replacements_needed > 0) {
+                        $phrase_synonyms = array('specialized solutions', 'professional services', 'our campaigns', 'growth strategies');
+                        $this->replace_text_recursive($content, $phrase, $phrase_synonyms, $replacements_needed);
+                    }
+                }
+            }
+        }
+
+        return $content;
+    }
+
+    private function replace_text_recursive(&$item, $word, $synonyms, &$replacements_needed)
+    {
+        if ($replacements_needed <= 0) {
+            return;
+        }
+
+        if (is_string($item)) {
+            $regex = '/\b' . preg_quote($word, '/') . '\b/i';
+            
+            $item = preg_replace_callback($regex, function($matches) use ($synonyms, &$replacements_needed) {
+                if ($replacements_needed > 0) {
+                    $replacements_needed--;
+                    $syn = $synonyms[array_rand($synonyms)];
+                    if ($matches[0] === strtoupper($matches[0])) {
+                        return strtoupper($syn);
+                    } elseif ($matches[0] === ucfirst($matches[0])) {
+                        return ucfirst($syn);
+                    }
+                    return $syn;
+                }
+                return $matches[0];
+            }, $item);
+        } elseif (is_array($item)) {
+            foreach ($item as $key => &$value) {
+                $this->replace_text_recursive($value, $word, $synonyms, $replacements_needed);
+            }
+        }
+    }
 
 }

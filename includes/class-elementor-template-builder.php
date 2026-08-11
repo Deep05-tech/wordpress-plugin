@@ -146,6 +146,8 @@ class VCPG_Elementor_Template_Builder
 
         $home = function_exists('home_url') ? home_url('/') : '/';
 
+        $nouns = $this->get_service_nouns($svc);
+
         $hero_small = $this->t(isset($data['hero_subtitle']) ? $data['hero_subtitle'] : '');
         if(empty($hero_small))
         {
@@ -161,7 +163,7 @@ class VCPG_Elementor_Template_Builder
         $hero_description = $this->t(isset($data['hero_description']) ? $data['hero_description'] : '');
         if(empty($hero_description) || strpos($hero_description, "\n\n") === false)
         {
-            $hero_description = "Welcome to our digital marketing agency in " . $city . "! In " . $city . "’s competitive " . strtolower($svc) . " industry, exceptional services alone are insufficient. Partnering with a top " . strtolower($svc) . " firm can elevate your practice.\n\nWe specialize in customized digital marketing strategies for " . strtolower($svc) . " clinics. Our expertise in tailored designs ensures maximum online visibility, attracting new patients and retaining existing ones.\n\nAs leaders in " . strtolower($svc) . ", we offer solutions from SEO services to engaging social media marketing. Our websites are user-friendly and attractive, helping your practice stand out.\n\nLet us help you grow with top-notch designs, effective " . strtolower($svc) . ", and comprehensive SEO strategies. Our social media marketing and website development will ensure your practice reaches its full potential.";
+            $hero_description = "Welcome to our digital marketing agency in " . $city . "! In " . $city . "’s competitive " . strtolower($svc) . " " . $nouns['business_type'] . " industry, exceptional services alone are insufficient. Partnering with a top " . strtolower($svc) . " " . $nouns['business_type'] . " can elevate your " . $nouns['business_type'] . ".\n\nWe specialize in customized digital marketing strategies for " . strtolower($svc) . " " . $nouns['business_type'] . "s. Our expertise in tailored designs ensures maximum online visibility, attracting new " . $nouns['client_type'] . "s and retaining existing ones.\n\nAs leaders in " . strtolower($svc) . ", we offer solutions from SEO services to engaging social media marketing. Our websites are user-friendly and attractive, helping your " . $nouns['business_type'] . " stand out.\n\nLet us help you grow with top-notch designs, effective " . strtolower($svc) . ", and comprehensive SEO strategies. Our social media marketing and website development will ensure your " . $nouns['business_type'] . " reaches its full potential.";
         }
 
         if(stripos($svc, 'agency') !== false || stripos($svc, 'marketing') !== false) {
@@ -170,7 +172,7 @@ class VCPG_Elementor_Template_Builder
             $about_title = 'Creating a Strong Online Presence for ' . $svc . ' with our Digital Marketing Agency in ' . $city . '.';
         }
 
-        $about_content = "Enhance your business's online presence in " . $city . " with customized digital marketing solutions tailored to your practice. We specialize in optimizing your website for search engines and engaging patients through various social media platforms.\n\nOur comprehensive digital marketing services focus on attracting new clients while fostering loyalty among your current clientele. Partner with us to transform your business and achieve lasting success in the competitive digital landscape.\n\nReach out to us to navigate the complexities of online marketing and realize sustained growth for your practice, utilizing our proven expertise in advertising, web design, SEO strategies, and social media marketing. Together, we can build a thriving online presence for your business.";
+        $about_content = "Enhance your business's online presence in " . $city . " with customized digital marketing solutions tailored to your " . $nouns['business_type'] . ". We specialize in optimizing your website for search engines and engaging " . $nouns['client_type'] . "s through various social media platforms.\n\nOur comprehensive digital marketing services focus on attracting new clients while fostering loyalty among your current clientele. Partner with us to transform your business and achieve lasting success in the competitive digital landscape.\n\nReach out to us to navigate the complexities of online marketing and realize sustained growth for your " . $nouns['business_type'] . ", utilizing our proven expertise in advertising, web design, SEO strategies, and social media marketing. Together, we can build a thriving online presence for your business.";
 
         $about_paras = explode("\n\n", $about_content);
         $about_html_paras = array();
@@ -181,11 +183,11 @@ class VCPG_Elementor_Template_Builder
         }
         $about_content_html = implode('', $about_html_paras);
 
-        $intro_title = 'Get ' . $svc . ' in ' . $city . ': Why Your Clinic Needs Online Marketing in ' . $city;
-        $intro_content = "Unlock the digital revolution in " . strtolower($svc) . " and discover why your clinic must embrace online marketing. Our specialized SEO services for " . strtolower($svc) . " are designed to enhance your practice's visibility and attract new patients. In today's competitive landscape, having a strong online presence is crucial for growth and patient engagement.\n\nWe excel in local SEO for " . strtolower($svc) . ", ensuring your dental office stands out in local searches. As a leading dental SEO agency, we offer tailored strategies that incorporate dental social media marketing and effective dental advertising. Our goal is to help you connect with potential patients in your area and build a loyal patient base.\n\nStrengthen your practice's online presence with our expert SEO dentist services, which are specifically designed to maximize visibility and foster patient engagement. We provide targeted solutions that include enhancing dental designs and optimizing your dentist website to ensure it effectively attracts and retains patients.\n\nTransform your dental clinic in " . $city . " by partnering with us. Our comprehensive services, from innovative SEO dentist techniques to strategic dental social media marketing, will revolutionize your practice. With our expertise, your dentist website will not only shine with captivating dental designs but will also leverage effective dental advertising to drive sustained growth and success in the competitive dental market.";
+        $intro_title = 'Get ' . $svc . ' in ' . $city . ': Why Your ' . ucwords($nouns['business_type']) . ' Needs Online Marketing in ' . $city;
+        $intro_content = "Unlock the digital revolution in " . strtolower($svc) . " and discover why your " . $nouns['business_type'] . " must embrace online marketing. Our specialized SEO services for " . strtolower($svc) . " are designed to enhance your " . $nouns['business_type'] . "'s visibility and attract new " . $nouns['client_type'] . "s. In today's competitive landscape, having a strong online presence is crucial for growth and " . $nouns['client_type'] . " engagement.\n\nWe excel in local SEO for " . strtolower($svc) . ", ensuring your " . $nouns['business_type'] . " stands out in local searches. As a leading " . strtolower($svc) . " agency, we offer tailored strategies that incorporate social media marketing and effective advertising. Our goal is to help you connect with potential " . $nouns['client_type'] . "s in your area and build a loyal " . $nouns['client_type'] . " base.\n\nStrengthen your " . $nouns['business_type'] . "'s online presence with our expert SEO " . $nouns['practitioner'] . " services, which are specifically designed to maximize visibility and foster " . $nouns['client_type'] . " engagement. We provide targeted solutions that include enhancing designs and optimizing your website to ensure it effectively attracts and retains " . $nouns['client_type'] . "s.\n\nTransform your " . $nouns['business_type'] . " in " . $city . " by partnering with us. Our comprehensive services, from innovative SEO " . $nouns['practitioner'] . " techniques to strategic social media marketing, will revolutionize your " . $nouns['business_type'] . ". With our expertise, your website will not only shine with captivating designs but will also leverage effective advertising to drive sustained growth and success in the competitive market.";
 
-        $services_heading = 'Services of ' . $svc . ' for Dentists and Dental Clinics in ' . $city;
-        $services_description = 'Our ' . strtolower($svc) . ' services in ' . $city . ' encompass a range of digital strategies, all working together to achieve your practice\'s unique goals. Here\'s a closer look at some key components:';
+        $services_heading = 'Services of ' . $svc . ' for ' . ucwords($nouns['business_type']) . 's in ' . $city;
+        $services_description = 'Our ' . strtolower($svc) . ' services in ' . $city . ' encompass a range of digital strategies, all working together to achieve your ' . $nouns['business_type'] . '\'s unique goals. Here\'s a closer look at some key components:';
 
         $why_choose_heading = "Distinct Advantages of Partnering with Vispan Solutions' Digital Marketing Experts";
         $why_choose_description = $this->t(isset($data['why_choose_description']) ? $data['why_choose_description'] : '');
@@ -197,7 +199,7 @@ class VCPG_Elementor_Template_Builder
         $cta_description = $this->t(isset($data['cta_content']) ? $data['cta_content'] : '');
         if(empty($cta_description) || strlen($cta_description) > 300 || strlen($cta_description) < 150)
         {
-            $cta_description = "Don't let your business get lost in the digital world of " . $city . ". Our comprehensive digital marketing agency can help you attract new customers, build a strong online presence, and ultimately achieve your practice's growth goals.\n\nContact us today for a free consultation and discuss how we can help your business thrive in the digital age.";
+            $cta_description = "Don't let your business get lost in the digital world of " . $city . ". Our comprehensive digital marketing agency can help you attract new customers, build a strong online presence, and ultimately achieve your " . $nouns['business_type'] . "'s growth goals.\n\nContact us today for a free consultation and discuss how we can help your business thrive in the digital age.";
         }
 
         $cta_paras = explode("\n\n", $cta_description);
@@ -239,7 +241,7 @@ class VCPG_Elementor_Template_Builder
             '{{about_content}}'            => $this->nl($about_content),
             '{{about_content_html}}'       => $about_content_html,
             '{{about_image}}'              => $about_uri,
-            '{{about_features}}'           => $this->about_features_html(),
+            '{{about_features}}'           => $this->about_features_html($nouns),
             '{{stats}}'                   => $this->stats_html($data),
             '{{services_bg}}'              => $services_bg_uri,
             '{{services_heading}}'         => $this->e($services_heading),
@@ -253,7 +255,7 @@ class VCPG_Elementor_Template_Builder
             '{{cta_button}}'               => 'Claim Your Free Audit',
             '{{cta_image}}'                => $cta_bg_uri,
             '{{portfolio_heading}}'        => 'We Succeed When Our Customers Thrive - Our portfolio!',
-            '{{portfolio_description}}'    => 'We\'re committed to helping you grow your clinic and achieve your business goals through strategic digital marketing.',
+            '{{portfolio_description}}'    => 'We\'re committed to helping you grow your ' . $nouns['business_type'] . ' and achieve your business goals through strategic digital marketing.',
             '{{portfolio_images}}'         => $this->portfolio_html(),
             '{{logos}}'                    => $this->logos_html(),
             '{{testimonial}}'              => $this->testimonial_html($data),
@@ -363,27 +365,34 @@ class VCPG_Elementor_Template_Builder
 </form>';
     }
 
-    private function about_features_html()
+    private function about_features_html($nouns = null)
     {
+        if (is_null($nouns)) {
+            $nouns = array(
+                'business_type' => 'business',
+                'client_type'   => 'client',
+                'practitioner'  => 'professional',
+            );
+        }
         $items = array(
             array(
                 'title' => 'Increase appointments',
-                'desc' => 'Convert online interest into confirmed bookings and a growing patient base through online marketing for dentists.',
+                'desc' => 'Convert online interest into confirmed bookings and a growing ' . $nouns['client_type'] . ' base through online marketing.',
                 'svg' => '<svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="28" r="8"/><line x1="8" y1="20" x2="32" y2="4"/><rect x="24" y="6" width="12" height="12"/><polygon points="40,32 44,40 36,40"/></svg>'
             ),
             array(
                 'title' => 'Build Trust and Credibility',
-                'desc' => 'Showcase your expertise, advanced technology, and patient-centric approach.',
+                'desc' => 'Showcase your expertise, advanced technology, and ' . $nouns['client_type'] . '-centric approach.',
                 'svg' => '<svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="15" height="15" rx="1"/><circle cx="13.5" cy="13.5" r="5"/><circle cx="13.5" cy="13.5" r="2"/><rect x="27" y="6" width="15" height="15" rx="1"/><circle cx="34.5" cy="13.5" r="5"/><circle cx="34.5" cy="13.5" r="2"/><rect x="6" y="27" width="15" height="15" rx="1"/><rect x="27" y="27" width="15" height="15" rx="1"/><circle cx="34.5" cy="34.5" r="5"/><circle cx="34.5" cy="34.5" r="2"/></svg>'
             ),
             array(
-                'title' => 'Enhance patient engagement',
+                'title' => 'Enhance ' . $nouns['client_type'] . ' engagement',
                 'desc' => 'Foster strong relationships by providing valuable information and interacting with your audience online.',
                 'svg' => '<svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6L42 16.5V31.5L24 42L6 31.5V16.5L24 6Z"/><path d="M6 16.5L24 27L42 16.5"/><path d="M24 27V42"/></svg>'
             ),
             array(
                 'title' => 'Boost Online visibility',
-                'desc' => 'Improve your search engine ranking and ensure your dental practice appears at the top of local searches.',
+                'desc' => 'Improve your search engine ranking and ensure your ' . $nouns['business_type'] . ' appears at the top of local searches.',
                 'svg' => '<svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 42H42"/><path d="M6 42V6"/><rect x="14" y="22" width="14" height="14"/><path d="M18 30L34 14"/><path d="M24 14H34V24"/></svg>'
             ),
         );
@@ -406,17 +415,20 @@ class VCPG_Elementor_Template_Builder
 
     private function services_html($data)
     {
+        $svc = isset($data['service']) ? $data['service'] : 'Digital Marketing';
+        $nouns = $this->get_service_nouns($svc);
+
         $services = array(
             array(
                 'title' => 'Website Development',
-                'sub' => 'Building a Strong Foundation for Dental clinic',
-                'desc' => 'Understanding your ideal patient will guide the website\'s content and tone. Craft clear and informative content to highlight your services, procedures, and the expertise of your dentists. Use easy-to-understand language and avoid excessive dental jargon. A significant portion of web traffic comes from mobile devices. Ensure your website displays seamlessly on all screen sizes.',
+                'sub' => 'Building a Strong Foundation for Your ' . ucwords($nouns['business_type']),
+                'desc' => 'Understanding your ideal ' . $nouns['client_type'] . ' will guide the website\'s content and tone. Craft clear and informative content to highlight your services, procedures, and the expertise of your ' . $nouns['practitioner'] . 's. Use easy-to-understand language and avoid excessive ' . $nouns['jargon'] . '. A significant portion of web traffic comes from mobile devices. Ensure your website displays seamlessly on all screen sizes.',
                 'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="8" cy="19" r="2"/><circle cx="16" cy="19" r="2"/><path d="M12 7v3M7 12l3-2M17 12l-3-2M8 17l2.5-3.5M16 17l-2.5-3.5"/></svg>'
             ),
             array(
                 'title' => 'Search Engine Optimization',
-                'sub' => 'Dental SEO Service',
-                'desc' => 'We optimize your website and online listings with relevant keywords to ensure your practice appears in local searches for "dentist near me" or specific procedures. We create informative blog posts, articles, and patient education materials that address common dental concerns and establish your dental practice as a trusted source & ensure your website is mobile-friendly, user-friendly, and provides a seamless appointment booking experience.',
+                'sub' => ucwords($nouns['industry_noun']) . ' SEO Service',
+                'desc' => 'We optimize your website and online listings with relevant keywords to ensure your ' . $nouns['business_type'] . ' appears in local searches for "' . $nouns['practitioner'] . ' near me" or specific services. We create informative blog posts, articles, and ' . $nouns['client_type'] . ' education materials that address common ' . $nouns['concerns'] . ' and establish your ' . $nouns['business_type'] . ' as a trusted source & ensure your website is mobile-friendly, user-friendly, and provides a seamless client experience.',
                 'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>'
             ),
             array(
@@ -427,8 +439,8 @@ class VCPG_Elementor_Template_Builder
             ),
             array(
                 'title' => 'Social Media & Branding',
-                'sub' => 'Engage Patients & Build Trust',
-                'desc' => 'Establish and grow your brand presence across key social media channels. We craft compelling visual assets, manage online reputation across local directories, and nurture patient relationships to drive long-term clinic growth.',
+                'sub' => 'Engage ' . ucwords($nouns['client_type']) . 's & Build Trust',
+                'desc' => 'Establish and grow your brand presence across key social media channels. We craft compelling visual assets, manage online reputation across local directories, and nurture ' . $nouns['client_type'] . ' relationships to drive long-term ' . $nouns['business_type'] . ' growth.',
                 'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>'
             ),
         );
@@ -1268,5 +1280,44 @@ function vcpgSwitchTab(idx) {
             return 'data:image/jpeg;base64,' . base64_encode(file_get_contents($file));
         }
         return "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'><rect width='800' height='600' rx='16' fill='#F8FAFC'/><rect x='80' y='80' width='640' height='440' rx='16' fill='#FFFFFF' stroke='#E2E8F0' stroke-width='2'/><text x='400' y='310' font-size='22' font-weight='700' fill='#081828' text-anchor='middle' font-family='Arial'>Digital Marketing Strategy</text></svg>";
+    }
+
+    private function get_service_nouns($service)
+    {
+        $service_lower = strtolower($service);
+        $nouns = array(
+            'business_type' => 'business',
+            'client_type'   => 'client',
+            'industry_noun' => 'industry',
+            'practitioner'  => 'professional',
+            'jargon'        => 'technical jargon',
+            'concerns'      => 'needs',
+            'service_name'  => ucwords($service),
+        );
+
+        if (preg_match('/(law|legal|attorney|lawyer|advocate)/i', $service_lower)) {
+            $nouns['business_type'] = 'firm';
+            $nouns['client_type']   = 'client';
+            $nouns['industry_noun'] = 'legal';
+            $nouns['practitioner']  = 'attorney';
+            $nouns['jargon']        = 'legal jargon';
+            $nouns['concerns']      = 'legal needs';
+        } elseif (preg_match('/(dental|dentist|orthodontist|teeth|smile)/i', $service_lower)) {
+            $nouns['business_type'] = 'practice';
+            $nouns['client_type']   = 'patient';
+            $nouns['industry_noun'] = 'dental';
+            $nouns['practitioner']  = 'dentist';
+            $nouns['jargon']        = 'dental jargon';
+            $nouns['concerns']      = 'dental concerns';
+        } elseif (preg_match('/(medical|clinic|doctor|health|physician|patient)/i', $service_lower)) {
+            $nouns['business_type'] = 'clinic';
+            $nouns['client_type']   = 'patient';
+            $nouns['industry_noun'] = 'healthcare';
+            $nouns['practitioner']  = 'doctor';
+            $nouns['jargon']        = 'medical jargon';
+            $nouns['concerns']      = 'health concerns';
+        }
+
+        return $nouns;
     }
 }

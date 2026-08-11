@@ -424,6 +424,17 @@ class VCPG_AI_Content_Generator
         - Vispan Solutions appears in: hero_description, benefits_description, why_choose_description, difference_content, cta.
         - Vary WHERE Vispan Solutions appears (not always at start of sentence).
 
+        STRICT SERVICE ISOLATION (NO ENTITY BLEEDING):
+        - The page MUST focus EXCLUSIVELY on the service: " . $data['service'] . ".
+        - Absolutely DO NOT reference or bleed into unrelated service niches. For example, if the service is attorney marketing / law firm marketing, do NOT mention dental offices, dentists, clinics, patients, healthcare, medical, treatments, or procedures.
+        - Use appropriate industry terms: use \"clients\", \"cases\", or \"practice\" for legal services, and \"patients\" or \"appointments\" ONLY for healthcare/dental services. For generic services, use \"customers\" or \"clients\".
+        - Do not mix different niches under any circumstances. Keep the industry focus 100% pure and professional.
+
+        STRICT KEYWORD DENSITY LIMIT:
+        - Monitor the frequency of all primary and target keywords (such as '" . $data['service'] . "' and keywords from target list).
+        - Ensure NO individual keyword or phrase exceeds a 3% density (frequency relative to total words) in any section or across the overall document.
+        - Weave keywords naturally into high-quality, readable sentences. Avoid repetitive or spammy phrasing.
+
         IMPORTANT: Every section must be tailored specifically to the service type provided above. Do not write generic marketing content. Use the terminology, challenges, tools, and concepts specific to this service.
 
         OUTPUT: ONLY valid JSON. No markdown. No code fences. No explanations.";
@@ -1234,14 +1245,37 @@ class VCPG_AI_Content_Generator
         );
         
         error_log(
-            "AI QUALITY SCORE: ".$quality['score']
+            "INITIAL AI QUALITY SCORE: ".$quality['score']
         );
+
+        if(!$quality['approved'] && $content_source === 'api')
+        {
+            $attempts = 0;
+            $max_attempts = 2;
+            while(!$quality['approved'] && $attempts < $max_attempts)
+            {
+                $attempts++;
+                error_log("AI CONTENT BELOW THRESHOLD. RETRYING IMPROVEMENT (ATTEMPT {$attempts}/{$max_attempts})...");
+                
+                $improved = $this->quality_checker->improve($content, $data, $quality['issues']);
+                $new_quality = $this->quality_checker->check($improved, $data);
+                
+                error_log("IMPROVED QUALITY SCORE (ATTEMPT {$attempts}): " . $new_quality['score']);
+                
+                $content = $improved;
+                $quality = $new_quality;
+            }
+        }
 
         if(!$quality['approved'])
         {
             error_log(
-                "AI CONTENT BELOW THRESHOLD (SCORE: ".$quality['score'].") — PROCEEDING WITH AS-IS CONTENT"
+                "AI CONTENT BELOW THRESHOLD (FINAL SCORE: ".$quality['score'].") — RUNNING SANITIZER TO LOWER KEYWORD DENSITY"
             );
+            $content = $this->quality_checker->sanitize_density($content, $data);
+            $quality = $this->quality_checker->check($content, $data);
+            
+            error_log("POST-SANITY QUALITY SCORE: " . $quality['score']);
         }
 
 

@@ -222,22 +222,58 @@ class VCPG_Page_Generator
 
         $page_slug = sanitize_title($slug_text);
 
+        /*
+        Assign Target Keywords — real Google search terms this page must cover.
+        Unused keywords are picked first so every keyword gets used across pages.
+        */
+        $target_keywords = array();
 
+        if($this->keyword_manager)
+        {
+            $target_keywords = $this->keyword_manager->get_keywords_for_page(
+                $service,
+                $city,
+                $state,
+                50
+            );
 
+            $data['target_keywords'] = $target_keywords;
+        }
 
+        /*
+        Generate AI Content
+        */
+        if($this->ai_generator)
+        {
+            $ai_content = $this->ai_generator->generate(
+                array(
+                    'service' => $service,
+                    'city' => $city,
+                    'state' => $state,
+                    'country' => $country,
+                    'country_code' => $country_code,
+                    'target_keywords' => $target_keywords
+                )
+            );
+
+            /*
+            Merge Content
+            */
+            $data = array_merge(
+                $data,
+                $ai_content
+            );
+        }
 
         /*
         Check Existing WordPress Page
         */
-
 
         $existing_page = get_page_by_path(
             $country_code . '/' . $page_slug,
             OBJECT,
             'page'
         );
-
-
 
         if($existing_page)
         {
@@ -319,69 +355,6 @@ class VCPG_Page_Generator
                 'page_id' => $existing_page->ID
             );
         }
-
-
-
-
-
-        /*
-        Assign Target Keywords — real Google search terms this page must cover.
-        Unused keywords are picked first so every keyword gets used across pages.
-        */
-
-        $target_keywords = array();
-
-        if($this->keyword_manager)
-        {
-            $target_keywords = $this->keyword_manager->get_keywords_for_page(
-                $service,
-                $city,
-                $state,
-                50
-            );
-
-            $data['target_keywords'] = $target_keywords;
-        }
-
-
-
-        /*
-        Generate AI Content
-        */
-
-
-        $ai_content = $this->ai_generator->generate(
-
-            array(
-
-                'service' => $service,
-
-                'city' => $city,
-
-                'state' => $state,
-
-                'country' => $country,
-
-                'country_code' => $country_code,
-
-                'target_keywords' => $target_keywords
-
-            )
-        );
-
-
-
-        /*
-        Merge Content
-        */
-
-        $data = array_merge(
-
-            $data,
-
-            $ai_content
-
-        );
 
 
 
