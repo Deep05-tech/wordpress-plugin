@@ -291,16 +291,23 @@ class VCPG_Page_Generator
                     // Renderer returned null — fall back to HTML mode for this page.
                     error_log( 'VCPG create_page (update): Elementor renderer returned null, falling back to HTML mode.' );
                     $html_content = $this->elementor_builder->build_html( $data );
+                    if ( $this->ai_generator ) {
+                        $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
+                    }
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
                         'post_content' => $html_content,
                     ) );
                 } else {
+                    if ( $this->ai_generator ) {
+                        $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
+                    }
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
                         'post_content' => '',
                     ) );
                     update_post_meta( $existing_page->ID, '_elementor_data', wp_slash( wp_json_encode( $elementor_content ) ) );
+                    delete_post_meta( $existing_page->ID, '_elementor_element_cache' );
                     update_post_meta( $existing_page->ID, '_elementor_edit_mode', 'builder' );
                     update_post_meta( $existing_page->ID, '_elementor_template_type', 'wp-page' );
                     update_post_meta( $existing_page->ID, '_elementor_version', defined( 'ELEMENTOR_VERSION' ) ? ELEMENTOR_VERSION : '3.23.0' );
@@ -318,7 +325,13 @@ class VCPG_Page_Generator
 
                 // html mode — identical to previous behaviour
                 $elementor_content = $this->get_template_content( $data );
+                if ( $this->ai_generator ) {
+                    $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
+                }
                 $html_content      = $this->elementor_builder->build_html( $data );
+                if ( $this->ai_generator ) {
+                    $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
+                }
 
                 wp_update_post( array(
                     'ID'           => $existing_page->ID,
@@ -476,6 +489,10 @@ class VCPG_Page_Generator
             ? $this->elementor_builder->build_html( $data )
             : '';
 
+        if ( $mode === 'html' && $this->ai_generator && !empty( $html_content ) ) {
+            $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
+        }
+
         $page_id = wp_insert_post(
             array(
                 'post_title'   => $page_title,
@@ -528,8 +545,13 @@ class VCPG_Page_Generator
                 ? ELEMENTOR_VERSION
                 : '3.23.0';
 
+            if ( $this->ai_generator ) {
+                $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
+            }
+
             update_post_meta( $page_id, '_elementor_edit_mode',     'builder' );
             update_post_meta( $page_id, '_elementor_data',          wp_slash( wp_json_encode( $elementor_content ) ) );
+            delete_post_meta( $page_id, '_elementor_element_cache' );
             update_post_meta( $page_id, '_elementor_template_type', 'wp-page' );
             update_post_meta( $page_id, '_elementor_version',       $elementor_version );
             update_post_meta( $page_id, '_wp_page_template',        'default' );
@@ -549,6 +571,10 @@ class VCPG_Page_Generator
                 ? ELEMENTOR_VERSION
                 : '3.23.0';
 
+            if ( $this->ai_generator ) {
+                $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
+            }
+
             update_post_meta(
                 $page_id,
                 '_elementor_edit_mode',
@@ -560,6 +586,7 @@ class VCPG_Page_Generator
                 '_elementor_data',
                 wp_slash(wp_json_encode($elementor_content))
             );
+            delete_post_meta( $page_id, '_elementor_element_cache' );
 
             update_post_meta(
                 $page_id,

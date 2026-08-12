@@ -11,7 +11,7 @@ class VCPG_AI_Content_Database
     changes (e.g. new keyword logic, new sections) so stale cached content is
     bypassed and regenerated with the new rules.
     */
-    const CONTENT_VERSION = 'v6';
+    const CONTENT_VERSION = 'v15';
 
     public function __construct()
     {

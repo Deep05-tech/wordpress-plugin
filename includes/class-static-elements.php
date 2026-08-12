@@ -99,7 +99,7 @@ class VCPG_Static_Elements
     <textarea name="message" placeholder="Additional Details/Purpose of Business*" style="width:100%;padding:16px 22px;border-radius:18px;border:none;background:#FFFFFF;color:#081828;font-size:14px;box-sizing:border-box;height:110px;resize:vertical;outline:none;" required></textarea>
   </div>
   <div style="margin-top:6px;text-align:left;">
-    <button type="submit" style="background:#0B2538;color:#FFFFFF;border:1px solid rgba(255,255,255,0.4);border-radius:50px;padding:14px 38px;font-weight:700;font-size:15px;cursor:pointer;display:inline-block;transition:all 0.2s ease;">Submit Now</button>
+    <button type="submit" style="background:#02426A;color:#FFFFFF;border:none;border-radius:50px;padding:14px 38px;font-weight:700;font-size:15px;cursor:pointer;display:inline-block;transition:all 0.2s ease;">Submit Now</button>
   </div>
 </form>';
     }
@@ -111,14 +111,22 @@ class VCPG_Static_Elements
     <input name="fullname" placeholder="Full Name*" style="width:100%;padding:14px 18px;border-radius:10px;border:1px solid #CBD5E1;background:#F8FAFC;font-size:0.9rem;box-sizing:border-box;outline:none;" type="text" required>
     <input name="email" placeholder="Email Address*" style="width:100%;padding:14px 18px;border-radius:10px;border:1px solid #CBD5E1;background:#F8FAFC;font-size:0.9rem;box-sizing:border-box;outline:none;" type="email" required>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+  <div>
     <input name="phone" placeholder="Contact No. with Country Code*" style="width:100%;padding:14px 18px;border-radius:10px;border:1px solid #CBD5E1;background:#F8FAFC;font-size:0.9rem;box-sizing:border-box;outline:none;" type="tel" required>
+  </div>
+  <div>
     <select name="service" style="width:100%;padding:14px 18px;border-radius:10px;border:1px solid #CBD5E1;background:#F8FAFC;font-size:0.9rem;box-sizing:border-box;color:#475569;outline:none;">
       <option value="">Select Service</option>
-      <option value="seo">Search Engine Optimization</option>
-      <option value="ppc">PPC & Google Ads</option>
-      <option value="web">Website Development</option>
-      <option value="social">Social Media Marketing</option>
+      <option value="digital-marketing">Digital Marketing</option>
+      <option value="google-ads">Google Ads</option>
+      <option value="branding-services">Branding Services</option>
+      <option value="seo">SEO</option>
+      <option value="web-development">Web Development</option>
+      <option value="social-media-management">Social Media Management</option>
+      <option value="online-reputation-management">Online Reputation Management</option>
+      <option value="video-production">Video Production</option>
+      <option value="vfx">VFX</option>
+      <option value="cgi-services">CGI Services</option>
     </select>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -141,7 +149,7 @@ class VCPG_Static_Elements
 
     private function footer_services_html(): string
     {
-        $services = array('Digital Marketing', 'Google Ads Management', 'Branding Services', 'Search Engine Optimization', 'Web Development', 'Social Media Management', 'Online Reputation Management', 'VFX Service');
+        $services = array('Digital Marketing', 'Google Ads', 'Branding Services', 'SEO', 'Web Development', 'Social Media Management', 'Online Reputation Management', 'Video Production', 'VFX', 'CGI Services');
         $html = '';
         foreach ($services as $n) {
             $html .= '<li style="list-style:none;margin-bottom:8px;"><a style="color:#CBD5E1;text-decoration:none;font-size:0.88rem;" href="#">' . esc_html($n) . '</a></li>';

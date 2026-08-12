@@ -8,7 +8,7 @@ defined('ABSPATH') || exit;
 <style>
 html, body { margin: 0; padding: 0; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .elementor-widget-heading .elementor-heading-title { color: #0A3663; font-weight: 800 !important; }
-h1.elementor-heading-title, .vp-hero .elementor-heading-title { color: #FFFFFF !important; }
+h1.elementor-heading-title, .vp-hero .elementor-heading-title { color: #02426A !important; }
 .elementor-widget-text-editor { color: #334155; line-height: 1.8 !important; }
 footer a, .vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
 footer a:hover, .vp-footer a:hover { color: #FFFFFF !important; }

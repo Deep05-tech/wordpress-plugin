@@ -1070,4 +1070,215 @@ class VCPG_AI_Quality_Checker
         }
     }
 
+    public function sanitize_elementor_content($elementor_content, $data)
+    {
+        if (empty($elementor_content)) {
+            return $elementor_content;
+        }
+
+        $all_text = '';
+        $extract_text = function($item) use (&$extract_text, &$all_text) {
+            if (isset($item['elType']) && $item['elType'] === 'widget') {
+                if (isset($item['settings'])) {
+                    foreach ($item['settings'] as $key => $val) {
+                        if (is_string($val) && !empty($val)) {
+                            if (!in_array($key, array('widgetType', 'id', 'elType', 'align', 'size', 'link', 'icon', 'title_size', 'button_type', 'event_name', 'view', 'shape', 'position'))) {
+                                $all_text .= ' ' . wp_strip_all_tags($val);
+                            }
+                        }
+                    }
+                }
+            }
+            if (isset($item['elements']) && is_array($item['elements'])) {
+                foreach ($item['elements'] as $sub) {
+                    $extract_text($sub);
+                }
+            }
+        };
+
+        if (is_array($elementor_content)) {
+            foreach ($elementor_content as $root) {
+                $extract_text($root);
+            }
+        } else {
+            return $elementor_content;
+        }
+
+        $clean_all_text = strtolower(strip_tags($all_text));
+        $words_text = preg_replace('/[^\w\s\-]/u', ' ', $clean_all_text);
+        $words_text = preg_replace('/\s+/', ' ', $words_text);
+        $words_text = trim($words_text);
+        
+        $words_array = array_filter(explode(' ', $words_text));
+        $total_words_count = count($words_array);
+        
+        if ($total_words_count <= 0) {
+            return $elementor_content;
+        }
+
+        $stop_words = array(
+            'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'this', 'with', 'for', 'on', 'as', 'at', 'by', 'it', 'an', 'be', 'are', 'was', 'were', 'or', 'from', 'your', 'our', 'we', 'us', 'you', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its', 'about', 'more', 'how', 'why', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'then', 'else', 'than', 'so', 'up', 'down', 'out', 'into', 'over', 'under', 'again', 'further', 'once', 'here', 'there', 'when', 'where', 'all', 'any', 'both', 'each', 'few', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
+        );
+
+        $synonyms_map = array(
+            'digital'    => array('online', 'web', 'interactive', 'virtual'),
+            'marketing'  => array('promotions', 'advertising', 'outreach', 'branding'),
+            'seo'        => array('search visibility', 'optimization', 'rankings'),
+            'ads'        => array('campaigns', 'promotions', 'paid search'),
+            'services'   => array('solutions', 'offerings', 'programs', 'capabilities'),
+            'firm'       => array('agency', 'company', 'organization', 'business'),
+            'practice'   => array('office', 'facility', 'center', 'clinic'),
+            'clinic'     => array('facility', 'center', 'practice', 'office'),
+            'patients'   => array('individuals', 'visitors', 'clients', 'members'),
+            'clients'    => array('customers', 'patrons', 'partners', 'visitors'),
+            'customers'  => array('clients', 'buyers', 'patrons', 'consumers'),
+            'business'   => array('company', 'enterprise', 'organization', 'agency'),
+            'google'     => array('search engine', 'online search', 'major search network')
+        );
+
+        $word_counts = array_count_values($words_array);
+        foreach ($word_counts as $word => $count) {
+            if (strlen($word) < 3 || in_array($word, $stop_words)) {
+                continue;
+            }
+            
+            $density = ($count / $total_words_count) * 100;
+            if ($density > 2.8) {
+                $target_count = floor(0.025 * $total_words_count);
+                $replacements_needed = $count - $target_count;
+                if ($replacements_needed > 0) {
+                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
+                    $this->replace_text_recursive($elementor_content, $word, $syns, $replacements_needed);
+                }
+            }
+        }
+
+        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+            ? array_values(array_filter($data['target_keywords']))
+            : array();
+        
+        $phrases_to_check = array_merge(array($data['service']), $target_keywords);
+        $phrases_to_check = array_unique(array_map('strtolower', array_filter($phrases_to_check)));
+        
+        foreach ($phrases_to_check as $phrase) {
+            $phrase = trim($phrase);
+            if (empty($phrase)) {
+                continue;
+            }
+            
+            $regex = '/\b' . preg_quote($phrase, '/') . '\b/i';
+            $matches = array();
+            $count = preg_match_all($regex, $clean_all_text, $matches);
+            
+            if ($count > 0) {
+                $phrase_word_count = count(array_filter(explode(' ', preg_replace('/[^\w\s\-]/u', ' ', $phrase))));
+                if ($phrase_word_count === 0) {
+                    $phrase_word_count = 1;
+                }
+                $density = ($count * $phrase_word_count / $total_words_count) * 100;
+                
+                if ($density > 2.8) {
+                    $target_count = floor((0.025 * $total_words_count) / $phrase_word_count);
+                    $replacements_needed = $count - $target_count;
+                    if ($replacements_needed > 0) {
+                        $phrase_synonyms = array('specialized solutions', 'professional services', 'our campaigns', 'growth strategies');
+                        $this->replace_text_recursive($elementor_content, $phrase, $phrase_synonyms, $replacements_needed);
+                    }
+                }
+            }
+        }
+
+        return $elementor_content;
+    }
+
+    public function sanitize_html_content($html_content, $data)
+    {
+        if (empty($html_content)) {
+            return $html_content;
+        }
+
+        $clean_all_text = strtolower(strip_tags($html_content));
+        $words_text = preg_replace('/[^\w\s\-]/u', ' ', $clean_all_text);
+        $words_text = preg_replace('/\s+/', ' ', $words_text);
+        $words_text = trim($words_text);
+        
+        $words_array = array_filter(explode(' ', $words_text));
+        $total_words_count = count($words_array);
+        
+        if ($total_words_count <= 0) {
+            return $html_content;
+        }
+
+        $stop_words = array(
+            'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'this', 'with', 'for', 'on', 'as', 'at', 'by', 'it', 'an', 'be', 'are', 'was', 'were', 'or', 'from', 'your', 'our', 'we', 'us', 'you', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its', 'about', 'more', 'how', 'why', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'then', 'else', 'than', 'so', 'up', 'down', 'out', 'into', 'over', 'under', 'again', 'further', 'once', 'here', 'there', 'when', 'where', 'all', 'any', 'both', 'each', 'few', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
+        );
+
+        $synonyms_map = array(
+            'digital'    => array('online', 'web', 'interactive', 'virtual'),
+            'marketing'  => array('promotions', 'advertising', 'outreach', 'branding'),
+            'seo'        => array('search visibility', 'optimization', 'rankings'),
+            'ads'        => array('campaigns', 'promotions', 'paid search'),
+            'services'   => array('solutions', 'offerings', 'programs', 'capabilities'),
+            'firm'       => array('agency', 'company', 'organization', 'business'),
+            'practice'   => array('office', 'facility', 'center', 'clinic'),
+            'clinic'     => array('facility', 'center', 'practice', 'office'),
+            'patients'   => array('individuals', 'visitors', 'clients', 'members'),
+            'clients'    => array('customers', 'patrons', 'partners', 'visitors'),
+            'customers'  => array('clients', 'buyers', 'patrons', 'consumers'),
+            'business'   => array('company', 'enterprise', 'organization', 'agency'),
+            'google'     => array('search engine', 'online search', 'major search network')
+        );
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($html_content, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+        $xpath = new DOMXPath($dom);
+        $text_nodes = $xpath->query('//text()');
+
+        $word_counts = array_count_values($words_array);
+        foreach ($word_counts as $word => $count) {
+            if (strlen($word) < 3 || in_array($word, $stop_words)) {
+                continue;
+            }
+            
+            $density = ($count / $total_words_count) * 100;
+            if ($density > 2.8) {
+                $target_count = floor(0.025 * $total_words_count);
+                $replacements_needed = $count - $target_count;
+                if ($replacements_needed > 0) {
+                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
+                    
+                    foreach ($text_nodes as $node) {
+                        if ($replacements_needed <= 0) {
+                            break;
+                        }
+                        
+                        $text = $node->nodeValue;
+                        $regex = '/\b' . preg_quote($word, '/') . '\b/i';
+                        $new_text = preg_replace_callback($regex, function($matches) use ($syns, &$replacements_needed) {
+                            if ($replacements_needed > 0) {
+                                $replacements_needed--;
+                                $syn = $syns[array_rand($syns)];
+                                if ($matches[0] === strtoupper($matches[0])) {
+                                    return strtoupper($syn);
+                                } elseif ($matches[0] === ucfirst($matches[0])) {
+                                    return ucfirst($syn);
+                                }
+                                return $syn;
+                            }
+                            return $matches[0];
+                        }, $text);
+                        
+                        if ($text !== $new_text) {
+                            $node->nodeValue = $new_text;
+                        }
+                    }
+                }
+            }
+        }
+
+        $html_content = $dom->saveHTML();
+        return $html_content;
+    }
+
 }

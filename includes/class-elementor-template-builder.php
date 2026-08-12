@@ -101,18 +101,75 @@ class VCPG_Elementor_Template_Builder
         if ($value === '') {
             return '';
         }
-        $paragraphs = preg_split('/\n\s*\n/', $value);
-        if (count($paragraphs) > 1) {
-            $p_html = array();
-            foreach ($paragraphs as $p) {
-                $p = trim($p);
-                if ($p !== '') {
-                    $p_html[] = '<p style="margin:0 0 18px 0;">' . nl2br($this->e($p)) . '</p>';
-                }
+
+        // 1. Split on existing double-newlines (author-defined paragraphs).
+        $raw_paragraphs = preg_split('/\n\s*\n/', $value);
+
+        // 2. Further split any paragraph that exceeds 50 words into
+        //    chunks of ~40-50 words, preferring sentence boundaries.
+        $final_paragraphs = array();
+        foreach ($raw_paragraphs as $raw_p) {
+            $raw_p = trim($raw_p);
+            if ($raw_p === '') {
+                continue;
             }
-            return implode('', $p_html);
+            $words = preg_split('/\s+/', $raw_p);
+            if (count($words) <= 50) {
+                $final_paragraphs[] = $raw_p;
+                continue;
+            }
+            // Break into sentence-aware chunks of 40-50 words.
+            $chunks = $this->split_into_word_chunks($raw_p, 40, 50);
+            foreach ($chunks as $chunk) {
+                $final_paragraphs[] = $chunk;
+            }
         }
-        return '<p style="margin:0 0 18px 0;">' . nl2br($this->e($value)) . '</p>';
+
+        $p_html = array();
+        foreach ($final_paragraphs as $p) {
+            $p = trim($p);
+            if ($p !== '') {
+                $p_html[] = '<p style="margin:0 0 18px 0;">' . nl2br($this->e($p)) . '</p>';
+            }
+        }
+        return implode('', $p_html);
+    }
+
+    /**
+     * Split text into chunks of $min to $max words.
+     * Prefers breaking after sentence-ending punctuation (. ! ?) when a
+     * break point falls within the target window.
+     */
+    private function split_into_word_chunks($text, $min = 40, $max = 50)
+    {
+        $sentences = preg_split('/(?<=[.!?])\s+/', trim($text));
+        $chunks = array();
+        $current_chunk = array();
+        $current_word_count = 0;
+
+        foreach ($sentences as $sentence) {
+            $sentence = trim($sentence);
+            if ($sentence === '') {
+                continue;
+            }
+            $sentence_words = preg_split('/\s+/', $sentence);
+            $sentence_word_count = count($sentence_words);
+
+            if ($current_word_count > 0 && ($current_word_count + $sentence_word_count) > $max) {
+                $chunks[] = implode(' ', $current_chunk);
+                $current_chunk = $sentence_words;
+                $current_word_count = $sentence_word_count;
+            } else {
+                $current_chunk = array_merge($current_chunk, $sentence_words);
+                $current_word_count += $sentence_word_count;
+            }
+        }
+
+        if (!empty($current_chunk)) {
+            $chunks[] = implode(' ', $current_chunk);
+        }
+
+        return $chunks;
     }
 
     private function clean_service($service)
@@ -161,20 +218,28 @@ class VCPG_Elementor_Template_Builder
         }
 
         $hero_description = $this->t(isset($data['hero_description']) ? $data['hero_description'] : '');
-        if(empty($hero_description) || strpos($hero_description, "\n\n") === false)
+        if(empty($hero_description))
         {
-            $hero_description = "Welcome to our digital marketing agency in " . $city . "! In " . $city . "’s competitive " . strtolower($svc) . " " . $nouns['business_type'] . " industry, exceptional services alone are insufficient. Partnering with a top " . strtolower($svc) . " " . $nouns['business_type'] . " can elevate your " . $nouns['business_type'] . ".\n\nWe specialize in customized digital marketing strategies for " . strtolower($svc) . " " . $nouns['business_type'] . "s. Our expertise in tailored designs ensures maximum online visibility, attracting new " . $nouns['client_type'] . "s and retaining existing ones.\n\nAs leaders in " . strtolower($svc) . ", we offer solutions from SEO services to engaging social media marketing. Our websites are user-friendly and attractive, helping your " . $nouns['business_type'] . " stand out.\n\nLet us help you grow with top-notch designs, effective " . strtolower($svc) . ", and comprehensive SEO strategies. Our social media marketing and website development will ensure your " . $nouns['business_type'] . " reaches its full potential.";
+            $hero_description = "Welcome to our team in " . $city . "! In " . $city . "’s competitive landscape, exceptional offerings alone are insufficient. Partnering with a top agency can elevate your " . $nouns['business_type'] . ".\n\nWe specialize in customized outreach strategies for your team. Our expertise in tailored layouts ensures maximum web visibility, attracting new " . $nouns['client_type'] . "s and retaining existing ones.\n\nAs leaders in the area, we offer solutions from optimization to engaging branding. Our websites are user-friendly and attractive, helping you stand out.\n\nLet us help you grow with top-notch designs, effective promotions, and comprehensive search strategies. Our social campaign and website development will ensure your " . $nouns['business_type'] . " reaches its full potential.";
         }
 
-        if(stripos($svc, 'agency') !== false || stripos($svc, 'marketing') !== false) {
-            $about_title = 'Creating a Strong Online Presence for Local Businesses with our ' . $svc . ' in ' . $city . '.';
-        } else {
-            $about_title = 'Creating a Strong Online Presence for ' . $svc . ' with our Digital Marketing Agency in ' . $city . '.';
+        $about_title = $this->t(isset($data['about_title']) ? $data['about_title'] : '');
+        if(empty($about_title))
+        {
+            if(stripos($svc, 'agency') !== false || stripos($svc, 'marketing') !== false) {
+                $about_title = 'Creating a Strong Online Presence for Local Businesses with our ' . $svc . ' in ' . $city . '.';
+            } else {
+                $about_title = 'Creating a Strong Online Presence for ' . $svc . ' with our Digital Marketing Agency in ' . $city . '.';
+            }
         }
 
-        $about_content = "Enhance your business's online presence in " . $city . " with customized digital marketing solutions tailored to your " . $nouns['business_type'] . ". We specialize in optimizing your website for search engines and engaging " . $nouns['client_type'] . "s through various social media platforms.\n\nOur comprehensive digital marketing services focus on attracting new clients while fostering loyalty among your current clientele. Partner with us to transform your business and achieve lasting success in the competitive digital landscape.\n\nReach out to us to navigate the complexities of online marketing and realize sustained growth for your " . $nouns['business_type'] . ", utilizing our proven expertise in advertising, web design, SEO strategies, and social media marketing. Together, we can build a thriving online presence for your business.";
+        $about_content = $this->t(isset($data['about_content']) ? $data['about_content'] : '');
+        if(empty($about_content))
+        {
+            $about_content = "Enhance your business's online presence in " . $city . " with customized online marketing solutions tailored to your " . $nouns['business_type'] . ". We specialize in optimizing your website for search engines and engaging " . $nouns['client_type'] . "s through various social media platforms.\n\nOur comprehensive outreach services focus on attracting new clients while fostering loyalty among your current clientele. Partner with us to transform your business and achieve lasting success in the competitive virtual landscape.\n\nReach out to us to navigate the complexities of online marketing and realize sustained growth for your " . $nouns['business_type'] . ", utilizing our proven expertise in advertising, web design, SEO strategies, and social media marketing. Together, we can build a thriving online presence for your business.";
+        }
 
-        $about_paras = explode("\n\n", $about_content);
+        $about_paras = preg_split('/\n+/', $about_content);
         $about_html_paras = array();
         foreach($about_paras as $ap) {
             if(!empty(trim($ap))) {
@@ -183,26 +248,49 @@ class VCPG_Elementor_Template_Builder
         }
         $about_content_html = implode('', $about_html_paras);
 
-        $intro_title = 'Get ' . $svc . ' in ' . $city . ': Why Your ' . ucwords($nouns['business_type']) . ' Needs Online Marketing in ' . $city;
-        $intro_content = "Unlock the digital revolution in " . strtolower($svc) . " and discover why your " . $nouns['business_type'] . " must embrace online marketing. Our specialized SEO services for " . strtolower($svc) . " are designed to enhance your " . $nouns['business_type'] . "'s visibility and attract new " . $nouns['client_type'] . "s. In today's competitive landscape, having a strong online presence is crucial for growth and " . $nouns['client_type'] . " engagement.\n\nWe excel in local SEO for " . strtolower($svc) . ", ensuring your " . $nouns['business_type'] . " stands out in local searches. As a leading " . strtolower($svc) . " agency, we offer tailored strategies that incorporate social media marketing and effective advertising. Our goal is to help you connect with potential " . $nouns['client_type'] . "s in your area and build a loyal " . $nouns['client_type'] . " base.\n\nStrengthen your " . $nouns['business_type'] . "'s online presence with our expert SEO " . $nouns['practitioner'] . " services, which are specifically designed to maximize visibility and foster " . $nouns['client_type'] . " engagement. We provide targeted solutions that include enhancing designs and optimizing your website to ensure it effectively attracts and retains " . $nouns['client_type'] . "s.\n\nTransform your " . $nouns['business_type'] . " in " . $city . " by partnering with us. Our comprehensive services, from innovative SEO " . $nouns['practitioner'] . " techniques to strategic social media marketing, will revolutionize your " . $nouns['business_type'] . ". With our expertise, your website will not only shine with captivating designs but will also leverage effective advertising to drive sustained growth and success in the competitive market.";
+        $intro_title = $this->t(isset($data['intro_title']) ? $data['intro_title'] : '');
+        if(empty($intro_title))
+        {
+            $intro_title = 'Get ' . $svc . ' in ' . $city . ': Why Your ' . ucwords($nouns['business_type']) . ' Needs Online Marketing in ' . $city;
+        }
 
-        $services_heading = 'Services of ' . $svc . ' for ' . ucwords($nouns['business_type']) . 's in ' . $city;
-        $services_description = 'Our ' . strtolower($svc) . ' services in ' . $city . ' encompass a range of digital strategies, all working together to achieve your ' . $nouns['business_type'] . '\'s unique goals. Here\'s a closer look at some key components:';
+        $intro_content = $this->t(isset($data['intro_content']) ? $data['intro_content'] : '');
+        if(empty($intro_content))
+        {
+            $intro_content = "Unlock the modern revolution in " . strtolower($svc) . " and discover why your " . $nouns['business_type'] . " must embrace online promotions. Our specialized visibility services are designed to enhance your " . $nouns['business_type'] . "'s reach and attract new " . $nouns['client_type'] . "s. In today's competitive landscape, having a strong online presence is crucial for growth and " . $nouns['client_type'] . " engagement.\n\nWe excel in local search optimization, ensuring your " . $nouns['business_type'] . " stands out in local queries. As a leading growth partner, we offer tailored strategies that incorporate social platforms and effective advertising. Our goal is to help you connect with potential " . $nouns['client_type'] . "s in your area and build a loyal base.\n\nStrengthen your brand with our expert optimization techniques, which are specifically designed to maximize exposure. We provide targeted solutions that include enhancing layouts and optimizing your website to ensure it effectively attracts and retains visitors.\n\nTransform your " . $nouns['business_type'] . " in " . $city . " by partnering with us. Our comprehensive services, from innovative search techniques to strategic outreach campaigns, will revolutionize your organization. With our expertise, your website will not only shine with captivating layouts but will also leverage smart campaigns to drive sustained growth and success in the competitive market.";
+        }
 
-        $why_choose_heading = "Distinct Advantages of Partnering with Vispan Solutions' Digital Marketing Experts";
+        $services_heading = $this->t(isset($data['services_heading']) ? $data['services_heading'] : '');
+        if(empty($services_heading))
+        {
+            $services_heading = 'Services of ' . $svc . ' for ' . ucwords($nouns['business_type']) . 's in ' . $city;
+        }
+
+        $services_description = $this->t(isset($data['services_description']) ? $data['services_description'] : '');
+        if(empty($services_description))
+        {
+            $services_description = 'Our ' . strtolower($svc) . ' services in ' . $city . ' encompass a range of modern strategies, all working together to achieve your ' . $nouns['business_type'] . '\'s unique goals. Here\'s a closer look at some key components:';
+        }
+
+        $why_choose_heading = $this->t(isset($data['why_choose_heading']) ? $data['why_choose_heading'] : '');
+        if(empty($why_choose_heading))
+        {
+            $why_choose_heading = "Distinct Advantages of Partnering with Vispan Solutions' Specialists";
+        }
+
         $why_choose_description = $this->t(isset($data['why_choose_description']) ? $data['why_choose_description'] : '');
         if(empty($why_choose_description))
         {
-            $why_choose_description = 'As your digital marketing partner in ' . $city . ', we understand the unique challenges faced in today\'s competitive landscape.';
+            $why_choose_description = 'As your growth partner in ' . $city . ', we understand the unique challenges faced in today\'s competitive landscape.';
         }
 
         $cta_description = $this->t(isset($data['cta_content']) ? $data['cta_content'] : '');
-        if(empty($cta_description) || strlen($cta_description) > 300 || strlen($cta_description) < 150)
+        if(empty($cta_description))
         {
-            $cta_description = "Don't let your business get lost in the digital world of " . $city . ". Our comprehensive digital marketing agency can help you attract new customers, build a strong online presence, and ultimately achieve your " . $nouns['business_type'] . "'s growth goals.\n\nContact us today for a free consultation and discuss how we can help your business thrive in the digital age.";
+            $cta_description = "Don't let your brand get lost in the virtual world of " . $city . ". Our comprehensive outreach agency can help you attract new visitors, build a strong online presence, and ultimately achieve your growth goals.\n\nContact us today for a free consultation and discuss how we can help your team thrive in the modern age.";
         }
 
-        $cta_paras = explode("\n\n", $cta_description);
+        $cta_paras = preg_split('/\n+/', $cta_description);
         $cta_html_paras = array();
         foreach($cta_paras as $cp) {
             if(!empty(trim($cp))) {
@@ -213,6 +301,7 @@ class VCPG_Elementor_Template_Builder
 
         $logo_uri         = $this->svg_uri($this->logo_svg());
         $hero_bg_uri      = $this->get_asset_url('hero-bg.png');
+        $hero_video_uri   = $this->get_asset_url('vispan-banner.webm');
         $services_bg_uri  = $this->get_asset_url('section-5.jpg');
         $about_uri        = $this->get_asset_url('section-3.webp');
         $cta_bg_uri       = $this->get_asset_url('section-5.jpg');
@@ -227,9 +316,11 @@ class VCPG_Elementor_Template_Builder
             '{{nav_menu}}'                 => $this->nav_html(),
             '{{topbar}}'                   => $this->topbar_html($phone, $email),
             '{{hero_bg}}'                  => $hero_bg_uri,
+            '{{hero_video}}'               => $hero_video_uri,
             '{{contact_bg}}'               => $contact_bg_uri,
             '{{hero_small_title}}'         => '',
             '{{hero_title}}'               => $this->e($hero_title),
+            '{{hero_subtitle}}'            => $this->e($hero_small),
             '{{hero_description}}'         => $this->nl($hero_description),
             '{{hero_primary_btn}}'         => 'Learn More',
             '{{consultation_title}}'       => 'Get A Free Consultation',
@@ -267,6 +358,7 @@ class VCPG_Elementor_Template_Builder
             '{{footer_services}}'          => $this->footer_services_html($data),
             '{{footer_links}}'             => $this->footer_links_html(),
             '{{footer_contact}}'           => $this->footer_contact_html($phone, $email),
+            '{{case_study_html}}'          => $this->case_study_html($data),
             '{{social_icons}}'             => $this->social_html(),
         );
 
@@ -348,21 +440,7 @@ class VCPG_Elementor_Template_Builder
 
     private function hero_form_html()
     {
-        return '<form style="display:flex;flex-direction:column;gap:16px;" onsubmit="return false;">
-  <div>
-    <input placeholder="Full Name*" style="width:100%;padding:14px 24px;border-radius:50px;border:none;background:#FFFFFF;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-    <input placeholder="Email Address*" style="width:100%;padding:14px 20px;border-radius:50px;border:none;background:#FFFFFF;color:#1E293B;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit;" type="email" required>
-    <input placeholder="Contact No. with Country Code*" style="width:100%;padding:14px 20px;border-radius:50px;border:none;background:#FFFFFF;color:#1E293B;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit;" type="tel" required>
-  </div>
-  <div>
-    <textarea placeholder="Additional Details/Purpose of Business*" style="width:100%;padding:16px 22px;border-radius:20px;border:none;background:#FFFFFF;color:#1E293B;font-size:14px;box-sizing:border-box;height:140px;resize:vertical;outline:none;font-family:inherit;" required></textarea>
-  </div>
-  <div style="margin-top:4px;text-align:left;">
-    <button type="submit" style="background:transparent;color:#FFFFFF;border:1.5px solid #FFFFFF;border-radius:50px;padding:12px 36px;font-weight:600;font-size:15px;cursor:pointer;display:inline-block;transition:all 0.2s;font-family:inherit;">Submit Now</button>
-  </div>
-</form>';
+        return $this->build_proposal_form('hero_proposal');
     }
 
     private function about_features_html($nouns = null)
@@ -417,33 +495,144 @@ class VCPG_Elementor_Template_Builder
     {
         $svc = isset($data['service']) ? $data['service'] : 'Digital Marketing';
         $nouns = $this->get_service_nouns($svc);
+        $svc_lower = strtolower($svc);
 
-        $services = array(
-            array(
-                'title' => 'Website Development',
-                'sub' => 'Building a Strong Foundation for Your ' . ucwords($nouns['business_type']),
-                'desc' => 'Understanding your ideal ' . $nouns['client_type'] . ' will guide the website\'s content and tone. Craft clear and informative content to highlight your services, procedures, and the expertise of your ' . $nouns['practitioner'] . 's. Use easy-to-understand language and avoid excessive ' . $nouns['jargon'] . '. A significant portion of web traffic comes from mobile devices. Ensure your website displays seamlessly on all screen sizes.',
-                'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="8" cy="19" r="2"/><circle cx="16" cy="19" r="2"/><path d="M12 7v3M7 12l3-2M17 12l-3-2M8 17l2.5-3.5M16 17l-2.5-3.5"/></svg>'
-            ),
-            array(
-                'title' => 'Search Engine Optimization',
-                'sub' => ucwords($nouns['industry_noun']) . ' SEO Service',
-                'desc' => 'We optimize your website and online listings with relevant keywords to ensure your ' . $nouns['business_type'] . ' appears in local searches for "' . $nouns['practitioner'] . ' near me" or specific services. We create informative blog posts, articles, and ' . $nouns['client_type'] . ' education materials that address common ' . $nouns['concerns'] . ' and establish your ' . $nouns['business_type'] . ' as a trusted source & ensure your website is mobile-friendly, user-friendly, and provides a seamless client experience.',
-                'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>'
-            ),
-            array(
-                'title' => 'Pay-Per-Click (PPC) Advertising',
-                'sub' => 'Targeted Google and Meta Ads',
-                'desc' => 'Targeted Google and Meta ads campaigns are managed with precision to maximize ROI. Automated bid strategies and detailed attribution models ensure your business captures high-intent leads while controlling ad spend effectively.',
-                'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>'
-            ),
-            array(
-                'title' => 'Social Media & Branding',
-                'sub' => 'Engage ' . ucwords($nouns['client_type']) . 's & Build Trust',
-                'desc' => 'Establish and grow your brand presence across key social media channels. We craft compelling visual assets, manage online reputation across local directories, and nurture ' . $nouns['client_type'] . ' relationships to drive long-term ' . $nouns['business_type'] . ' growth.',
-                'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>'
-            ),
-        );
+        if (preg_match('/(seo|search|optimization)/i', $svc_lower)) {
+            $services = array(
+                array(
+                    'title' => 'On-Page SEO Optimization',
+                    'sub' => 'Aligning Content with Search Intent',
+                    'desc' => 'We optimize page titles, headings, content structure, and internal linking to align with user search intent. By ensuring target keywords are strategically placed and content is highly engaging, we improve your website\'s relevance and ranking potential for your ' . $nouns['business_type'] . '.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M12 12l4.5-4.5"/></svg>'
+                ),
+                array(
+                    'title' => 'Technical SEO Auditing',
+                    'sub' => ucwords($nouns['industry_noun']) . ' Crawler Accessibility',
+                    'desc' => 'We enhance your website\'s crawlability, indexing speed, mobile responsiveness, and schema markup. Resolving crawl errors, optimizing sitemaps, and maximizing page speed ensures that search engines can seamlessly discover and list your primary landing pages.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>'
+                ),
+                array(
+                    'title' => 'Off-Page Link Acquisition',
+                    'sub' => 'Cultivating Authoritative Domain Signals',
+                    'desc' => 'Our team secures high-quality backlinks, guest posts, and digital PR placements to build domain authority. Connecting your brand with reputable industry portals signals trust and authority to search engines, lifting your keyword rankings.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+                ),
+                array(
+                    'title' => 'Local SEO & Google Maps',
+                    'sub' => 'Optimizing Hyper-Local Search Presence',
+                    'desc' => 'We optimize your Google Business Profile and local citations to ensure prominent placement in the local map pack. Consistent Name, Address, and Phone (NAP) data combined with local keyword alignment helps you capture nearby ' . $nouns['client_type'] . 's.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>'
+                )
+            );
+        } elseif (preg_match('/(ppc|ads|adwords|advertising|pay)/i', $svc_lower)) {
+            $services = array(
+                array(
+                    'title' => 'Search & Shopping Campaigns',
+                    'sub' => 'Capturing High-Intent Searches',
+                    'desc' => 'We build and manage targeted search campaigns and product shopping feeds. By bidding on keywords with commercial intent, we put your brand in front of users ready to buy, maximizing conversion rates and minimizing wasted budget.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+                ),
+                array(
+                    'title' => 'Display & Remarketing Campaigns',
+                    'sub' => 'Nurturing Past Website Visitors',
+                    'desc' => 'Retarget users who previously interacted with your website using targeted banner and video promotions. We segment audiences based on behavior to deliver highly personalized messaging, turning window shoppers into loyal customers.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="21" y1="12" x2="3" y2="12"/><line x1="12" y1="21" x2="12" y2="3"/></svg>'
+                ),
+                array(
+                    'title' => 'Social Media Advertising',
+                    'sub' => 'Paid Social Lead Acquisition',
+                    'desc' => 'We create, test, and optimize visual ad campaigns across Meta, LinkedIn, and TikTok. Combining creative storytelling with precise demographic and behavioral targeting ensures your ' . $nouns['business_type'] . ' reaches ideal decision-makers.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'
+                ),
+                array(
+                    'title' => 'Attribution & Conversion Analytics',
+                    'sub' => 'Granular Return on Investment Tracking',
+                    'desc' => 'We implement end-to-end attribution tracking for every call, form submission, and checkout. With detailed reporting on Cost-Per-Acquisition (CPA) and Customer Lifetime Value (LTV), you can scale your paid acquisition with full clarity.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
+                )
+            );
+        } elseif (preg_match('/(web|development|design)/i', $svc_lower)) {
+            $services = array(
+                array(
+                    'title' => 'Custom UI/UX & Responsive Design',
+                    'sub' => 'Crafting Engaging Web Experiences',
+                    'desc' => 'We design pixel-perfect, custom user interfaces that reflect your branding guidelines. Ensuring smooth navigation, visual hierarchy, and full mobile optimization helps convert visitors into customers on any screen size.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
+                ),
+                array(
+                    'title' => 'Frontend & Backend Architecture',
+                    'sub' => 'Building Secure & Scalable Applications',
+                    'desc' => 'Our developers write clean, standards-compliant code using modern frameworks and secure database configurations. We implement custom CMS setups and APIs that allow your team to manage content effortlessly.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>'
+                ),
+                array(
+                    'title' => 'E-Commerce Engineering',
+                    'sub' => 'Seamless Shopping & Checkout Systems',
+                    'desc' => 'We construct robust online stores with secure payment gateway integrations, automated inventory synchronization, and flexible shipping calculations. We make the purchasing journey frictionless for your customers.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'
+                ),
+                array(
+                    'title' => 'Speed & Core Web Vitals Optimization',
+                    'sub' => 'Optimizing for Speed and Search Rankings',
+                    'desc' => 'We optimize assets, enable advanced server caching, compress media, and audit script loading. Achieving fast load times and strong Core Web Vitals grades satisfies both human visitors and search engine indexing bots.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+                )
+            );
+        } elseif (preg_match('/(social|media|brand|branding)/i', $svc_lower)) {
+            $services = array(
+                array(
+                    'title' => 'Brand Identity & Visual Guidelines',
+                    'sub' => 'Defining Your Corporate Voice',
+                    'desc' => 'We design memorable logos, custom color schemes, typography guides, and brand collateral. Defining a consistent visual identity ensures your ' . $nouns['business_type'] . ' stands out across print and digital media.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+                ),
+                array(
+                    'title' => 'Social Media Strategy & Planning',
+                    'sub' => 'Growing an Engaged Digital Community',
+                    'desc' => 'We prioritize target networks, outline custom posting schedules, and plan themed campaigns. Designing custom content calendars and posting workflows ensures consistent brand engagement with your target audience.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+                ),
+                array(
+                    'title' => 'Content Styling & Graphic Assets',
+                    'sub' => 'Creating Reels, Stories, & Banner Collateral',
+                    'desc' => 'We design engaging reels, stories, graphics, and infographics that capture attention and drive shares. Our content production workflow ensures high-quality creative assets align with current platform trends.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+                ),
+                array(
+                    'title' => 'Reputation & Feedback Management',
+                    'sub' => 'Fostering Trust Across Review Networks',
+                    'desc' => 'We monitor local directories, track brand mentions, and manage consumer feedback. Engaging with comments and reviews helps build credibility and maintains a positive online reputation for your ' . $nouns['business_type'] . '.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>'
+                )
+            );
+        } else {
+            $services = array(
+                array(
+                    'title' => 'Website Development',
+                    'sub' => 'Building a Strong Foundation for Your ' . ucwords($nouns['business_type']),
+                    'desc' => 'Understanding your ideal ' . $nouns['client_type'] . ' will guide the website\'s content and tone. Craft clear and informative content to highlight your services, procedures, and the expertise of your ' . $nouns['practitioner'] . 's. Use easy-to-understand language and avoid excessive ' . $nouns['jargon'] . '. A significant portion of web traffic comes from mobile devices. Ensure your website displays seamlessly on all screen sizes.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="8" cy="19" r="2"/><circle cx="16" cy="19" r="2"/><path d="M12 7v3M7 12l3-2M17 12l-3-2M8 17l2.5-3.5M16 17l-2.5-3.5"/></svg>'
+                ),
+                array(
+                    'title' => 'Search Engine Optimization',
+                    'sub' => ucwords($nouns['industry_noun']) . ' SEO Service',
+                    'desc' => 'We optimize your website and online listings with relevant keywords to ensure your ' . $nouns['business_type'] . ' appears in local searches for "' . $nouns['practitioner'] . ' near me" or specific services. We create informative blog posts, articles, and ' . $nouns['client_type'] . ' education materials that address common ' . $nouns['concerns'] . ' and establish your ' . $nouns['business_type'] . ' as a trusted source & ensure your website is mobile-friendly, user-friendly, and provides a seamless client experience.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>'
+                ),
+                array(
+                    'title' => 'Pay-Per-Click (PPC) Advertising',
+                    'sub' => 'Targeted Google and Meta Ads',
+                    'desc' => 'Targeted Google and Meta ads campaigns are managed with precision to maximize ROI. Automated bid strategies and detailed attribution models ensure your business captures high-intent leads while controlling ad spend effectively.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>'
+                ),
+                array(
+                    'title' => 'Social Media & Branding',
+                    'sub' => 'Engage ' . ucwords($nouns['client_type']) . 's & Build Trust',
+                    'desc' => 'Establish and grow your brand presence across key social media channels. We craft compelling visual assets, manage online reputation across local directories, and nurture ' . $nouns['client_type'] . ' relationships to drive long-term ' . $nouns['business_type'] . ' growth.',
+                    'svg' => '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>'
+                ),
+            );
+        }
 
         $html = '';
         foreach($services as $s)
@@ -468,8 +657,9 @@ class VCPG_Elementor_Template_Builder
 
     private function benefits_html($data)
     {
-        $city = $this->e(isset($data['city']) ? $data['city'] : 'Los Angeles');
-        $svc  = $this->e(isset($data['service']) ? $data['service'] : 'Digital Marketing');
+        $city  = $this->e(isset($data['city']) ? $data['city'] : 'Los Angeles');
+        $state = $this->e(isset($data['state']) ? $data['state'] : 'California');
+        $svc   = $this->e(isset($data['service']) ? $data['service'] : 'Digital Marketing');
 
         $html  = '<div style="max-width:1100px;margin:0 auto;font-family:inherit;">';
         $html .= '  <div style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:28px;width:100%;">';
@@ -482,12 +672,12 @@ class VCPG_Elementor_Template_Builder
         // Tab Panels Box
         $html .= '  <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:4px;padding:36px 40px;box-shadow:0 2px 10px rgba(0,0,0,0.02);text-align:left;">';
 
-        // Generate keyword-rich panel text (50-60 words each)
+        // Generate keyword-rich panel text (expanded to ~80-100 words each with state mentions)
         $panel_texts = array(
-            'Vispan Solutions integrates cutting-edge machine learning models to forecast trends and optimize targeting, ensuring campaigns adapt dynamically to changing local consumer behaviors and market conditions in ' . $city . '. Our data-driven digital marketing strategy leverages advanced analytics, conversion optimization, and performance tracking to deliver measurable ROI for businesses seeking top-rated online marketing solutions.',
-            'Our team brings deep domain expertise across SEO, PPC, social media marketing, branding, and content creation tailored specifically to the ' . $city . ' market. As a trusted digital marketing agency, we combine local search optimization, Google Ads management, and strategic campaign planning to ensure your business stays ahead of local competitors.',
-            'From website optimization and paid ad acquisition to reputation management and email marketing, we manage every touchpoint of your digital presence. Our comprehensive approach includes conversion rate optimization, lead generation, social media management, and search engine marketing — delivering end-to-end strategy with precision for ' . $city . ' businesses.',
-            'Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards, Google Analytics reporting, and actionable growth insights to maximize your ROI. Our advanced marketing analytics cover cost-per-acquisition, customer lifetime value, and multi-channel attribution modeling for ' . $city . ' businesses.',
+            'Vispan Solutions integrates cutting-edge machine learning models to forecast trends and optimize targeting, ensuring campaigns adapt dynamically to changing local consumer behaviors and market conditions in ' . $city . ', ' . $state . '. Our data-driven digital marketing strategy leverages advanced analytics, conversion optimization, and performance tracking to deliver measurable ROI for businesses seeking top-rated online marketing solutions. By deploying predictive modeling and real-time audience segmentation across the ' . $state . ' region, we help local businesses establish a dominant search presence and sustain long-term digital authority.',
+            'Our team brings deep domain expertise across SEO, PPC, social media marketing, branding, and content creation tailored specifically to the ' . $city . ', ' . $state . ' market. As a trusted digital marketing agency, we combine local search optimization, Google Ads management, and strategic campaign planning to ensure your business stays ahead of local competitors. Our seasoned professionals customize outreach tactics to align with local demographic needs, ensuring every local campaign achieves maximum exposure and high-quality lead generation in ' . $state . '.',
+            'From website optimization and paid ad acquisition to reputation management and email marketing, we manage every touchpoint of your digital presence in ' . $city . ', ' . $state . '. Our comprehensive approach includes conversion rate optimization, lead generation, social media management, and search engine marketing — delivering end-to-end strategy with precision for ' . $city . ' businesses. We implement multi-layered SEO blueprints and interactive content funnels to ensure your brand stands out, converts visitors, and maintains a distinct competitive edge.',
+            'Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards, Google Analytics reporting, and actionable growth insights to maximize your ROI. Our advanced marketing analytics cover cost-per-acquisition, customer lifetime value, and multi-channel attribution modeling for ' . $city . ', ' . $state . ' businesses. Through granular conversion tracking and transparent data sharing, we verify that every advertising dollar directly contributes to your bottom-line success.'
         );
 
         for ($i = 0; $i < 4; $i++) {
@@ -1097,42 +1287,557 @@ function vcpgSwitchTab(idx) {
 
     private function contact_form_html()
     {
+        return $this->build_proposal_form('contact_proposal');
+    }
+
+    private function build_proposal_form($form_id)
+    {
+        $countries = array(
+            array('c'=>'+91','n'=>'India','i'=>'IND'),
+            array('c'=>'+1','n'=>'United States','i'=>'USA'),
+            array('c'=>'+44','n'=>'United Kingdom','i'=>'GBR'),
+            array('c'=>'+61','n'=>'Australia','i'=>'AUS'),
+            array('c'=>'+971','n'=>'United Arab Emirates','i'=>'ARE'),
+            array('c'=>'+65','n'=>'Singapore','i'=>'SGP'),
+            array('c'=>'+1','n'=>'Canada','i'=>'CAN'),
+            array('c'=>'+93','n'=>'Afghanistan','i'=>'AFG'),
+            array('c'=>'+355','n'=>'Albania','i'=>'ALB'),
+            array('c'=>'+213','n'=>'Algeria','i'=>'DZA'),
+            array('c'=>'+376','n'=>'Andorra','i'=>'AND'),
+            array('c'=>'+244','n'=>'Angola','i'=>'AGO'),
+            array('c'=>'+54','n'=>'Argentina','i'=>'ARG'),
+            array('c'=>'+374','n'=>'Armenia','i'=>'ARM'),
+            array('c'=>'+43','n'=>'Austria','i'=>'AUT'),
+            array('c'=>'+994','n'=>'Azerbaijan','i'=>'AZE'),
+            array('c'=>'+1','n'=>'Bahamas','i'=>'BHS'),
+            array('c'=>'+973','n'=>'Bahrain','i'=>'BHR'),
+            array('c'=>'+880','n'=>'Bangladesh','i'=>'BGD'),
+            array('c'=>'+375','n'=>'Belarus','i'=>'BLR'),
+            array('c'=>'+32','n'=>'Belgium','i'=>'BEL'),
+            array('c'=>'+501','n'=>'Belize','i'=>'BLZ'),
+            array('c'=>'+229','n'=>'Benin','i'=>'BEN'),
+            array('c'=>'+975','n'=>'Bhutan','i'=>'BTN'),
+            array('c'=>'+591','n'=>'Bolivia','i'=>'BOL'),
+            array('c'=>'+387','n'=>'Bosnia and Herzegovina','i'=>'BIH'),
+            array('c'=>'+267','n'=>'Botswana','i'=>'BWA'),
+            array('c'=>'+55','n'=>'Brazil','i'=>'BRA'),
+            array('c'=>'+673','n'=>'Brunei','i'=>'BRN'),
+            array('c'=>'+359','n'=>'Bulgaria','i'=>'BGR'),
+            array('c'=>'+226','n'=>'Burkina Faso','i'=>'BFA'),
+            array('c'=>'+257','n'=>'Burundi','i'=>'BDI'),
+            array('c'=>'+855','n'=>'Cambodia','i'=>'KHM'),
+            array('c'=>'+237','n'=>'Cameroon','i'=>'CMR'),
+            array('c'=>'+238','n'=>'Cape Verde','i'=>'CPV'),
+            array('c'=>'+236','n'=>'Central African Republic','i'=>'CAF'),
+            array('c'=>'+235','n'=>'Chad','i'=>'TCD'),
+            array('c'=>'+56','n'=>'Chile','i'=>'CHL'),
+            array('c'=>'+86','n'=>'China','i'=>'CHN'),
+            array('c'=>'+57','n'=>'Colombia','i'=>'COL'),
+            array('c'=>'+269','n'=>'Comoros','i'=>'COM'),
+            array('c'=>'+242','n'=>'Congo','i'=>'COG'),
+            array('c'=>'+243','n'=>'Congo (DRC)','i'=>'COD'),
+            array('c'=>'+506','n'=>'Costa Rica','i'=>'CRI'),
+            array('c'=>'+385','n'=>'Croatia','i'=>'HRV'),
+            array('c'=>'+53','n'=>'Cuba','i'=>'CUB'),
+            array('c'=>'+357','n'=>'Cyprus','i'=>'CYP'),
+            array('c'=>'+420','n'=>'Czech Republic','i'=>'CZE'),
+            array('c'=>'+45','n'=>'Denmark','i'=>'DNK'),
+            array('c'=>'+253','n'=>'Djibouti','i'=>'DJI'),
+            array('c'=>'+1','n'=>'Dominica','i'=>'DMA'),
+            array('c'=>'+1','n'=>'Dominican Republic','i'=>'DOM'),
+            array('c'=>'+593','n'=>'Ecuador','i'=>'ECU'),
+            array('c'=>'+20','n'=>'Egypt','i'=>'EGY'),
+            array('c'=>'+503','n'=>'El Salvador','i'=>'SLV'),
+            array('c'=>'+240','n'=>'Equatorial Guinea','i'=>'GNQ'),
+            array('c'=>'+291','n'=>'Eritrea','i'=>'ERI'),
+            array('c'=>'+372','n'=>'Estonia','i'=>'EST'),
+            array('c'=>'+268','n'=>'Eswatini','i'=>'SWZ'),
+            array('c'=>'+251','n'=>'Ethiopia','i'=>'ETH'),
+            array('c'=>'+679','n'=>'Fiji','i'=>'FJI'),
+            array('c'=>'+358','n'=>'Finland','i'=>'FIN'),
+            array('c'=>'+33','n'=>'France','i'=>'FRA'),
+            array('c'=>'+241','n'=>'Gabon','i'=>'GAB'),
+            array('c'=>'+220','n'=>'Gambia','i'=>'GMB'),
+            array('c'=>'+995','n'=>'Georgia','i'=>'GEO'),
+            array('c'=>'+49','n'=>'Germany','i'=>'DEU'),
+            array('c'=>'+233','n'=>'Ghana','i'=>'GHA'),
+            array('c'=>'+30','n'=>'Greece','i'=>'GRC'),
+            array('c'=>'+1','n'=>'Grenada','i'=>'GRD'),
+            array('c'=>'+502','n'=>'Guatemala','i'=>'GTM'),
+            array('c'=>'+224','n'=>'Guinea','i'=>'GIN'),
+            array('c'=>'+245','n'=>'Guinea-Bissau','i'=>'GNB'),
+            array('c'=>'+592','n'=>'Guyana','i'=>'GUY'),
+            array('c'=>'+509','n'=>'Haiti','i'=>'HTI'),
+            array('c'=>'+504','n'=>'Honduras','i'=>'HND'),
+            array('c'=>'+852','n'=>'Hong Kong','i'=>'HKG'),
+            array('c'=>'+36','n'=>'Hungary','i'=>'HUN'),
+            array('c'=>'+354','n'=>'Iceland','i'=>'ISL'),
+            array('c'=>'+62','n'=>'Indonesia','i'=>'IDN'),
+            array('c'=>'+98','n'=>'Iran','i'=>'IRN'),
+            array('c'=>'+964','n'=>'Iraq','i'=>'IRQ'),
+            array('c'=>'+353','n'=>'Ireland','i'=>'IRL'),
+            array('c'=>'+972','n'=>'Israel','i'=>'ISR'),
+            array('c'=>'+39','n'=>'Italy','i'=>'ITA'),
+            array('c'=>'+1','n'=>'Jamaica','i'=>'JAM'),
+            array('c'=>'+81','n'=>'Japan','i'=>'JPN'),
+            array('c'=>'+962','n'=>'Jordan','i'=>'JOR'),
+            array('c'=>'+7','n'=>'Kazakhstan','i'=>'KAZ'),
+            array('c'=>'+254','n'=>'Kenya','i'=>'KEN'),
+            array('c'=>'+686','n'=>'Kiribati','i'=>'KIR'),
+            array('c'=>'+965','n'=>'Kuwait','i'=>'KWT'),
+            array('c'=>'+996','n'=>'Kyrgyzstan','i'=>'KGZ'),
+            array('c'=>'+856','n'=>'Laos','i'=>'LAO'),
+            array('c'=>'+371','n'=>'Latvia','i'=>'LVA'),
+            array('c'=>'+961','n'=>'Lebanon','i'=>'LBN'),
+            array('c'=>'+266','n'=>'Lesotho','i'=>'LSO'),
+            array('c'=>'+231','n'=>'Liberia','i'=>'LBR'),
+            array('c'=>'+218','n'=>'Libya','i'=>'LBY'),
+            array('c'=>'+423','n'=>'Liechtenstein','i'=>'LIE'),
+            array('c'=>'+370','n'=>'Lithuania','i'=>'LTU'),
+            array('c'=>'+352','n'=>'Luxembourg','i'=>'LUX'),
+            array('c'=>'+853','n'=>'Macau','i'=>'MAC'),
+            array('c'=>'+261','n'=>'Madagascar','i'=>'MDG'),
+            array('c'=>'+265','n'=>'Malawi','i'=>'MWI'),
+            array('c'=>'+60','n'=>'Malaysia','i'=>'MYS'),
+            array('c'=>'+960','n'=>'Maldives','i'=>'MDV'),
+            array('c'=>'+223','n'=>'Mali','i'=>'MLI'),
+            array('c'=>'+356','n'=>'Malta','i'=>'MLT'),
+            array('c'=>'+692','n'=>'Marshall Islands','i'=>'MHL'),
+            array('c'=>'+222','n'=>'Mauritania','i'=>'MRT'),
+            array('c'=>'+230','n'=>'Mauritius','i'=>'MUS'),
+            array('c'=>'+52','n'=>'Mexico','i'=>'MEX'),
+            array('c'=>'+691','n'=>'Micronesia','i'=>'FSM'),
+            array('c'=>'+373','n'=>'Moldova','i'=>'MDA'),
+            array('c'=>'+377','n'=>'Monaco','i'=>'MCO'),
+            array('c'=>'+976','n'=>'Mongolia','i'=>'MNG'),
+            array('c'=>'+382','n'=>'Montenegro','i'=>'MNE'),
+            array('c'=>'+212','n'=>'Morocco','i'=>'MAR'),
+            array('c'=>'+258','n'=>'Mozambique','i'=>'MOZ'),
+            array('c'=>'+95','n'=>'Myanmar','i'=>'MMR'),
+            array('c'=>'+264','n'=>'Namibia','i'=>'NAM'),
+            array('c'=>'+674','n'=>'Nauru','i'=>'NRU'),
+            array('c'=>'+977','n'=>'Nepal','i'=>'NPL'),
+            array('c'=>'+31','n'=>'Netherlands','i'=>'NLD'),
+            array('c'=>'+64','n'=>'New Zealand','i'=>'NZL'),
+            array('c'=>'+505','n'=>'Nicaragua','i'=>'NIC'),
+            array('c'=>'+227','n'=>'Niger','i'=>'NER'),
+            array('c'=>'+234','n'=>'Nigeria','i'=>'NGA'),
+            array('c'=>'+850','n'=>'North Korea','i'=>'PRK'),
+            array('c'=>'+82','n'=>'South Korea','i'=>'KOR'),
+            array('c'=>'+389','n'=>'North Macedonia','i'=>'MKD'),
+            array('c'=>'+47','n'=>'Norway','i'=>'NOR'),
+            array('c'=>'+968','n'=>'Oman','i'=>'OMN'),
+            array('c'=>'+92','n'=>'Pakistan','i'=>'PAK'),
+            array('c'=>'+680','n'=>'Palau','i'=>'PLW'),
+            array('c'=>'+970','n'=>'Palestine','i'=>'PSE'),
+            array('c'=>'+507','n'=>'Panama','i'=>'PAN'),
+            array('c'=>'+675','n'=>'Papua New Guinea','i'=>'PNG'),
+            array('c'=>'+595','n'=>'Paraguay','i'=>'PRY'),
+            array('c'=>'+51','n'=>'Peru','i'=>'PER'),
+            array('c'=>'+63','n'=>'Philippines','i'=>'PHL'),
+            array('c'=>'+48','n'=>'Poland','i'=>'POL'),
+            array('c'=>'+351','n'=>'Portugal','i'=>'PRT'),
+            array('c'=>'+974','n'=>'Qatar','i'=>'QAT'),
+            array('c'=>'+40','n'=>'Romania','i'=>'ROU'),
+            array('c'=>'+7','n'=>'Russia','i'=>'RUS'),
+            array('c'=>'+250','n'=>'Rwanda','i'=>'RWA'),
+            array('c'=>'+1','n'=>'Saint Kitts and Nevis','i'=>'KNA'),
+            array('c'=>'+1','n'=>'Saint Lucia','i'=>'LCA'),
+            array('c'=>'+1','n'=>'Saint Vincent','i'=>'VCT'),
+            array('c'=>'+685','n'=>'Samoa','i'=>'WSM'),
+            array('c'=>'+378','n'=>'San Marino','i'=>'SMR'),
+            array('c'=>'+239','n'=>'Sao Tome and Principe','i'=>'STP'),
+            array('c'=>'+966','n'=>'Saudi Arabia','i'=>'SAU'),
+            array('c'=>'+221','n'=>'Senegal','i'=>'SEN'),
+            array('c'=>'+381','n'=>'Serbia','i'=>'SRB'),
+            array('c'=>'+248','n'=>'Seychelles','i'=>'SYC'),
+            array('c'=>'+232','n'=>'Sierra Leone','i'=>'SLE'),
+            array('c'=>'+421','n'=>'Slovakia','i'=>'SVK'),
+            array('c'=>'+386','n'=>'Slovenia','i'=>'SVN'),
+            array('c'=>'+677','n'=>'Solomon Islands','i'=>'SLB'),
+            array('c'=>'+252','n'=>'Somalia','i'=>'SOM'),
+            array('c'=>'+27','n'=>'South Africa','i'=>'ZAF'),
+            array('c'=>'+82','n'=>'South Korea','i'=>'KOR'),
+            array('c'=>'+211','n'=>'South Sudan','i'=>'SSD'),
+            array('c'=>'+34','n'=>'Spain','i'=>'ESP'),
+            array('c'=>'+94','n'=>'Sri Lanka','i'=>'LKA'),
+            array('c'=>'+249','n'=>'Sudan','i'=>'SDN'),
+            array('c'=>'+597','n'=>'Suriname','i'=>'SUR'),
+            array('c'=>'+46','n'=>'Sweden','i'=>'SWE'),
+            array('c'=>'+41','n'=>'Switzerland','i'=>'CHE'),
+            array('c'=>'+963','n'=>'Syria','i'=>'SYR'),
+            array('c'=>'+886','n'=>'Taiwan','i'=>'TWN'),
+            array('c'=>'+992','n'=>'Tajikistan','i'=>'TJK'),
+            array('c'=>'+255','n'=>'Tanzania','i'=>'TZA'),
+            array('c'=>'+66','n'=>'Thailand','i'=>'THA'),
+            array('c'=>'+670','n'=>'Timor-Leste','i'=>'TLS'),
+            array('c'=>'+228','n'=>'Togo','i'=>'TGO'),
+            array('c'=>'+676','n'=>'Tonga','i'=>'TON'),
+            array('c'=>'+1','n'=>'Trinidad and Tobago','i'=>'TTO'),
+            array('c'=>'+216','n'=>'Tunisia','i'=>'TUN'),
+            array('c'=>'+90','n'=>'Turkey','i'=>'TUR'),
+            array('c'=>'+993','n'=>'Turkmenistan','i'=>'TKM'),
+            array('c'=>'+688','n'=>'Tuvalu','i'=>'TUV'),
+            array('c'=>'+256','n'=>'Uganda','i'=>'UGA'),
+            array('c'=>'+380','n'=>'Ukraine','i'=>'UKR'),
+            array('c'=>'+598','n'=>'Uruguay','i'=>'URY'),
+            array('c'=>'+998','n'=>'Uzbekistan','i'=>'UZB'),
+            array('c'=>'+678','n'=>'Vanuatu','i'=>'VUT'),
+            array('c'=>'+379','n'=>'Vatican City','i'=>'VAT'),
+            array('c'=>'+58','n'=>'Venezuela','i'=>'VEN'),
+            array('c'=>'+84','n'=>'Vietnam','i'=>'VNM'),
+            array('c'=>'+967','n'=>'Yemen','i'=>'YEM'),
+            array('c'=>'+260','n'=>'Zambia','i'=>'ZMB'),
+            array('c'=>'+263','n'=>'Zimbabwe','i'=>'ZWE')
+        );
         $select_arrow = 'data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20fill%3D%22%231E293B%22%20d%3D%22M5.293%207.293a1%201%200%20011.414%200L10%2010.586l3.293-3.293a1%201%200%20111.414%201.414l-4%204a1%201%200%2001-1.414%200l-4-4a1%201%200%20010-1.414z%22%2F%3E%3C%2Fsvg%3E';
-        return '<form style="display:flex;flex-direction:column;gap:16px;" onsubmit="return false;">
+        return '<form id="' . $form_id . '" style="display:flex;flex-direction:column;gap:16px;" onsubmit="return handleFormSubmit_' . $form_id . '(event);">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <input placeholder="Full Name*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
-    <input placeholder="Email Address*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="email" required>
+    <input name="fullname" placeholder="Full Name*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
+    <input name="email" placeholder="Email Address*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="email" required>
+  </div>
+  <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;">
+    <div style="position:relative;width:100%;">
+      <input name="country_code" id="cc_input_' . $form_id . '" value="+91 IND" placeholder="+91 IND" style="width:100%;padding:13px 8px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;text-align:center;cursor:pointer;" autocomplete="off">
+      <div id="cc_dropdown_' . $form_id . '" style="position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:#FFFFFF;border:1px solid #CBD5E1;border-radius:12px;z-index:99999;box-shadow:0 10px 25px rgba(0,0,0,0.15);display:none;margin-top:6px;padding:4px;box-sizing:border-box;text-align:left;">
+        <style>
+        #cc_dropdown_' . $form_id . '::-webkit-scrollbar { width: 6px; }
+        #cc_dropdown_' . $form_id . '::-webkit-scrollbar-track { background: transparent; }
+        #cc_dropdown_' . $form_id . '::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        #cc_dropdown_' . $form_id . '::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        </style>
+      </div>
+    </div>
+    <input name="phone" placeholder="Contact No.*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="tel" required>
+  </div>
+  <div style="position:relative;width:100%;">
+    <input type="text" readonly id="service_trigger_' . $form_id . '" placeholder="Select Service*" value="" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;cursor:pointer;font-family:inherit;background-image:url(\'' . $select_arrow . '\');background-repeat:no-repeat;background-position:right 18px center;padding-right:45px;" required>
+    <input type="hidden" name="service" id="service_input_' . $form_id . '" required>
+    <div id="service_dropdown_' . $form_id . '" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#FFFFFF;border:1px solid #CBD5E1;border-radius:12px;z-index:99999;box-shadow:0 10px 25px rgba(0,0,0,0.15);display:none;margin-top:6px;padding:4px;box-sizing:border-box;text-align:left;">
+      <style>
+      #service_dropdown_' . $form_id . '::-webkit-scrollbar { width: 6px; }
+      #service_dropdown_' . $form_id . '::-webkit-scrollbar-track { background: transparent; }
+      #service_dropdown_' . $form_id . '::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+      #service_dropdown_' . $form_id . '::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+      </style>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <input placeholder="Contact No. with Country Code*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="tel" required>
-    <select style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#121212;font-size:14px;box-sizing:border-box;outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url(\'' . $select_arrow . '\');background-repeat:no-repeat;background-position:right 18px center;padding-right:45px;">
-      <option value="">Select Service</option>
-      <option value="seo">Search Engine Optimization</option>
-      <option value="ppc">PPC & Google Ads</option>
-      <option value="web">Website Development</option>
-      <option value="social">Social Media Marketing</option>
-    </select>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <input placeholder="Company Name*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
-    <input placeholder="Website/Landing Page*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="url">
+    <input name="company" placeholder="Company Name*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
+    <input name="website" placeholder="Website/Landing Page*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
   </div>
   <div>
-    <select style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#121212;font-size:14px;box-sizing:border-box;outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url(\'' . $select_arrow . '\');background-repeat:no-repeat;background-position:right 18px center;padding-right:45px;">
-      <option value="">Budget Spent In Last 30 Days?</option>
-      <option value="under1k">Under $1,000</option>
-      <option value="1k-5k">$1,000 - $5,000</option>
-      <option value="5k-10k">$5,000 - $10,000</option>
-      <option value="10k+">$10,000+</option>
-    </select>
+    <div style="position:relative;width:100%;">
+      <input type="text" readonly id="budget_trigger_' . $form_id . '" placeholder="Budget Spent In Last 30 Days?*" value="" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;cursor:pointer;font-family:inherit;background-image:url(\'' . $select_arrow . '\');background-repeat:no-repeat;background-position:right 18px center;padding-right:45px;" required>
+      <input type="hidden" name="budget" id="budget_input_' . $form_id . '" required>
+      <div id="budget_dropdown_' . $form_id . '" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#FFFFFF;border:1px solid #CBD5E1;border-radius:12px;z-index:99999;box-shadow:0 10px 25px rgba(0,0,0,0.15);display:none;margin-top:6px;padding:4px;box-sizing:border-box;text-align:left;">
+        <style>
+        #budget_dropdown_' . $form_id . '::-webkit-scrollbar { width: 6px; }
+        #budget_dropdown_' . $form_id . '::-webkit-scrollbar-track { background: transparent; }
+        #budget_dropdown_' . $form_id . '::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        #budget_dropdown_' . $form_id . '::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        </style>
+      </div>
+    </div>
   </div>
   <div>
-    <textarea placeholder="Additional Details/Purpose of Business" style="width:100%;padding:16px 22px;border-radius:18px;border:1px solid #7E7E7E;background:#FFFFFF;color:#1E293B;font-size:14px;box-sizing:border-box;height:140px;resize:vertical;outline:none;font-family:inherit;"></textarea>
+    <textarea name="details" placeholder="Additional Details/Purpose of Business" style="width:100%;padding:16px 22px;border-radius:18px;border:1px solid #7E7E7E;background:#FFFFFF;color:#1E293B;font-size:14px;box-sizing:border-box;height:120px;resize:vertical;outline:none;font-family:inherit;"></textarea>
   </div>
-  <div style="margin-top:8px;text-align:left;">
-    <button type="submit" style="background:#111827;color:#FFFFFF;border:none;border-radius:50px;padding:14px 34px;font-weight:600;font-size:14px;cursor:pointer;display:inline-block;transition:all 0.2s;font-family:inherit;">Request a marketing Proposal</button>
+  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:8px;text-align:left;">
+    <button type="submit" style="background:#02426A;color:#FFFFFF;border:none;border-radius:50px;padding:14px 34px;font-weight:600;font-size:14px;cursor:pointer;display:inline-block;transition:all 0.2s;font-family:inherit;">Request a marketing Proposal</button>
+    <div id="error_' . $form_id . '" style="color:#DC2626;font-size:13px;display:none;font-weight:500;"></div>
+    <div id="success_' . $form_id . '" style="color:#16A34A;font-size:13px;display:none;font-weight:500;"></div>
   </div>
-</form>';
+</form>
+<script>
+(function() {
+    // 1. Country Code Dropdown
+    var countries = ' . json_encode($countries) . ';
+    var input = document.getElementById("cc_input_' . $form_id . '");
+    var dropdown = document.getElementById("cc_dropdown_' . $form_id . '");
+    
+    function renderList(filter) {
+        dropdown.innerHTML = "";
+        
+        var styleTag = dropdown.querySelector("style");
+        if (styleTag) {
+            dropdown.innerHTML = "";
+            dropdown.appendChild(styleTag);
+        }
+        
+        var filtered = countries.filter(function(c) {
+            var searchStr = (c.c + " " + c.i + " " + c.n).toLowerCase();
+            return !filter || searchStr.indexOf(filter.toLowerCase()) !== -1;
+        });
+        
+        if (filtered.length === 0) {
+            var empty = document.createElement("div");
+            empty.textContent = "No matches";
+            empty.style.padding = "10px 14px";
+            empty.style.fontSize = "13px";
+            empty.style.color = "#94A3B8";
+            empty.style.textAlign = "center";
+            dropdown.appendChild(empty);
+            return;
+        }
+        
+        filtered.forEach(function(c) {
+            var item = document.createElement("div");
+            item.textContent = c.n + " (" + c.c + " " + c.i + ")";
+            item.style.padding = "10px 14px";
+            item.style.cursor = "pointer";
+            item.style.fontSize = "13px";
+            item.style.color = "#1E293B";
+            item.style.borderRadius = "8px";
+            item.style.transition = "background 0.15s, color 0.15s";
+            
+            item.addEventListener("mouseenter", function() {
+                item.style.background = "#F1F5F9";
+                item.style.color = "#0F172A";
+            });
+            item.addEventListener("mouseleave", function() {
+                item.style.background = "transparent";
+                item.style.color = "#1E293B";
+            });
+            item.addEventListener("click", function(e) {
+                input.value = c.c + " " + c.i;
+                dropdown.style.display = "none";
+                e.stopPropagation();
+            });
+            dropdown.appendChild(item);
+        });
+    }
+    
+    input.addEventListener("focus", function() {
+        dropdown.style.display = "block";
+        input.dataset.prev = input.value;
+        input.value = "";
+        renderList("");
+    });
+    
+    input.addEventListener("input", function() {
+        dropdown.style.display = "block";
+        renderList(input.value);
+    });
+    
+    input.addEventListener("blur", function() {
+        setTimeout(function() {
+            if (input.value === "") {
+                input.value = input.dataset.prev || "+91 IND";
+            }
+            dropdown.style.display = "none";
+        }, 200);
+    });
+    
+    dropdown.addEventListener("wheel", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    dropdown.addEventListener("touchmove", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    // 2. Service Dropdown
+    var serviceTrigger = document.getElementById("service_trigger_' . $form_id . '");
+    var serviceInput = document.getElementById("service_input_' . $form_id . '");
+    var serviceDropdown = document.getElementById("service_dropdown_' . $form_id . '");
+    
+    var services = [
+        { v: "digital-marketing", n: "Digital Marketing" },
+        { v: "google-ads", n: "Google Ads" },
+        { v: "branding-services", n: "Branding Services" },
+        { v: "seo", n: "SEO" },
+        { v: "web-development", n: "Web Development" },
+        { v: "social-media-management", n: "Social Media Management" },
+        { v: "online-reputation-management", n: "Online Reputation Management" },
+        { v: "video-production", n: "Video Production" },
+        { v: "vfx", n: "VFX" },
+        { v: "cgi-services", n: "CGI Services" }
+    ];
+    
+    function renderServices() {
+        serviceDropdown.innerHTML = "";
+        
+        var styleTag = serviceDropdown.querySelector("style");
+        if (styleTag) {
+            serviceDropdown.innerHTML = "";
+            serviceDropdown.appendChild(styleTag);
+        }
+        
+        services.forEach(function(s) {
+            var item = document.createElement("div");
+            item.textContent = s.n;
+            item.style.padding = "10px 14px";
+            item.style.cursor = "pointer";
+            item.style.fontSize = "13px";
+            item.style.color = "#1E293B";
+            item.style.borderRadius = "8px";
+            item.style.transition = "background 0.15s, color 0.15s";
+            
+            item.addEventListener("mouseenter", function() {
+                item.style.background = "#F1F5F9";
+                item.style.color = "#0F172A";
+            });
+            item.addEventListener("mouseleave", function() {
+                item.style.background = "transparent";
+                item.style.color = "#1E293B";
+            });
+            item.addEventListener("click", function(e) {
+                serviceTrigger.value = s.n;
+                serviceInput.value = s.v;
+                serviceDropdown.style.display = "none";
+                e.stopPropagation();
+            });
+            serviceDropdown.appendChild(item);
+        });
+    }
+    
+    serviceTrigger.addEventListener("click", function(e) {
+        var isDisplayed = serviceDropdown.style.display === "block";
+        serviceDropdown.style.display = isDisplayed ? "none" : "block";
+        if (!isDisplayed) {
+            renderServices();
+        }
+        e.stopPropagation();
+    });
+    
+    serviceDropdown.addEventListener("wheel", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    serviceDropdown.addEventListener("touchmove", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    // 3. Budget Dropdown
+    var budgetTrigger = document.getElementById("budget_trigger_' . $form_id . '");
+    var budgetInput = document.getElementById("budget_input_' . $form_id . '");
+    var budgetDropdown = document.getElementById("budget_dropdown_' . $form_id . '");
+    
+    var budgets = [
+        { v: "under1k", n: "Under $1,000" },
+        { v: "1k-5k", n: "$1,000 - $5,000" },
+        { v: "5k-10k", n: "$5,000 - $10,000" },
+        { v: "10k+", n: "$10,000+" }
+    ];
+    
+    function renderBudgets() {
+        budgetDropdown.innerHTML = "";
+        
+        var styleTag = budgetDropdown.querySelector("style");
+        if (styleTag) {
+            budgetDropdown.innerHTML = "";
+            budgetDropdown.appendChild(styleTag);
+        }
+        
+        budgets.forEach(function(b) {
+            var item = document.createElement("div");
+            item.textContent = b.n;
+            item.style.padding = "10px 14px";
+            item.style.cursor = "pointer";
+            item.style.fontSize = "13px";
+            item.style.color = "#1E293B";
+            item.style.borderRadius = "8px";
+            item.style.transition = "background 0.15s, color 0.15s";
+            
+            item.addEventListener("mouseenter", function() {
+                item.style.background = "#F1F5F9";
+                item.style.color = "#0F172A";
+            });
+            item.addEventListener("mouseleave", function() {
+                item.style.background = "transparent";
+                item.style.color = "#1E293B";
+            });
+            item.addEventListener("click", function(e) {
+                budgetTrigger.value = b.n;
+                budgetInput.value = b.v;
+                budgetDropdown.style.display = "none";
+                e.stopPropagation();
+            });
+            budgetDropdown.appendChild(item);
+        });
+    }
+    
+    budgetTrigger.addEventListener("click", function(e) {
+        var isDisplayed = budgetDropdown.style.display === "block";
+        budgetDropdown.style.display = isDisplayed ? "none" : "block";
+        if (!isDisplayed) {
+            renderBudgets();
+        }
+        e.stopPropagation();
+    });
+    
+    budgetDropdown.addEventListener("wheel", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    budgetDropdown.addEventListener("touchmove", function(e) {
+        e.stopPropagation();
+    }, { passive: false });
+    
+    // Global Document Clicks
+    document.addEventListener("click", function(e) {
+        if (e.target !== input && !dropdown.contains(e.target)) {
+            dropdown.style.display = "none";
+        }
+        if (e.target !== serviceTrigger && !serviceDropdown.contains(e.target)) {
+            serviceDropdown.style.display = "none";
+        }
+        if (e.target !== budgetTrigger && !budgetDropdown.contains(e.target)) {
+            budgetDropdown.style.display = "none";
+        }
+    });
+})();
+
+function handleFormSubmit_' . $form_id . '(event) {
+    event.preventDefault();
+    var form = event.target;
+    var errorDiv = document.getElementById("error_' . $form_id . '");
+    var successDiv = document.getElementById("success_' . $form_id . '");
+    errorDiv.style.display = "none";
+    successDiv.style.display = "none";
+
+    var name = form.fullname.value.trim();
+    var email = form.email.value.trim();
+    var phone = form.phone.value.trim();
+    var service = form.service.value;
+    var company = form.company.value.trim();
+    var website = form.website.value.trim();
+    var budget = form.budget.value;
+
+    if (!name || !email || !phone || !service || !company || !website || !budget) {
+        errorDiv.textContent = "Please fill in all required fields.";
+        errorDiv.style.display = "block";
+        return false;
+    }
+
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        errorDiv.textContent = "Please enter a valid email address.";
+        errorDiv.style.display = "block";
+        return false;
+    }
+
+    var phoneClean = phone.replace(/[\s\-\(\)\+]/g, "");
+    if (!/^\d{7,15}$/.test(phoneClean)) {
+        errorDiv.textContent = "Please enter a valid contact number (7-15 digits).";
+        errorDiv.style.display = "block";
+        return false;
+    }
+
+    var webRegex = /^(https?:\/\/)?(www\.)?[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(\/\S*)?$/;
+    if (!webRegex.test(website)) {
+        errorDiv.textContent = "Please enter a valid website URL or domain name.";
+        errorDiv.style.display = "block";
+        return false;
+    }
+
+    successDiv.textContent = "Thank you! Your proposal request has been submitted successfully.";
+    successDiv.style.display = "block";
+    form.reset();
+    return false;
+}
+</script>';
     }
 
     private function form_html()
@@ -1319,5 +2024,65 @@ function vcpgSwitchTab(idx) {
         }
 
         return $nouns;
+    }
+
+    private function case_study_html($data)
+    {
+        $city = $this->t(isset($data['city']) ? $data['city'] : 'Los Angeles');
+        $svc = $this->t(isset($data['service']) ? $data['service'] : 'Law Firm Marketing');
+        $nouns = $this->get_service_nouns($svc);
+        
+        $niche = ucwords($svc);
+        if (stripos($niche, $nouns['business_type']) === false) {
+            $niche .= ' ' . ucwords($nouns['business_type']);
+        }
+        $client_type = $nouns['client_type'];
+        
+        $service_name = strtolower($svc);
+        
+        $title = "Case Study: Helping a " . $city . " " . $niche . " Improve Local Search Visibility";
+        
+        $challenge = "A " . $city . " " . strtolower($niche) . " had a professional website but was not getting enough inquiries from Google. The " . strtolower($nouns['business_type']) . " was ranking for some general terms, but visibility for important local and service-specific searches was limited. The client wanted one thing: more relevant people finding the " . strtolower($nouns['business_type']) . " when they were actively looking for " . $service_name . " solutions.";
+        
+        $what_we_did = "We reviewed the website, competitors, local search presence, and existing content. We then focused on improving key service pages, targeting relevant " . $city . " " . $service_name . " searches, strengthening internal links, optimizing the Google Business Profile, and improving calls-to-action on important landing pages. Instead of creating content only to target keywords, we focused on answering the questions potential " . $client_type . "s were actually asking before contacting them.";
+        
+        $result = "Within the campaign period, the " . strtolower($nouns['business_type']) . " saw improved visibility for targeted local searches, stronger organic traffic to its practice-area pages, and an increase in consultation inquiries from organic search. Key improvement: The marketing strategy shifted the focus from simply getting more website visitors to attracting potential " . $client_type . "s actively looking for professional services in " . $city . ".";
+        
+        $what_this_shows = "Effective local SEO and digital marketing is not about repeating keywords or publishing large amounts of generic content. It is about understanding what potential " . $client_type . "s search for, creating useful content around those needs, improving local visibility, and making it easy for the right visitor to contact the " . strtolower($nouns['business_type']) . ".";
+        
+        $image_url = $this->get_asset_url('case-study.png');
+        
+        $html = '
+<div class="vp-container" style="padding: 0;">
+    <div class="vp-casestudy-grid">
+        <div style="order: 1; display: flex; height: 100%;">
+            <img src="' . esc_url($image_url) . '" alt="' . esc_attr($title) . '" style="width: 100%; height: 100%; min-height: 100%; border-radius: 24px; box-shadow: 0 12px 36px rgba(2,66,106,0.12); display: block; object-fit: cover;">
+        </div>
+        <div style="order: 2;">
+            <h2 style="font-size: 2.2rem; font-weight: 800; color: #02426A; line-height: 1.25; margin-bottom: 30px; font-family: \'DM Sans\', sans-serif;">' . $this->e($title) . '</h2>
+            
+            <div style="margin-bottom: 24px;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #02426A; margin-bottom: 8px; font-family: \'DM Sans\', sans-serif;">The Challenge</h4>
+                <p style="font-size: 15px; color: #334155; line-height: 1.7; font-family: \'Plus Jakarta Sans\', sans-serif;">' . $this->e($challenge) . '</p>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #02426A; margin-bottom: 8px; font-family: \'DM Sans\', sans-serif;">What We Did</h4>
+                <p style="font-size: 15px; color: #334155; line-height: 1.7; font-family: \'Plus Jakarta Sans\', sans-serif;">' . $this->e($what_we_did) . '</p>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #02426A; margin-bottom: 8px; font-family: \'DM Sans\', sans-serif;">The Result</h4>
+                <p style="font-size: 15px; color: #334155; line-height: 1.7; font-family: \'Plus Jakarta Sans\', sans-serif;">' . $this->e($result) . '</p>
+            </div>
+            
+            <div style="margin-bottom: 0;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #02426A; margin-bottom: 8px; font-family: \'DM Sans\', sans-serif;">What This Shows</h4>
+                <p style="font-size: 15px; color: #334155; line-height: 1.7; font-family: \'Plus Jakarta Sans\', sans-serif;">' . $this->e($what_this_shows) . '</p>
+            </div>
+        </div>
+    </div>
+</div>';
+        return $html;
     }
 }

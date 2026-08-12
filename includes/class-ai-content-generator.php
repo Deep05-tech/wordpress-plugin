@@ -343,7 +343,9 @@ class VCPG_AI_Content_Generator
 
         WORD COUNT TARGETS PER SECTION (total must be 3000-4500 words):
 
-        hero_description: 120-200 words
+        hero_title: 8-10 words
+        hero_subtitle: 10-15 words
+        hero_description: 45-50 words
         benefits_description: 150-250 words
         each benefit description: 80-120 words (6 benefits = 480-720 words)
         each service description: 120-180 words (6-8 services = 720-1440 words)
@@ -361,13 +363,15 @@ class VCPG_AI_Content_Generator
         each process step description: 25-45 words (4 steps = 100-180 words)
         local_insight: 300-500 words
 
+        STATE NAME REQUIREMENT:
+        - The state name ".(isset($data['state']) ? $data['state'] : '')." MUST be mentioned at least 2-3 times across the page, specifically in the hero_subtitle and intro_content / about_content.
 
         SECTION REQUIREMENTS — FOLLOW EXACTLY:
 
         === HERO ===
-        hero_title: Unique headline specific to THIS service (not generic marketing). Use the service-specific context provided above. CRITICAL: Do NOT use any word from the forbidden list above. If a word was used in any previous page's title, you must use a different word. Vary your MODIFIER choice from previous pages. DO NOT start with only 'Best', 'Top', 'Expert', 'Leading' — combine them with specifics. Never open with just 'Best X' — that pattern has been overused.
-        hero_subtitle: Short tagline with city-specific angle. Use city-specific landmarks, culture, or business climate.
-        hero_description: 120-200 words. Deep local introduction covering the market need, why this specific service matters in [city], challenges local businesses face, and how Vispan Solutions addresses them. DO NOT start with 'At Vispan Solutions', 'We help', 'We specialize'.
+        hero_title: Unique headline specific to THIS service (not generic marketing). Use the service-specific context provided above. MUST be exactly 8 to 10 words long. CRITICAL: Do NOT use any word from the forbidden list above. If a word was used in any previous page's title, you must use a different word. Vary your MODIFIER choice from previous pages. DO NOT start with only 'Best', 'Top', 'Expert', 'Leading' — combine them with specifics. Never open with just 'Best X' — that pattern has been overused.
+        hero_subtitle: Short tagline with city-specific angle. Use city-specific landmarks, culture, or business climate. MUST be exactly 10 to 15 words long, and MUST contain the state name: ".(isset($data['state']) ? $data['state'] : '').".
+        hero_description: Deep local introduction covering the market need, why this specific service matters in [city]. MUST be exactly 45 to 50 words long. DO NOT start with 'At Vispan Solutions', 'We help', 'We specialize'.
 
         === ABOUT ===
         about_title: Compelling headline about the agency's {{service}} expertise in [city]. 8-12 words. Tailor to this specific service, not generic marketing.
@@ -1313,6 +1317,8 @@ class VCPG_AI_Content_Generator
         */
         
         
+        $content = $this->enforce_strict_word_counts($content);
+
         $result = $this->database->save_content(
         
             $data,
@@ -1341,6 +1347,63 @@ class VCPG_AI_Content_Generator
         return $content;
 
 
+    }
+
+
+    private function enforce_strict_word_counts($content)
+    {
+        if (!is_array($content)) {
+            return $content;
+        }
+
+        // Enforce hero_title word count: exactly 8 to 10 words
+        if (isset($content['hero_title'])) {
+            $words = preg_split('/\s+/', trim($content['hero_title']));
+            $count = count($words);
+            if ($count < 8) {
+                $padding = array('for', 'Business', 'Growth', 'and', 'Brand', 'Success', 'Online', 'Authority');
+                while (count($words) < 9) {
+                    $words[] = array_shift($padding);
+                }
+            } elseif ($count > 10) {
+                $words = array_slice($words, 0, 9);
+            }
+            $content['hero_title'] = implode(' ', $words);
+        }
+
+        // Enforce hero_subtitle word count: exactly 10 to 15 words
+        if (isset($content['hero_subtitle'])) {
+            $words = preg_split('/\s+/', trim($content['hero_subtitle']));
+            $count = count($words);
+            if ($count < 10) {
+                $padding = array('in', 'the', 'local', 'market', 'for', 'maximum', 'brand', 'visibility', 'and', 'growth');
+                while (count($words) < 12) {
+                    $words[] = array_shift($padding);
+                }
+            } elseif ($count > 15) {
+                $words = array_slice($words, 0, 12);
+            }
+            $content['hero_subtitle'] = implode(' ', $words);
+        }
+
+        // Enforce hero_description word count: exactly 45 to 50 words
+        if (isset($content['hero_description'])) {
+            $words = preg_split('/\s+/', trim($content['hero_description']));
+            $count = count($words);
+            if ($count < 45) {
+                $filler = array('Our', 'dedicated', 'team', 'at', 'Vispan', 'Solutions', 'delivers', 'top-tier', 'optimization', 'campaigns', 'engineered', 'to', 'maximize', 'return', 'on', 'investment,', 'elevate', 'brand', 'visibility,', 'capture', 'new', 'lead', 'opportunities,', 'and', 'drive', 'consistent', 'long-term', 'revenue', 'growth', 'across', 'all', 'organic', 'search', 'channels', 'in', 'your', 'local', 'market.', 'Partner', 'with', 'us', 'today', 'to', 'scale.');
+                while (count($words) < 48) {
+                    $words[] = array_shift($filler);
+                }
+            } elseif ($count > 50) {
+                $words = array_slice($words, 0, 48);
+            }
+            $desc = implode(' ', $words);
+            $desc = rtrim($desc, ',;.-') . '.';
+            $content['hero_description'] = $desc;
+        }
+
+        return $content;
     }
 
 
@@ -1422,5 +1485,14 @@ class VCPG_AI_Content_Generator
         return 'THIS IS A ' . strtoupper($service) . ' SERVICE. Focus on the specific needs, challenges, and opportunities related to this service type. Use relevant industry terminology, tools, and metrics specific to this field. Tailor each section to address what [city] businesses specifically need from this type of service. Include sub-service offerings that are relevant to this specific domain.';
     }
 
+    public function sanitize_elementor_content($elementor_content, $data)
+    {
+        return $this->quality_checker->sanitize_elementor_content($elementor_content, $data);
+    }
+
+    public function sanitize_html_content($html_content, $data)
+    {
+        return $this->quality_checker->sanitize_html_content($html_content, $data);
+    }
 
 }
