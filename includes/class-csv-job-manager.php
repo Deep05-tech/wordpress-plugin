@@ -43,6 +43,15 @@ class VCPG_CSV_Job_Manager
         );
 
 
+        add_action(
+            'wp_ajax_vcpg_get_csv_progress',
+            array(
+                $this,
+                'get_progress'
+            )
+        );
+
+
     }
 
 
@@ -421,10 +430,6 @@ public function process_job()
 
 
 
-    /*
-    Lock Job
-    */
-
     $updated = $wpdb->update(
 
         $table,
@@ -444,6 +449,13 @@ public function process_job()
         )
 
     );
+
+
+
+    if($updated)
+    {
+        update_option('vcpg_job_activity', 'Starting generation for ' . $job->city . ' - ' . $job->service . '...');
+    }
 
 
 
@@ -852,6 +864,87 @@ public function process_job()
         );
 
 
+    }
+
+
+
+    public function get_progress()
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'vcpg_csv_jobs';
+        $batch_id = get_option('vcpg_current_batch');
+
+        if (empty($batch_id)) {
+            wp_send_json_success(array(
+                'completed' => 0,
+                'total' => 0,
+                'processing' => 0,
+                'failed' => 0,
+                'current' => '',
+                'activity' => 'No active batch.',
+                'failures' => array()
+            ));
+        }
+
+        $total = $this->count_jobs($batch_id);
+        $completed = $this->count_status($batch_id, 'completed');
+        $processing = $this->count_status($batch_id, 'processing');
+        $failed = $this->count_status($batch_id, 'failed');
+        $activity = get_option('vcpg_job_activity', '');
+
+        // Get the current job that is being processed (if any)
+        $current_job = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT city, service FROM $table WHERE batch_id=%s AND status='processing' LIMIT 1",
+                $batch_id
+            )
+        );
+
+        $current = '';
+        if ($current_job) {
+            $current = $current_job->city . ' - ' . $current_job->service;
+        } else {
+            // Fallback: get the last completed/failed job to show what just processed
+            $last_job = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT city, service FROM $table WHERE batch_id=%s AND status IN ('completed', 'failed') ORDER BY updated_at DESC LIMIT 1",
+                    $batch_id
+                )
+            );
+            if ($last_job) {
+                $current = $last_job->city . ' - ' . $last_job->service;
+            }
+        }
+
+        // Get failures in the current batch
+        $failures_rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT city, service, message FROM $table WHERE batch_id=%s AND status='failed' ORDER BY updated_at DESC LIMIT 5",
+                $batch_id
+            )
+        );
+
+        $failures = array();
+        if ($failures_rows) {
+            foreach ($failures_rows as $row) {
+                $failures[] = array(
+                    'city' => $row->city,
+                    'service' => $row->service,
+                    'message' => $row->message
+                );
+            }
+        }
+
+        wp_send_json_success(array(
+            'completed' => $completed,
+            'total' => $total,
+            'processing' => $processing,
+            'failed' => $failed,
+            'current' => $current,
+            'activity' => $activity,
+            'failures' => $failures
+        ));
     }
 
 

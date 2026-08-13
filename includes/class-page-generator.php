@@ -58,6 +58,16 @@ class VCPG_Page_Generator
             $data['country']
         );
 
+        $city = sanitize_text_field(
+            $data['city']
+        );
+
+        $service = sanitize_text_field(
+            $data['service']
+        );
+
+        update_option('vcpg_job_activity', 'Checking local database cache for ' . $city . ' - ' . $service . '...');
+
         error_log(
             'PAGE GENERATOR DATA: '.print_r($data,true)
         );
@@ -245,6 +255,8 @@ class VCPG_Page_Generator
         */
         if($this->ai_generator)
         {
+            update_option('vcpg_job_activity', 'Querying OpenAI API to generate professional landing page copy (this can take 5-15 seconds)...');
+
             $ai_content = $this->ai_generator->generate(
                 array(
                     'service' => $service,
@@ -265,6 +277,8 @@ class VCPG_Page_Generator
             );
         }
 
+        update_option('vcpg_job_activity', 'Checking if WordPress page already exists and preparing structure...');
+
         /*
         Check Existing WordPress Page
         */
@@ -281,6 +295,8 @@ class VCPG_Page_Generator
 
             if ( $mode === 'elementor' ) {
 
+                update_option('vcpg_job_activity', 'Designing landing page template in Elementor...');
+
                 $renderer       = new VCPG_Elementor_Renderer();
                 $tpl_content    = $renderer->load_template_content();
                 $elementor_content = $tpl_content !== null
@@ -294,6 +310,7 @@ class VCPG_Page_Generator
                     if ( $this->ai_generator ) {
                         $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
                     }
+                    update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
                         'post_content' => $html_content,
@@ -302,6 +319,7 @@ class VCPG_Page_Generator
                     if ( $this->ai_generator ) {
                         $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
                     }
+                    update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
                         'post_content' => '',
@@ -313,6 +331,7 @@ class VCPG_Page_Generator
                     update_post_meta( $existing_page->ID, '_elementor_version', defined( 'ELEMENTOR_VERSION' ) ? ELEMENTOR_VERSION : '3.23.0' );
                     update_post_meta( $existing_page->ID, '_wp_page_template', 'default' );
                     try {
+                        update_option('vcpg_job_activity', 'Regenerating Elementor layout CSS and clearing cache...');
                         if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
                             ( new \Elementor\Core\Files\CSS\Post( $existing_page->ID ) )->update();
                         }
@@ -324,6 +343,7 @@ class VCPG_Page_Generator
             } else {
 
                 // html mode — identical to previous behaviour
+                update_option('vcpg_job_activity', 'Designing HTML landing page and building layouts...');
                 $elementor_content = $this->get_template_content( $data );
                 if ( $this->ai_generator ) {
                     $elementor_content = $this->ai_generator->sanitize_elementor_content( $elementor_content, $data );
@@ -333,6 +353,7 @@ class VCPG_Page_Generator
                     $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
                 }
 
+                update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                 wp_update_post( array(
                     'ID'           => $existing_page->ID,
                     'post_content' => $html_content
@@ -462,6 +483,8 @@ class VCPG_Page_Generator
         Generate Template Content
         */
 
+        update_option('vcpg_job_activity', 'Designing landing page template in Elementor...');
+
         if ( $mode === 'elementor' ) {
 
             $renderer    = new VCPG_Elementor_Renderer();
@@ -492,6 +515,8 @@ class VCPG_Page_Generator
         if ( $mode === 'html' && $this->ai_generator && !empty( $html_content ) ) {
             $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
         }
+
+        update_option('vcpg_job_activity', 'Saving generated page to WordPress database...');
 
         $page_id = wp_insert_post(
             array(
@@ -557,6 +582,7 @@ class VCPG_Page_Generator
             update_post_meta( $page_id, '_wp_page_template',        'default' );
 
             try {
+                update_option('vcpg_job_activity', 'Regenerating Elementor layout CSS and clearing cache...');
                 if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
                     ( new \Elementor\Core\Files\CSS\Post( $page_id ) )->update();
                 }
@@ -567,6 +593,7 @@ class VCPG_Page_Generator
         } elseif ( $mode === 'html' && !empty( $elementor_content ) ) {
 
             // html mode — identical to previous behaviour
+            update_option('vcpg_job_activity', 'Saving generated page metadata to WordPress...');
             $elementor_version = defined('ELEMENTOR_VERSION')
                 ? ELEMENTOR_VERSION
                 : '3.23.0';
@@ -813,7 +840,7 @@ class VCPG_Page_Generator
             true
         );
 
-
+        update_option('vcpg_job_activity', 'Page successfully created!');
 
         return array(
 

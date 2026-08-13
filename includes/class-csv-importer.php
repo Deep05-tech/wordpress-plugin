@@ -243,263 +243,130 @@ Stop Generation
 
 jQuery(document).ready(function(){
 
+    let running = false;
+    let pollInterval = null;
 
-let running = false;
+    function start_polling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
+        pollInterval = setInterval(fetch_progress, 1000);
+    }
 
+    function stop_polling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
 
+    function fetch_progress() {
+        jQuery.post(
+            ajaxurl,
+            {
+                action: 'vcpg_get_csv_progress'
+            },
+            function(response) {
+                if (!response.success) {
+                    return;
+                }
+                let data = response.data;
 
-function update_progress()
-{
+                // Build HTML output
+                let html = '<strong>Total:</strong> ' + data.total +
+                    '<br><strong>Completed:</strong> ' + data.completed +
+                    '<br><strong>Processing:</strong> ' + data.processing +
+                    '<br><strong>Failed:</strong> ' + data.failed +
+                    '<br><br><strong>Current:</strong> ' + (data.current || '') +
+                    '<br><strong>Live Status:</strong> <span style="color: #007cba;">' + (data.activity || 'Waiting...') + '</span>';
 
+                // Display failures if any
+                if (data.failures && data.failures.length > 0) {
+                    html += '<br><br><strong style="color: #d63638;">Recent Failures:</strong><ul style="margin: 5px 0 0 20px; list-style-type: disc; color: #d63638;">';
+                    data.failures.forEach(function(fail) {
+                        html += '<li><strong>' + fail.city + ' - ' + fail.service + ':</strong> ' + fail.message + '</li>';
+                    });
+                    html += '</ul>';
+                }
 
-jQuery.post(
+                jQuery('#vcpg-progress').html(html);
 
-ajaxurl,
+                // If stopped or complete, hide stop button and stop polling
+                if (parseInt(data.completed) + parseInt(data.failed) >= parseInt(data.total) && parseInt(data.total) > 0) {
+                    stop_polling();
+                    jQuery('#vcpg-stop').hide();
+                    if (!jQuery('#vcpg-progress').text().includes('Generation Completed')) {
+                        jQuery('#vcpg-progress').append('<br><br><strong style="color: #46b450;">Generation Completed.</strong>');
+                    }
+                }
+            },
+            'json'
+        );
+    }
 
-{
-    action:'vcpg_process_csv_job'
-},
+    function process_queue() {
+        if (!running) {
+            return;
+        }
 
+        jQuery.post(
+            ajaxurl,
+            {
+                action: 'vcpg_process_csv_job'
+            },
+            function(response) {
+                if (!response.success) {
+                    // Try again in 3 seconds
+                    setTimeout(process_queue, 3000);
+                    return;
+                }
 
-function(response)
-{
+                let data = response.data;
 
+                if (data.stopped) {
+                    running = false;
+                    stop_polling();
+                    jQuery('#vcpg-progress').html('Process stopped.');
+                    jQuery('#vcpg-stop').hide();
+                    return;
+                }
 
-if(!response.success)
-{
+                if (parseInt(data.completed) + parseInt(data.failed) >= parseInt(data.total)) {
+                    running = false;
+                    stop_polling();
+                    fetch_progress(); // final progress fetch to ensure sync
+                    jQuery('#vcpg-stop').hide();
+                } else {
+                    // Trigger next job immediately
+                    setTimeout(process_queue, 500);
+                }
+            },
+            'json'
+        );
+    }
 
-    setTimeout(
-        update_progress,
-        3000
-    );
-
-    return;
-
-}
-
-
-
-let data=response.data;
-
-/*
-Show stop button while generation is running
-*/
-
-if(
-    parseInt(data.completed)
-    +
-    parseInt(data.failed)
-    <
-    parseInt(data.total)
-)
-{
-
+    // Start execution
+    running = true;
     jQuery('#vcpg-stop').show();
-
-}
-
-
-
-console.log(
-    "CSV Progress:",
-    data
-);
-
-
-
-
-
-if(data.stopped)
-{
-
-    running=false;
-
-
-    jQuery('#vcpg-progress').html(
-        'Process stopped.'
-    );
-
-
-    jQuery('#vcpg-stop').hide();
-
-
-    return;
-
-}
-
-
-
-
-
-jQuery('#vcpg-progress').html(
-
-'<strong>Total:</strong> '
-+ data.total
-
-+
-'<br><strong>Completed:</strong> '
-+ data.completed
-
-+
-'<br><strong>Processing:</strong> '
-+ data.processing
-
-+
-'<br><strong>Failed:</strong> '
-+ data.failed
-
-+
-'<br><br><strong>Current:</strong> '
-+ (data.current || '')
-
-);
-
-
-
-
-
-/*
-Continue until everything is completed
-*/
-
-
-if(
-parseInt(data.completed)
-+
-parseInt(data.failed)
-
-<
-parseInt(data.total)
-)
-
-{
-
-    running=true;
-
-
-    setTimeout(
-
-        update_progress,
-
-        2000
-
-    );
-
-
-}
-else
-{
-
-    running=false;
-
-
-    jQuery('#vcpg-stop').hide();
-
-
-    jQuery('#vcpg-progress').append(
-
-        '<br><br><strong>Generation Completed.</strong>'
-
-    );
-
-
-}
-
-
-
-
-},
-
-
-'json'
-
-
-);
-
-
-}
-
-
-
-
-
-
-
-
-/*
-Start automatically when page opens
-*/
-
-jQuery('#vcpg-stop').hide();
-
-update_progress();
-
-
-
-
-
-jQuery('#vcpg-stop').on(
-
-'click',
-
-function(e)
-
-{
-
-
-e.preventDefault();
-
-
-
-jQuery.post(
-
-ajaxurl,
-
-{
-
-action:'vcpg_stop_csv_job'
-
-},
-
-function(response)
-{
-
-
-running=false;
-
-
-jQuery('#vcpg-progress').html(
-
-'Process stopped.'
-
-);
-
-
-if(
-    jQuery('#vcpg-progress').text().includes('Total')
-)
-{
-    jQuery('#vcpg-stop').show();
-}
-else
-{
-    jQuery('#vcpg-stop').hide();
-}
-
-
-}
-
-);
-
-
-
-}
-
-
-
-);
-
-
+    start_polling();
+    process_queue();
+
+    // Click handler for Stop Button
+    jQuery('#vcpg-stop').on('click', function(e) {
+        e.preventDefault();
+        jQuery.post(
+            ajaxurl,
+            {
+                action: 'vcpg_stop_csv_job'
+            },
+            function(response) {
+                running = false;
+                stop_polling();
+                jQuery('#vcpg-progress').html('Process stopped.');
+                jQuery('#vcpg-stop').hide();
+            }
+        );
+    });
 
 });
 
@@ -543,11 +410,15 @@ private function upload_csv()
 
 
     /*
-    Reset stop flag
+    Reset stop flag and activity
     */
 
     delete_option(
         'vcpg_csv_stop'
+    );
+
+    delete_option(
+        'vcpg_job_activity'
     );
 
 

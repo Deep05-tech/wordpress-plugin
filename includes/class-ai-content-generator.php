@@ -56,6 +56,7 @@ class VCPG_AI_Content_Generator
         if($existing)
         {
 
+            update_option('vcpg_job_activity', 'Using cached landing page content (no API request needed)...');
 
             return json_decode(
 
@@ -521,6 +522,7 @@ class VCPG_AI_Content_Generator
 
             $content_source = 'fallback';
 
+            update_option('vcpg_job_activity', 'OpenAI response failed or empty, using template-driven fallback content...');
 
             error_log(
                 "OPENAI FAILED USING FALLBACK"
