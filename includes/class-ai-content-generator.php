@@ -201,9 +201,9 @@ class VCPG_AI_Content_Generator
 
         Create a completely unique local SEO landing page for [city].
         Every section must use different wording from any previous page.
-        Target exactly 3000-4500 words total across all sections — this is very important, the content must be comprehensive and detailed.
+        Target exactly 800-2000 words total across all sections (maximum 2500 words) — this is very important, the content must be comprehensive but concise.
 
-        THIS PAGE'S CONTENT ANGLE: ".$content_angle.". Keep this angle as your core messaging theme.
+        THIS PAGE'S CONTENT ANGLE: " . $content_angle . ". Keep this angle as your core messaging theme.
 
         CRITICAL — PREVIOUSLY REPEATED WORDS YOU MUST NEVER USE IN ANY TITLE OR HEADING on this page: ".$forbidden_title_text."
 
@@ -259,6 +259,8 @@ class VCPG_AI_Content_Generator
         REQUIRED JSON STRUCTURE — Produce ALL fields:
 
         {
+        \"meta_title\":\"\",
+        \"meta_description\":\"\",
         \"hero_title\":\"\",
         \"hero_subtitle\":\"\",
         \"hero_description\":\"\",
@@ -304,17 +306,17 @@ class VCPG_AI_Content_Generator
         - process: EXACTLY 4 items
         - case_studies: EXACTLY 3 items
         - testimonials: EXACTLY 3 items
-        - faq: EXACTLY 6 items
+        - faq: EXACTLY 4 items
         - technology: EXACTLY 6 items
 
         ADDITIONAL FIELD REQUIREMENTS:
         - intro_title: Short h2 heading for the intro / \"Why You Need This\" section. 8-14 words. Include the service and city. Do NOT repeat the hero_title wording.
-        - intro_content: EXACTLY 200-220 words divided into 4 detailed paragraphs explaining why the practice or business needs online marketing in that city.
+        - intro_content: EXACTLY 100-150 words divided into 3 paragraphs explaining why the practice or business needs online marketing in that city.
         - services_heading: Short h2 heading introducing the services grid (e.g., \"Digital Marketing Services in Los Angeles\"). Distinct from services_description.
         - why_choose_heading: Short h2 heading for the Why Choose Us section (e.g., \"Why Choose Vispan as Your Digital Marketing Partner?\"). Distinct from why_choose_description.
         - consultation_title: Short h3 heading for the hero-section consultation form card (e.g., \"Get A Free Consultation\").
         - contact_title: Short h2 heading for the standalone contact / proposal section (e.g., \"Request A Marketing Proposal\").
-        - cta_description: 150-250 words. Closing call-to-action body copy. May overlap thematically with cta_content but must be DIFFERENT wording. Do NOT start with \"Contact us\", \"Reach out\", \"Ready to\", \"If you are looking for\".
+        - cta_description: 80-120 words. Closing call-to-action body copy. May overlap thematically with cta_content but must be DIFFERENT wording. Do NOT start with \"Contact us\", \"Reach out\", \"Ready to\", \"If you are looking for\".
         - cta_button: 3-6 word button label (e.g., \"Get a Free Quote\", \"Start Growing Today\", \"Book Your Strategy Call\").
 
         NOTE: hero_bg, about_image, services_bg, cta_image are image fields managed
@@ -342,27 +344,29 @@ class VCPG_AI_Content_Generator
         - Total keyword usage across all categories: minimum 40 keyword instances
 
 
-        WORD COUNT TARGETS PER SECTION (total must be 3000-4500 words):
+        WORD COUNT TARGETS PER SECTION (total must be 800-2000 words):
 
+        meta_title: Compelling SEO Title, exactly 50-60 characters.
+        meta_description: Compelling SEO Description, exactly 120-155 characters.
         hero_title: 8-10 words
         hero_subtitle: 10-15 words
-        hero_description: 45-50 words
-        benefits_description: 150-250 words
-        each benefit description: 80-120 words (6 benefits = 480-720 words)
-        each service description: 120-180 words (6-8 services = 720-1440 words)
-        why_choose_description: 120-180 words
-        each why_choose description: 70-100 words (6 items = 420-600 words)
-        technology_description: 100-180 words
-        each FAQ answer: 100-200 words (6-8 Q&A = 600-1600 words)
-        each testimonial content: 120-180 words (3 items = 360-540 words)
-        each case study summary: 90-140 words (3 items = 270-420 words)
-        difference_content: 180-250 words
-        cta_content: 150-250 words
-        about_content: 300-500 words
+        hero_description: 30-40 words
+        benefits_description: 60-100 words
+        each benefit description: 30-50 words (4 benefits = 120-200 words)
+        each service description: 50-80 words (6 services = 300-480 words)
+        why_choose_description: 60-100 words
+        each why_choose description: 30-50 words (4 items = 120-200 words)
+        technology_description: 50-80 words
+        each FAQ answer: 40-70 words (4 Q&A = 160-280 words)
+        each testimonial content: 40-60 words (3 items = 120-180 words)
+        each case study summary: 40-65 words (3 items = 120-195 words)
+        difference_content: 80-120 words
+        cta_content: 80-120 words
+        about_content: 120-180 words
         process_title: 4-8 words
-        process_description: 10-25 words
-        each process step description: 25-45 words (4 steps = 100-180 words)
-        local_insight: 300-500 words
+        process_description: 10-20 words
+        each process step description: 20-30 words (4 steps = 80-120 words)
+        local_insight: 150-250 words
 
         STATE NAME REQUIREMENT:
         - The state name ".(isset($data['state']) ? $data['state'] : '')." MUST be mentioned at least 2-3 times across the page, specifically in the hero_subtitle and intro_content / about_content.
@@ -377,52 +381,52 @@ class VCPG_AI_Content_Generator
         === ABOUT ===
         about_title: Compelling headline about the agency's {{service}} expertise in [city]. 8-12 words. Tailor to this specific service, not generic marketing.
         DO NOT start with 'About Us', 'Welcome to', 'We are', 'Our Approach'.
-        about_content: 300-500 words. CRITICAL: Vary sentence structure. NEVER open with '[Company Name] is a', '[Company Name] was founded', '[Company Name] is the', etc. Open with a city-specific observation, industry insight, or local trend — NOT about the company itself. Cover agency background, mission, local commitment, team expertise. Include Vispan Solutions naturally only after 2-3 sentences of city-specific context.
+        about_content: 120-180 words. CRITICAL: Vary sentence structure. NEVER open with '[Company Name] is a', '[Company Name] was founded', '[Company Name] is the', etc. Open with a city-specific observation, industry insight, or local trend — NOT about the company itself. Cover agency background, mission, local commitment, team expertise. Include Vispan Solutions naturally only after 2-3 sentences of city-specific context.
 
         === BENEFITS DESCRIPTION ===
-        150-250 words explaining exactly why [city] businesses need THIS SPECIFIC service. Address local challenges and opportunities. DO NOT start with 'Discover how', 'Learn why', 'Find out why'.
+        60-100 words explaining exactly why [city] businesses need THIS SPECIFIC service. Address local challenges and opportunities. DO NOT start with 'Discover how', 'Learn why', 'Find out why'.
 
         === BENEFITS (array) ===
-        6 items. Each benefit must be specific to this service type and tied to [city]-specific advantages. Each description: 80-120 words. DO NOT use generic 'Experienced Team', 'Proven Results'.
+        4 items. Each benefit must be specific to this service type and tied to [city]-specific advantages. Each description: 30-50 words. DO NOT use generic 'Experienced Team', 'Proven Results'.
 
         === WHY CHOOSE DESCRIPTION ===
-        120-180 words. Specific differentiator for THIS service (process, methodology, team expertise in this domain).
+        60-100 words. Specific differentiator for THIS service (process, methodology, team expertise in this domain).
         DO NOT use 'Vispan Solutions is the trusted choice', 'right partner'.
 
         === WHY CHOOSE (array) ===
-        6 items. Each specific to THIS service capability or process. Each description: 70-100 words.
+        4 items. Each specific to THIS service capability or process. Each description: 30-50 words.
 
         === SERVICES DESCRIPTION ===
         One sentence framing the service range for THIS specific service. Action-oriented and specific.
 
         === SERVICES (array) ===
-        6-8 items. Each title: specific sub-service name within this domain. Each description: 120-180 words, city-specific. Reference the service-specific context provided above.
+        6 items. Each title: specific sub-service name within this domain. Each description: 50-80 words, city-specific. Reference the service-specific context provided above.
 
         === LOCAL INSIGHT ===
-        local_insight: 300-500 words. Detailed local market analysis for [city] specific to THIS service. Cover: customer behavior, market competition, industry challenges, local opportunities. Must be city-specific, not generic. Reference local economic factors, demographics, and business landscape.
+        local_insight: 150-250 words. Detailed local market analysis for [city] specific to THIS service. Cover: customer behavior, market competition, industry challenges, local opportunities. Must be city-specific, not generic. Reference local economic factors, demographics, and business landscape.
 
         === TECHNOLOGY ===
-        6-8 platform names specific to this service domain. technology_description: 100-180 words on tech stack value for [city] businesses.
+        6 platform names specific to this service domain. technology_description: 50-80 words on tech stack value for [city] businesses.
 
         === FAQ ===
-        6-8 items. Each question must be specific to THIS service (e.g., for Web Design: 'How long does a website redesign take?'). Each answer: 100-200 words, city-specific. Vary question structure between pages.
+        4 items. Each question must be specific to THIS service (e.g., for Web Design: 'How long does a website redesign take?'). Each answer: 40-70 words, city-specific. Vary question structure between pages.
 
         === STATS ===
         4 items. Vary categories across pages. DO NOT reuse same stat labels. Make them specific to this service type.
 
         === TESTIMONIALS ===
-        3 items. Different names, roles, industries each time. Each content: 120-180 words. Must feel authentic and reference this specific service type.
+        3 items. Different names, roles, industries each time. Each content: 40-60 words. Must feel authentic and reference this specific service type.
 
         === DIFFERENCE CONTENT ===
-        180-250 words. Fresh angle specific to this service: process, methodology, local commitment, team expertise.
+        80-120 words. Fresh angle specific to this service: process, methodology, local commitment, team expertise.
         DO NOT start with 'At Vispan Solutions, we combine', 'We stand out', 'What sets us apart'.
 
         === PROCESS ===
-        4 steps. process_title: unique headline (DO NOT use 'Our Proven Process', 'How We Work', 'Our Process', 'How It Works'). process_description: one sentence framing the methodology. Each step: unique title + 25-45 word description. Steps must vary between pages — different phase names, different order emphasis, service-specific workflow (e.g., for Web Design: Discovery → Design → Development → Launch; for SEO: Audit → On-page → Content → Authority). Never repeat the same 4 step titles across pages.
+        4 steps. process_title: unique headline (DO NOT use 'Our Proven Process', 'How We Work', 'Our Process', 'How It Works'). process_description: one sentence framing the methodology. Each step: unique title + 20-30 word description. Steps must vary between pages — different phase names, different order emphasis, service-specific workflow (e.g., for Web Design: Discovery → Design → Development → Launch; for SEO: Audit → On-page → Content → Authority). Never repeat the same 4 step titles across pages.
 
         === CTA ===
         cta_title: Unique closing headline specific to this service. Use MODIFIERS and CTA keywords. DO NOT use 'Grow Your Business', 'Get Started Today', 'Ready to', 'Take Your Business to the Next Level', 'Transform Your'.
-        cta_content: 150-250 words. Include Vispan Solutions naturally. DO NOT start with 'Contact us', 'Reach out', 'Ready to', 'If you are looking for'. Include a specific offer or next step relevant to this service.
+        cta_content: 80-120 words. Include Vispan Solutions naturally. DO NOT start with 'Contact us', 'Reach out', 'Ready to', 'If you are looking for'. Include a specific offer or next step relevant to this service.
 
 
         BRAND RULES:
@@ -1257,7 +1261,7 @@ class VCPG_AI_Content_Generator
         if(!$quality['approved'] && $content_source === 'api')
         {
             $attempts = 0;
-            $max_attempts = 2;
+            $max_attempts = intval(get_option('vcpg_max_attempts', 2));
             while(!$quality['approved'] && $attempts < $max_attempts)
             {
                 $attempts++;
@@ -1388,17 +1392,17 @@ class VCPG_AI_Content_Generator
             $content['hero_subtitle'] = implode(' ', $words);
         }
 
-        // Enforce hero_description word count: exactly 45 to 50 words
+        // Enforce hero_description word count: exactly 30 to 40 words
         if (isset($content['hero_description'])) {
             $words = preg_split('/\s+/', trim($content['hero_description']));
             $count = count($words);
-            if ($count < 45) {
-                $filler = array('Our', 'dedicated', 'team', 'at', 'Vispan', 'Solutions', 'delivers', 'top-tier', 'optimization', 'campaigns', 'engineered', 'to', 'maximize', 'return', 'on', 'investment,', 'elevate', 'brand', 'visibility,', 'capture', 'new', 'lead', 'opportunities,', 'and', 'drive', 'consistent', 'long-term', 'revenue', 'growth', 'across', 'all', 'organic', 'search', 'channels', 'in', 'your', 'local', 'market.', 'Partner', 'with', 'us', 'today', 'to', 'scale.');
-                while (count($words) < 48) {
+            if ($count < 30) {
+                $filler = array('Our', 'dedicated', 'team', 'at', 'Vispan', 'Solutions', 'delivers', 'top-tier', 'optimization', 'campaigns', 'engineered', 'to', 'maximize', 'return', 'on', 'investment,', 'elevate', 'brand', 'visibility,', 'capture', 'new', 'lead', 'opportunities,', 'and', 'drive', 'consistent', 'long-term', 'revenue', 'growth', 'across', 'all', 'organic', 'search', 'channels.');
+                while (count($words) < 35) {
                     $words[] = array_shift($filler);
                 }
-            } elseif ($count > 50) {
-                $words = array_slice($words, 0, 48);
+            } elseif ($count > 40) {
+                $words = array_slice($words, 0, 35);
             }
             $desc = implode(' ', $words);
             $desc = rtrim($desc, ',;.-') . '.';

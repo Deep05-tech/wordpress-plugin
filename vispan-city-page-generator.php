@@ -119,6 +119,146 @@ function vcpg_output_styles()
     </style>';
 }
 
+add_filter('pre_get_document_title', 'vcpg_filter_page_title', 99999);
+function vcpg_filter_page_title($title)
+{
+    if (is_singular('page')) {
+        $pid = get_the_ID();
+        if (get_post_meta($pid, '_vcpg_page', true) === '1') {
+            // Check if there is an AI generated title saved
+            $ai_title = get_post_meta($pid, 'rank_math_title', true);
+            if (!$ai_title) {
+                $ai_title = get_post_meta($pid, '_yoast_wpseo_title', true);
+            }
+            if ($ai_title) {
+                // Remove RankMath variable patterns just in case
+                $ai_title = str_replace(array('%title%', '%sep%', '%sitename%'), '', $ai_title);
+                return trim($ai_title);
+            }
+        }
+    }
+    return $title;
+}
+
+add_action('wp_head', 'vcpg_output_seo_meta_and_schema', 5);
+function vcpg_output_seo_meta_and_schema()
+{
+    if (!is_singular('page')) {
+        return;
+    }
+
+    $page_id = get_the_ID();
+    if (get_post_meta($page_id, '_vcpg_page', true) !== '1') {
+        return;
+    }
+
+    // 1. Fallback Meta Description tag if no SEO plugin is active
+    if (!defined('WPSEO_VERSION') && !class_exists('RankMath')) {
+        $desc = get_post_meta($page_id, 'rank_math_description', true);
+        if (!$desc) {
+            $desc = get_post_meta($page_id, '_yoast_wpseo_metadesc', true);
+        }
+        if ($desc) {
+            echo '<meta name="description" content="' . esc_attr($desc) . '">' . "\n";
+        }
+    }
+
+    // 2. Build and output JSON-LD schemas
+    $city         = get_post_meta($page_id, '_vcpg_city', true);
+    $state        = get_post_meta($page_id, '_vcpg_state', true);
+    $country      = get_post_meta($page_id, '_vcpg_country', true);
+    $country_code = get_post_meta($page_id, '_vcpg_country_code', true);
+    $service      = get_post_meta($page_id, '_vcpg_service', true);
+    $faq          = get_post_meta($page_id, '_vcpg_faq', true);
+
+    $page_url = get_permalink($page_id);
+    $home_url = home_url('/');
+
+    $schemas = array();
+
+    // A. BreadcrumbList Schema
+    $breadcrumb_items = array(
+        array(
+            "@type" => "ListItem",
+            "position" => 1,
+            "name" => "Home",
+            "item" => $home_url
+        )
+    );
+    if (!empty($service)) {
+        $service_slug = sanitize_title($service);
+        $breadcrumb_items[] = array(
+            "@type" => "ListItem",
+            "position" => 2,
+            "name" => $service,
+            "item" => $home_url . $service_slug . '/'
+        );
+    }
+    $breadcrumb_items[] = array(
+        "@type" => "ListItem",
+        "position" => !empty($service) ? 3 : 2,
+        "name" => !empty($city) ? $city : get_the_title($page_id),
+        "item" => $page_url
+    );
+
+    $schemas[] = array(
+        "@context" => "https://schema.org",
+        "@type" => "BreadcrumbList",
+        "itemListElement" => $breadcrumb_items
+    );
+
+    // B. LocalBusiness Schema
+    $local_business = array(
+        "@context" => "https://schema.org",
+        "@type" => "LocalBusiness",
+        "name" => "Vispan Solutions",
+        "image" => "https://vispansolutions.com/wp-content/uploads/2022/11/logo.png",
+        "@id" => $page_url . "#localbusiness",
+        "url" => $page_url,
+        "telephone" => "+918485986860",
+        "address" => array(
+            "@type" => "PostalAddress",
+            "addressLocality" => !empty($city) ? $city : "",
+            "addressRegion" => !empty($state) ? $state : "",
+            "addressCountry" => !empty($country_code) ? strtoupper($country_code) : "US"
+        )
+    );
+    $schemas[] = $local_business;
+
+    // C. FAQPage Schema
+    if (!empty($faq) && is_array($faq)) {
+        $faq_elements = array();
+        foreach ($faq as $item) {
+            if (isset($item['question']) && isset($item['answer'])) {
+                $faq_elements[] = array(
+                    "@type" => "Question",
+                    "name" => esc_html($item['question']),
+                    "acceptedAnswer" => array(
+                        "@type" => "Answer",
+                        "text" => wp_strip_all_tags($item['answer'])
+                    )
+                );
+            }
+        }
+        if (!empty($faq_elements)) {
+            $schemas[] = array(
+                "@context" => "https://schema.org",
+                "@type" => "FAQPage",
+                "mainEntity" => $faq_elements
+            );
+        }
+    }
+
+    // Output JSON-LD
+    echo "\n" . '<!-- VCPG SEO Schema Begin -->' . "\n";
+    foreach ($schemas as $schema) {
+        echo '<script type="application/ld+json">' . "\n";
+        echo wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+        echo '</script>' . "\n";
+    }
+    echo '<!-- VCPG SEO Schema End -->' . "\n\n";
+}
+
 add_filter('the_content', 'vcpg_protect_styles', 1);
 function vcpg_protect_styles($content)
 {

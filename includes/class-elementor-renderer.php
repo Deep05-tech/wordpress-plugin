@@ -23,7 +23,7 @@ class VCPG_Elementor_Renderer
         'process'      => 4,
         'case_studies' => 3,
         'testimonials' => 3,
-        'faq'          => 6,
+        'faq'          => 4,
     );
 
     /**

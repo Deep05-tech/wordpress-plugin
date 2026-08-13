@@ -284,23 +284,20 @@ class VCPG_AI_Quality_Checker
             }
             else
             {
-
-
                 if(
-                    count($content['faq']) < 5
+                    count($content['faq']) !== 4
                 )
                 {
 
-                    $score -= 5;
+                    $score -= 10;
 
-                    $issues[]='FAQ needs improvement';
+                    $issues[]='FAQ count must be exactly 4 items (found ' . count($content['faq']) . ')';
 
                 }
 
             }
 
-
-}
+        }
 
 
 
@@ -457,15 +454,15 @@ class VCPG_AI_Quality_Checker
             "TOTAL WORD COUNT: ".$total_words
         );
 
-        if($total_words < 1500)
+        if($total_words < 800)
         {
             $score -= 20;
-            $issues[] = 'Content too short: '.$total_words.' words (target 2000-3000)';
+            $issues[] = 'Content too short: '.$total_words.' words (target 800-2000)';
         }
-        elseif($total_words < 2000)
+        elseif($total_words > 2500)
         {
-            $score -= 10;
-            $issues[] = 'Content below target: '.$total_words.' words (target 2000-3000)';
+            $score -= 20;
+            $issues[] = 'Content too long: '.$total_words.' words (target 800-2000)';
         }
 
 
@@ -807,55 +804,7 @@ class VCPG_AI_Quality_Checker
     {
 
 
-       /*
-        FAQ Array
-        */
-
-
-        if(
-            isset($content['faq'])
-            &&
-            is_array($content['faq'])
-        )
-        {
-
-
-            $faq = '';
-
-
-
-            foreach($content['faq'] as $item)
-            {
-        
-        
-                if(isset($item['question']))
-                {
-            
-                    $faq .= '<p><strong>';
-                    $faq .= $item['question'];
-                    $faq .= '</strong></p>';
-
-                }
-
-
-
-                if(isset($item['answer']))
-                {
-            
-                    $faq .= '<p>';
-                    $faq .= $item['answer'];
-                    $faq .= '</p>';
-
-                }
-
-
-            }
-
-
-            $content['faq'] = $faq;
-
-
-        }
+        // FAQ Array is preserved as a structured array for schema and rendering
 
 
 
@@ -985,10 +934,40 @@ class VCPG_AI_Quality_Checker
         $stop_words = array(
             'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'this', 'with', 'for', 'on', 'as', 'at', 'by', 'it', 'an', 'be', 'are', 'was', 'were', 'or', 'from', 'your', 'our', 'we', 'us', 'you', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its', 'about', 'more', 'how', 'why', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'then', 'else', 'than', 'so', 'up', 'down', 'out', 'into', 'over', 'under', 'again', 'further', 'once', 'here', 'there', 'when', 'where', 'all', 'any', 'both', 'each', 'few', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
         );
+
+        // Protect any words that are part of the target service keyword or target keywords
+        $protected_words = array();
+        if (!empty($data['service'])) {
+            $sws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($data['service'])));
+            foreach ($sws as $sw) {
+                $sw = trim($sw);
+                if (strlen($sw) >= 3) {
+                    $protected_words[$sw] = true;
+                }
+            }
+        }
+        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+            ? array_values(array_filter($data['target_keywords']))
+            : array();
+        foreach ($target_keywords as $tk) {
+            $tkws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($tk)));
+            foreach ($tkws as $tkw) {
+                $tkw = trim($tkw);
+                if (strlen($tkw) >= 3) {
+                    $protected_words[$tkw] = true;
+                }
+            }
+        }
         
         $word_counts = array_count_values($words_array);
         foreach ($word_counts as $word => $count) {
-            if (strlen($word) < 3 || in_array($word, $stop_words)) {
+            $word_lower = strtolower($word);
+            if (strlen($word) < 3 || in_array($word_lower, $stop_words) || isset($protected_words[$word_lower])) {
+                continue;
+            }
+
+            // Only sanitize if specific synonyms exist in synonyms map (prevent default solutions/initiatives spam)
+            if (!isset($synonyms_map[$word_lower])) {
                 continue;
             }
             
@@ -997,43 +976,8 @@ class VCPG_AI_Quality_Checker
                 $target_count = floor(0.025 * $total_words_count);
                 $replacements_needed = $count - $target_count;
                 if ($replacements_needed > 0) {
-                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
+                    $syns = $synonyms_map[$word_lower];
                     $this->replace_text_recursive($content, $word, $syns, $replacements_needed);
-                }
-            }
-        }
-
-        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
-            ? array_values(array_filter($data['target_keywords']))
-            : array();
-        
-        $phrases_to_check = array_merge(array($data['service']), $target_keywords);
-        $phrases_to_check = array_unique(array_map('strtolower', array_filter($phrases_to_check)));
-        
-        foreach ($phrases_to_check as $phrase) {
-            $phrase = trim($phrase);
-            if (empty($phrase)) {
-                continue;
-            }
-            
-            $regex = '/\b' . preg_quote($phrase, '/') . '\b/i';
-            $matches = array();
-            $count = preg_match_all($regex, $clean_all_text, $matches);
-            
-            if ($count > 0) {
-                $phrase_word_count = count(array_filter(explode(' ', preg_replace('/[^\w\s\-]/u', ' ', $phrase))));
-                if ($phrase_word_count === 0) {
-                    $phrase_word_count = 1;
-                }
-                $density = ($count * $phrase_word_count / $total_words_count) * 100;
-                
-                if ($count >= 5 && $density > 2.8) {
-                    $target_count = floor((0.025 * $total_words_count) / $phrase_word_count);
-                    $replacements_needed = $count - $target_count;
-                    if ($replacements_needed > 0) {
-                        $phrase_synonyms = array('specialized solutions', 'professional services', 'our campaigns', 'growth strategies');
-                        $this->replace_text_recursive($content, $phrase, $phrase_synonyms, $replacements_needed);
-                    }
                 }
             }
         }
@@ -1136,54 +1080,49 @@ class VCPG_AI_Quality_Checker
             'google'     => array('search engine', 'online search', 'major search network')
         );
 
-        $word_counts = array_count_values($words_array);
-        foreach ($word_counts as $word => $count) {
-            if (strlen($word) < 3 || in_array($word, $stop_words)) {
-                continue;
+        // Protect any words that are part of the target service keyword or target keywords
+        $protected_words = array();
+        if (!empty($data['service'])) {
+            $sws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($data['service'])));
+            foreach ($sws as $sw) {
+                $sw = trim($sw);
+                if (strlen($sw) >= 3) {
+                    $protected_words[$sw] = true;
+                }
             }
-            
-            $density = ($count / $total_words_count) * 100;
-            if ($density > 2.8) {
-                $target_count = floor(0.025 * $total_words_count);
-                $replacements_needed = $count - $target_count;
-                if ($replacements_needed > 0) {
-                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
-                    $this->replace_text_recursive($elementor_content, $word, $syns, $replacements_needed);
+        }
+        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+            ? array_values(array_filter($data['target_keywords']))
+            : array();
+        foreach ($target_keywords as $tk) {
+            $tkws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($tk)));
+            foreach ($tkws as $tkw) {
+                $tkw = trim($tkw);
+                if (strlen($tkw) >= 3) {
+                    $protected_words[$tkw] = true;
                 }
             }
         }
 
-        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
-            ? array_values(array_filter($data['target_keywords']))
-            : array();
-        
-        $phrases_to_check = array_merge(array($data['service']), $target_keywords);
-        $phrases_to_check = array_unique(array_map('strtolower', array_filter($phrases_to_check)));
-        
-        foreach ($phrases_to_check as $phrase) {
-            $phrase = trim($phrase);
-            if (empty($phrase)) {
+        $word_counts = array_count_values($words_array);
+        foreach ($word_counts as $word => $count) {
+            $word_lower = strtolower($word);
+            if (strlen($word) < 3 || in_array($word_lower, $stop_words) || isset($protected_words[$word_lower])) {
+                continue;
+            }
+
+            // Only sanitize if specific synonyms exist in synonyms map (prevent default solutions/initiatives spam)
+            if (!isset($synonyms_map[$word_lower])) {
                 continue;
             }
             
-            $regex = '/\b' . preg_quote($phrase, '/') . '\b/i';
-            $matches = array();
-            $count = preg_match_all($regex, $clean_all_text, $matches);
-            
-            if ($count > 0) {
-                $phrase_word_count = count(array_filter(explode(' ', preg_replace('/[^\w\s\-]/u', ' ', $phrase))));
-                if ($phrase_word_count === 0) {
-                    $phrase_word_count = 1;
-                }
-                $density = ($count * $phrase_word_count / $total_words_count) * 100;
-                
-                if ($density > 2.8) {
-                    $target_count = floor((0.025 * $total_words_count) / $phrase_word_count);
-                    $replacements_needed = $count - $target_count;
-                    if ($replacements_needed > 0) {
-                        $phrase_synonyms = array('specialized solutions', 'professional services', 'our campaigns', 'growth strategies');
-                        $this->replace_text_recursive($elementor_content, $phrase, $phrase_synonyms, $replacements_needed);
-                    }
+            $density = ($count / $total_words_count) * 100;
+            if ($count >= 5 && $density > 2.8) {
+                $target_count = floor(0.025 * $total_words_count);
+                $replacements_needed = $count - $target_count;
+                if ($replacements_needed > 0) {
+                    $syns = $synonyms_map[$word_lower];
+                    $this->replace_text_recursive($elementor_content, $word, $syns, $replacements_needed);
                 }
             }
         }
@@ -1229,6 +1168,30 @@ class VCPG_AI_Quality_Checker
             'google'     => array('search engine', 'online search', 'major search network')
         );
 
+        // Protect any words that are part of the target service keyword or target keywords
+        $protected_words = array();
+        if (!empty($data['service'])) {
+            $sws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($data['service'])));
+            foreach ($sws as $sw) {
+                $sw = trim($sw);
+                if (strlen($sw) >= 3) {
+                    $protected_words[$sw] = true;
+                }
+            }
+        }
+        $target_keywords = isset($data['target_keywords']) && is_array($data['target_keywords'])
+            ? array_values(array_filter($data['target_keywords']))
+            : array();
+        foreach ($target_keywords as $tk) {
+            $tkws = explode(' ', preg_replace('/[^\w\s\-]/u', ' ', strtolower($tk)));
+            foreach ($tkws as $tkw) {
+                $tkw = trim($tkw);
+                if (strlen($tkw) >= 3) {
+                    $protected_words[$tkw] = true;
+                }
+            }
+        }
+
         $dom = new DOMDocument();
         @$dom->loadHTML(mb_convert_encoding($html_content, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
@@ -1237,16 +1200,22 @@ class VCPG_AI_Quality_Checker
 
         $word_counts = array_count_values($words_array);
         foreach ($word_counts as $word => $count) {
-            if (strlen($word) < 3 || in_array($word, $stop_words)) {
+            $word_lower = strtolower($word);
+            if (strlen($word) < 3 || in_array($word_lower, $stop_words) || isset($protected_words[$word_lower])) {
+                continue;
+            }
+
+            // Only sanitize if specific synonyms exist in synonyms map (prevent default solutions/initiatives spam)
+            if (!isset($synonyms_map[$word_lower])) {
                 continue;
             }
             
             $density = ($count / $total_words_count) * 100;
-            if ($density > 2.8) {
+            if ($count >= 5 && $density > 2.8) {
                 $target_count = floor(0.025 * $total_words_count);
                 $replacements_needed = $count - $target_count;
                 if ($replacements_needed > 0) {
-                    $syns = isset($synonyms_map[$word]) ? $synonyms_map[$word] : array('solutions', 'initiatives');
+                    $syns = $synonyms_map[$word_lower];
                     
                     foreach ($text_nodes as $node) {
                         if ($replacements_needed <= 0) {

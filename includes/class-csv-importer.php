@@ -186,8 +186,35 @@ CSV columns, in order: <strong>country, state, city, service</strong>
 (e.g. <code>United States,California,Los Angeles,Digital Marketing Agency</code>).
 </p>
 
-<br><br>
+<table class="form-table" role="presentation" style="margin-top: 20px;">
+    <tbody>
+        <tr>
+            <th scope="row"><label for="vcpg-concurrency"><strong>Parallel Threads (Speed)</strong></label></th>
+            <td>
+                <select name="vcpg_concurrency" id="vcpg-concurrency">
+                    <option value="1" <?php selected(get_option('vcpg_concurrency', 1), 1); ?>>1 Thread (Safe / Default)</option>
+                    <option value="2" <?php selected(get_option('vcpg_concurrency', 1), 2); ?>>2 Threads (Fast)</option>
+                    <option value="3" <?php selected(get_option('vcpg_concurrency', 1), 3); ?>>3 Threads (Faster)</option>
+                    <option value="4" <?php selected(get_option('vcpg_concurrency', 1), 4); ?>>4 Threads (Turbo)</option>
+                </select>
+                <p class="description">Select how many pages to generate concurrently. Higher values speed up generation but require more server resources and OpenAI API limits.</p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="vcpg-max-attempts"><strong>AI Quality Checker Retries</strong></label></th>
+            <td>
+                <select name="vcpg_max_attempts" id="vcpg-max-attempts">
+                    <option value="0" <?php selected(get_option('vcpg_max_attempts', 2), 0); ?>>No Retries (Fastest: ~25s per page, uses auto-sanitizer for SEO)</option>
+                    <option value="1" <?php selected(get_option('vcpg_max_attempts', 2), 1); ?>>1 Retry (Balanced: ~25s - 50s per page)</option>
+                    <option value="2" <?php selected(get_option('vcpg_max_attempts', 2), 2); ?>>2 Retries (Thorough / Default: ~25s - 80s per page)</option>
+                </select>
+                <p class="description">Choose how many times the plugin asks OpenAI to rewrite a page if it fails the strict programmatic SEO checks on the first try. Setting to 0/1 decreases page generation time significantly.</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
 
+<br>
 
 <?php
 
@@ -345,11 +372,16 @@ jQuery(document).ready(function(){
         );
     }
 
+    let concurrency = <?php echo intval(get_option('vcpg_concurrency', 1)); ?>;
+
     // Start execution
     running = true;
     jQuery('#vcpg-stop').show();
     start_polling();
-    process_queue();
+    
+    for (let i = 0; i < concurrency; i++) {
+        setTimeout(process_queue, i * 400);
+    }
 
     // Click handler for Stop Button
     jQuery('#vcpg-stop').on('click', function(e) {
@@ -395,6 +427,11 @@ private function upload_csv()
 
     global $wpdb;
 
+
+    $concurrency = isset($_POST['vcpg_concurrency']) ? max(1, min(4, intval($_POST['vcpg_concurrency']))) : 1;
+    $max_attempts = isset($_POST['vcpg_max_attempts']) ? max(0, min(2, intval($_POST['vcpg_max_attempts']))) : 2;
+    update_option('vcpg_concurrency', $concurrency);
+    update_option('vcpg_max_attempts', $max_attempts);
 
     $table = $wpdb->prefix . 'vcpg_csv_jobs';
 

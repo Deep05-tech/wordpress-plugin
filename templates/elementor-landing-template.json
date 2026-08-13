@@ -792,6 +792,66 @@
             "isInner": false
         },
         {
+            "id": "vcpg_faq_section",
+            "elType": "section",
+            "settings": {
+                "background_color": "#F8FAFC",
+                "background_background": "classic",
+                "padding": {
+                    "unit": "px",
+                    "top": "80",
+                    "right": "0",
+                    "bottom": "80",
+                    "left": "0",
+                    "isLinked": true
+                }
+            },
+            "elements": [
+                {
+                    "id": "vcpg_faq_column",
+                    "elType": "column",
+                    "settings": {
+                        "_column_size": 100,
+                        "_inline_size": null
+                    },
+                    "elements": [
+                        {
+                            "id": "vcpg_faq_title_widget",
+                            "elType": "widget",
+                            "widgetType": "heading",
+                            "settings": {
+                                "title": "Frequently Asked Questions",
+                                "header_size": "h2",
+                                "align": "center",
+                                "title_color": "#02426A",
+                                "typography_typography": "custom",
+                                "typography_font_family": "DM Sans",
+                                "typography_font_size": {
+                                    "size": 42,
+                                    "unit": "px"
+                                },
+                                "typography_font_weight": "600",
+                                "typography_line_height": {
+                                    "size": 1.1,
+                                    "unit": "em"
+                                }
+                            }
+                        },
+                        {
+                            "id": "vcpg_faq_content_widget",
+                            "elType": "widget",
+                            "widgetType": "html",
+                            "settings": {
+                                "html": "<div style=\"max-width:800px;margin:30px auto 0;\">{{faq}}</div>"
+                            }
+                        }
+                    ],
+                    "isInner": false
+                }
+            ],
+            "isInner": false
+        },
+        {
             "id": "e00003a",
             "elType": "section",
             "settings": {

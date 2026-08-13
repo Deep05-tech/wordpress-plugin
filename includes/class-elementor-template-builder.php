@@ -360,6 +360,7 @@ class VCPG_Elementor_Template_Builder
             '{{footer_contact}}'           => $this->footer_contact_html($phone, $email),
             '{{case_study_html}}'          => $this->case_study_html($data),
             '{{social_icons}}'             => $this->social_html(),
+            '{{faq}}'                      => VCPG_Page_Generator::generate_faq($data),
         );
 
         return $map;
@@ -661,6 +662,65 @@ class VCPG_Elementor_Template_Builder
         $state = $this->e(isset($data['state']) ? $data['state'] : 'California');
         $svc   = $this->e(isset($data['service']) ? $data['service'] : 'Digital Marketing');
 
+        // Load counties for the current state
+        $state_counties = array();
+        $counties_file = dirname(__FILE__) . '/counties.json';
+        if (file_exists($counties_file)) {
+            $all_counties = json_decode(file_get_contents($counties_file), true);
+            if (is_array($all_counties)) {
+                foreach ($all_counties as $s_name => $c_list) {
+                    if (strcasecmp($s_name, $state) === 0) {
+                        $state_counties = $c_list;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Split into 3 parts for Tab 2, 3, and 4
+        $tab2_counties = array();
+        $tab3_counties = array();
+        $tab4_counties = array();
+
+        if (!empty($state_counties)) {
+            $total_counties = count($state_counties);
+            $part_size = ceil($total_counties / 3);
+            $tab2_counties = array_slice($state_counties, 0, $part_size);
+            $tab3_counties = array_slice($state_counties, $part_size, $part_size);
+            $tab4_counties = array_slice($state_counties, $part_size * 2);
+        }
+
+        $tab2_suffix = '';
+        $tab3_suffix = '';
+        $tab4_suffix = '';
+
+        if (!empty($tab2_counties)) {
+            $phrases = array();
+            foreach ($tab2_counties as $c) {
+                $c_clean = trim(preg_replace('/\bcounty\b/i', '', $c));
+                $phrases[] = $svc . ' in ' . $this->e($c_clean);
+            }
+            $tab2_suffix = ' We offer our specialized services across the region, including ' . implode(', ', $phrases) . '.';
+        }
+
+        if (!empty($tab3_counties)) {
+            $phrases = array();
+            foreach ($tab3_counties as $c) {
+                $c_clean = trim(preg_replace('/\bcounty\b/i', '', $c));
+                $phrases[] = $svc . ' in ' . $this->e($c_clean);
+            }
+            $tab3_suffix = ' We manage campaigns and digital growth throughout the territory, including ' . implode(', ', $phrases) . '.';
+        }
+
+        if (!empty($tab4_counties)) {
+            $phrases = array();
+            foreach ($tab4_counties as $c) {
+                $c_clean = trim(preg_replace('/\bcounty\b/i', '', $c));
+                $phrases[] = $svc . ' in ' . $this->e($c_clean);
+            }
+            $tab4_suffix = ' We provide attribution and tracking solutions for businesses locally, including ' . implode(', ', $phrases) . '.';
+        }
+
         $html  = '<div style="max-width:1100px;margin:0 auto;font-family:inherit;">';
         $html .= '  <div style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:28px;width:100%;">';
         $html .= '    <button onclick="vcpgSwitchTab(0)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#FFFFFF;color:#1E293B;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all 0.2s;text-align:center;">Strategic AI Implementation</button>';
@@ -675,9 +735,9 @@ class VCPG_Elementor_Template_Builder
         // Generate keyword-rich panel text (expanded to ~80-100 words each with state mentions)
         $panel_texts = array(
             'Vispan Solutions integrates cutting-edge machine learning models to forecast trends and optimize targeting, ensuring campaigns adapt dynamically to changing local consumer behaviors and market conditions in ' . $city . ', ' . $state . '. Our data-driven digital marketing strategy leverages advanced analytics, conversion optimization, and performance tracking to deliver measurable ROI for businesses seeking top-rated online marketing solutions. By deploying predictive modeling and real-time audience segmentation across the ' . $state . ' region, we help local businesses establish a dominant search presence and sustain long-term digital authority.',
-            'Our team brings deep domain expertise across SEO, PPC, social media marketing, branding, and content creation tailored specifically to the ' . $city . ', ' . $state . ' market. As a trusted digital marketing agency, we combine local search optimization, Google Ads management, and strategic campaign planning to ensure your business stays ahead of local competitors. Our seasoned professionals customize outreach tactics to align with local demographic needs, ensuring every local campaign achieves maximum exposure and high-quality lead generation in ' . $state . '.',
-            'From website optimization and paid ad acquisition to reputation management and email marketing, we manage every touchpoint of your digital presence in ' . $city . ', ' . $state . '. Our comprehensive approach includes conversion rate optimization, lead generation, social media management, and search engine marketing — delivering end-to-end strategy with precision for ' . $city . ' businesses. We implement multi-layered SEO blueprints and interactive content funnels to ensure your brand stands out, converts visitors, and maintains a distinct competitive edge.',
-            'Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards, Google Analytics reporting, and actionable growth insights to maximize your ROI. Our advanced marketing analytics cover cost-per-acquisition, customer lifetime value, and multi-channel attribution modeling for ' . $city . ', ' . $state . ' businesses. Through granular conversion tracking and transparent data sharing, we verify that every advertising dollar directly contributes to your bottom-line success.'
+            'Our team brings deep domain expertise across SEO, PPC, social media marketing, branding, and content creation tailored specifically to the ' . $city . ', ' . $state . ' market. As a trusted digital marketing agency, we combine local search optimization, Google Ads management, and strategic campaign planning to ensure your business stays ahead of local competitors. Our seasoned professionals customize outreach tactics to align with local demographic needs, ensuring every local campaign achieves maximum exposure and high-quality lead generation in ' . $state . '.' . $tab2_suffix,
+            'From website optimization and paid ad acquisition to reputation management and email marketing, we manage every touchpoint of your digital presence in ' . $city . ', ' . $state . '. Our comprehensive approach includes conversion rate optimization, lead generation, social media management, and search engine marketing — delivering end-to-end strategy with precision for ' . $city . ' businesses. We implement multi-layered SEO blueprints and interactive content funnels to ensure your brand stands out, converts visitors, and maintains a distinct competitive edge.' . $tab3_suffix,
+            'Track every lead, call, and appointment with complete attribution clarity. We deliver detailed performance dashboards, Google Analytics reporting, and actionable growth insights to maximize your ROI. Our advanced marketing analytics cover cost-per-acquisition, customer lifetime value, and multi-channel attribution modeling for ' . $city . ', ' . $state . ' businesses. Through granular conversion tracking and transparent data sharing, we verify that every advertising dollar directly contributes to your bottom-line success.' . $tab4_suffix
         );
 
         for ($i = 0; $i < 4; $i++) {
@@ -2059,7 +2119,7 @@ function handleFormSubmit_' . $form_id . '(event) {
             <img src="' . esc_url($image_url) . '" alt="' . esc_attr($title) . '" style="width: 100%; height: 100%; min-height: 100%; border-radius: 24px; box-shadow: 0 12px 36px rgba(2,66,106,0.12); display: block; object-fit: cover;">
         </div>
         <div style="order: 2;">
-            <h2 style="font-size: 2.2rem; font-weight: 800; color: #02426A; line-height: 1.25; margin-bottom: 30px; font-family: \'DM Sans\', sans-serif;">' . $this->e($title) . '</h2>
+            <h3 style="font-size: 2.2rem; font-weight: 800; color: #02426A; line-height: 1.25; margin-bottom: 30px; font-family: \'DM Sans\', sans-serif;">' . $this->e($title) . '</h3>
             
             <div style="margin-bottom: 24px;">
                 <h4 style="font-size: 1.1rem; font-weight: 700; color: #02426A; margin-bottom: 8px; font-family: \'DM Sans\', sans-serif;">The Challenge</h4>

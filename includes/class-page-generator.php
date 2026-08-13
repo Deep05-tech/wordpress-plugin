@@ -61,6 +61,8 @@ class VCPG_Page_Generator
         $city = sanitize_text_field(
             $data['city']
         );
+        $city = trim(preg_replace('/\bcounty\b/i', '', $city));
+        $data['city'] = $city;
 
         $service = sanitize_text_field(
             $data['service']
@@ -223,11 +225,14 @@ class VCPG_Page_Generator
         );
 
 
-        $slug_text = $service . ' in ' . $city;
-
-        if(!empty($state))
-        {
-            $slug_text .= ' ' . $state;
+        if (!empty($city) && !empty($state)) {
+            $slug_text = $service . ' in ' . $city . ' ' . $state;
+        } elseif (!empty($state)) {
+            $slug_text = $service . ' in ' . $state;
+        } elseif (!empty($city)) {
+            $slug_text = $service . ' in ' . $city;
+        } else {
+            $slug_text = $service;
         }
 
         $page_slug = sanitize_title($slug_text);
@@ -313,6 +318,8 @@ class VCPG_Page_Generator
                     update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
+                        'post_title'   => $page_title,
+                        'post_name'    => $page_slug,
                         'post_content' => $html_content,
                     ) );
                 } else {
@@ -322,6 +329,8 @@ class VCPG_Page_Generator
                     update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                     wp_update_post( array(
                         'ID'           => $existing_page->ID,
+                        'post_title'   => $page_title,
+                        'post_name'    => $page_slug,
                         'post_content' => '',
                     ) );
                     update_post_meta( $existing_page->ID, '_elementor_data', wp_slash( wp_json_encode( $elementor_content ) ) );
@@ -356,6 +365,8 @@ class VCPG_Page_Generator
                 update_option('vcpg_job_activity', 'Saving generated page updates to database...');
                 wp_update_post( array(
                     'ID'           => $existing_page->ID,
+                    'post_title'   => $page_title,
+                    'post_name'    => $page_slug,
                     'post_content' => $html_content
                 ) );
 
@@ -380,6 +391,7 @@ class VCPG_Page_Generator
 
             } // end mode switch
 
+            $this->save_page_seo_metadata($existing_page->ID, $city, $state, $country, $country_code, $service, $data);
             update_post_meta( $existing_page->ID, '_vcpg_page', '1' );
             clean_post_cache( $existing_page->ID );
 
@@ -783,6 +795,8 @@ class VCPG_Page_Generator
 
         }
 
+        $this->save_page_seo_metadata($page_id, $city, $state, $country, $country_code, $service, $data);
+
 
 
 
@@ -888,8 +902,8 @@ class VCPG_Page_Generator
         $service = trim($service);
         $variations = array($service);
 
-        // Pattern 1: Contains "Marketing Agency" (case insensitive)
-        if (preg_match('/^(.*)\bmarketing\s+agency$/i', $service, $matches)) {
+        // Pattern 1: Contains "Marketing [suffix]" (case insensitive)
+        if (preg_match('/^(.*)\bmarketing\s+(agency|company|firm|services|specialists|experts|solutions|consulting|partner)s?$/i', $service, $matches)) {
             $base = trim($matches[1]);
             $variations[] = $base . ' Marketing Services';
             $variations[] = $base . ' SEO Agency';
@@ -911,8 +925,8 @@ class VCPG_Page_Generator
                 $variations[] = 'Law Firm Digital Growth';
             }
         }
-        // Pattern 2: Contains "SEO Agency"
-        elseif (preg_match('/^(.*)\bseo\s+agency$/i', $service, $matches)) {
+        // Pattern 2: Contains "SEO [suffix]"
+        elseif (preg_match('/^(.*)\bseo\s+(agency|company|firm|services|specialists|experts|solutions|consulting|partner)s?$/i', $service, $matches)) {
             $base = trim($matches[1]);
             $variations[] = $base . ' SEO Services';
             $variations[] = $base . ' SEO Experts';
@@ -925,14 +939,14 @@ class VCPG_Page_Generator
         }
         // Pattern 3: General Fallback
         else {
-            $variations[] = $service . ' Services';
-            $variations[] = $service . ' Agency';
-            $variations[] = $service . ' Experts';
-            $variations[] = $service . ' Specialists';
-            $variations[] = $service . ' Solutions';
-            $variations[] = $service . ' Company';
-            $variations[] = $service . ' Consulting';
-            $variations[] = $service . ' Partner';
+            $suffixes = array('Services', 'Agency', 'Experts', 'Specialists', 'Solutions', 'Company', 'Consulting', 'Partner');
+            foreach ($suffixes as $suffix) {
+                // Prevent duplication if the service name already ends with the suffix
+                if (preg_match('/\b' . preg_quote($suffix, '/') . 's?$/i', $service)) {
+                    continue;
+                }
+                $variations[] = $service . ' ' . $suffix;
+            }
             $variations[] = 'Professional ' . $service;
             $variations[] = 'Top ' . $service;
         }
@@ -960,17 +974,15 @@ class VCPG_Page_Generator
 
         $location = '';
 
-        if(!empty($state))
-        {
+        if (!empty($city) && !empty($state)) {
+            $location = $city . ', ' . $state;
+        } elseif (!empty($state)) {
             $location = $state;
-        }
-        elseif(!empty($city))
-        {
+        } elseif (!empty($city)) {
             $location = $city;
         }
 
-        if(!empty($location))
-        {
+        if (!empty($location)) {
             $title .= ' in ' . $this->vcpg_title_case($location);
         }
 
@@ -1254,7 +1266,8 @@ class VCPG_Page_Generator
                 $html .= '<div style="display:flex;align-items:center;gap:12px;">';
                 $html .= '<div style="width:40px;height:40px;border-radius:50%;background:#0A3663;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;">' . $initials . '</div>';
                 $html .= '<div>';
-                $html .= '<strong style="display:block;color:#0A3663;font-size:0.92rem;">' . $name . '</strong>';
+                $strong = $name;
+                $html .= '<strong style="display:block;color:#0A3663;font-size:0.92rem;">' . $strong . '</strong>';
                 $html .= '<span style="color:#64748B;font-size:0.8rem;">' . $role . '</span>';
                 $html .= '</div>';
                 $html .= '</div>';
@@ -1263,6 +1276,18 @@ class VCPG_Page_Generator
             return $html;
         }
         return '';
+    }
+
+    private function save_page_seo_metadata($pid, $city, $state, $country, $country_code, $service, $data)
+    {
+        update_post_meta($pid, '_vcpg_city', $city);
+        update_post_meta($pid, '_vcpg_state', $state);
+        update_post_meta($pid, '_vcpg_country', $country);
+        update_post_meta($pid, '_vcpg_country_code', $country_code);
+        update_post_meta($pid, '_vcpg_service', $service);
+        if (isset($data['faq'])) {
+            update_post_meta($pid, '_vcpg_faq', $data['faq']);
+        }
     }
 
 }
