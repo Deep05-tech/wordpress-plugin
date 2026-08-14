@@ -272,12 +272,15 @@ jQuery(document).ready(function(){
 
     let running = false;
     let pollInterval = null;
+    let activeWorkers = 0;
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 10;
 
     function start_polling() {
         if (pollInterval) {
             clearInterval(pollInterval);
         }
-        pollInterval = setInterval(fetch_progress, 1000);
+        pollInterval = setInterval(fetch_progress, 2000);
     }
 
     function stop_polling() {
@@ -288,28 +291,33 @@ jQuery(document).ready(function(){
     }
 
     function fetch_progress() {
-        jQuery.post(
-            ajaxurl,
-            {
-                action: 'vcpg_get_csv_progress'
-            },
-            function(response) {
-                if (!response.success) {
+        jQuery.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action: 'vcpg_get_csv_progress' },
+            dataType: 'json',
+            timeout: 15000,
+            success: function(response) {
+                if (!response || !response.success) {
                     return;
                 }
                 let data = response.data;
+                let total = parseInt(data.total) || 0;
+                let completed = parseInt(data.completed) || 0;
+                let processing = parseInt(data.processing) || 0;
+                let failed = parseInt(data.failed) || 0;
 
                 // Build HTML output
-                let html = '<strong>Total:</strong> ' + data.total +
-                    '<br><strong>Completed:</strong> ' + data.completed +
-                    '<br><strong>Processing:</strong> ' + data.processing +
-                    '<br><strong>Failed:</strong> ' + data.failed +
+                let html = '<strong>Total:</strong> ' + total +
+                    '<br><strong>Completed:</strong> ' + completed +
+                    '<br><strong>Processing:</strong> ' + processing +
+                    '<br><strong>Failed:</strong> ' + failed +
                     '<br><br><strong>Current:</strong> ' + (data.current || '') +
                     '<br><strong>Live Status:</strong> <span style="color: #007cba;">' + (data.activity || 'Waiting...') + '</span>';
 
                 // Display failures if any
                 if (data.failures && data.failures.length > 0) {
-                    html += '<br><br><strong style="color: #d63638;">Recent Failures:</strong><ul style="margin: 5px 0 0 20px; list-style-type: disc; color: #d63638;">';
+                    html += '<br><br><strong style="color: #d63638;">Recent Failures (will auto-retry):</strong><ul style="margin: 5px 0 0 20px; list-style-type: disc; color: #d63638;">';
                     data.failures.forEach(function(fail) {
                         html += '<li><strong>' + fail.city + ' - ' + fail.service + ':</strong> ' + fail.message + '</li>';
                     });
@@ -318,33 +326,67 @@ jQuery(document).ready(function(){
 
                 jQuery('#vcpg-progress').html(html);
 
-                // If stopped or complete, hide stop button and stop polling
-                if (parseInt(data.completed) + parseInt(data.failed) >= parseInt(data.total) && parseInt(data.total) > 0) {
+                /*
+                Completion check: only consider truly done when
+                completed + permanently-failed == total. The server-side
+                auto-retry resets failed jobs with retry_count < 3 back
+                to pending, so the failed count here only reflects
+                permanently failed jobs (3+ retries).
+                */
+                if (completed + failed >= total && total > 0 && processing === 0) {
                     stop_polling();
+                    running = false;
                     jQuery('#vcpg-stop').hide();
                     if (!jQuery('#vcpg-progress').text().includes('Generation Completed')) {
-                        jQuery('#vcpg-progress').append('<br><br><strong style="color: #46b450;">Generation Completed.</strong>');
+                        let summary = '<br><br><strong style="color: #46b450;">Generation Completed.</strong>';
+                        if (failed > 0) {
+                            summary += ' <span style="color: #d63638;">(' + failed + ' permanently failed after 3 retries)</span>';
+                        }
+                        jQuery('#vcpg-progress').append(summary);
+                    }
+                }
+
+                /*
+                Watchdog: if there are still pending jobs but no active
+                workers, restart them. This handles the case where all
+                AJAX workers silently died (e.g. browser throttled the tab).
+                */
+                if (running && activeWorkers === 0 && (completed + failed) < total && total > 0) {
+                    let concurrency = <?php echo intval(get_option('vcpg_concurrency', 1)); ?>;
+                    for (let i = 0; i < concurrency; i++) {
+                        setTimeout(process_queue, i * 400);
                     }
                 }
             },
-            'json'
-        );
+            error: function() {
+                // Progress polling failure is non-critical, just skip
+            }
+        });
     }
 
     function process_queue() {
         if (!running) {
+            activeWorkers = Math.max(0, activeWorkers - 1);
             return;
         }
 
-        jQuery.post(
-            ajaxurl,
-            {
-                action: 'vcpg_process_csv_job'
-            },
-            function(response) {
-                if (!response.success) {
-                    // Try again in 3 seconds
-                    setTimeout(process_queue, 3000);
+        activeWorkers++;
+
+        jQuery.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action: 'vcpg_process_csv_job' },
+            dataType: 'json',
+            timeout: 120000, // 2 minute timeout per job (AI generation can be slow)
+            success: function(response) {
+                consecutiveErrors = 0; // Reset error counter on success
+
+                if (!response || !response.success) {
+                    // Server returned an error response but connection was OK
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    if (running) {
+                        setTimeout(process_queue, 3000);
+                    }
                     return;
                 }
 
@@ -352,24 +394,63 @@ jQuery(document).ready(function(){
 
                 if (data.stopped) {
                     running = false;
+                    activeWorkers = 0;
                     stop_polling();
                     jQuery('#vcpg-progress').html('Process stopped.');
                     jQuery('#vcpg-stop').hide();
                     return;
                 }
 
-                if (parseInt(data.completed) + parseInt(data.failed) >= parseInt(data.total)) {
-                    running = false;
-                    stop_polling();
-                    fetch_progress(); // final progress fetch to ensure sync
-                    jQuery('#vcpg-stop').hide();
+                let total = parseInt(data.total) || 0;
+                let completed = parseInt(data.completed) || 0;
+                let failed = parseInt(data.failed) || 0;
+
+                /*
+                Don't stop the loop on completed+failed >= total because
+                the server-side auto-retry may have reset some failed jobs
+                back to pending. Instead, rely on the 'finished' flag from
+                the server (set when there are no more pending jobs) or
+                the progress poller to determine true completion.
+                */
+                if (data.finished) {
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    // Don't set running=false here; let the progress poller handle it
+                    // because auto-retry may generate new pending jobs
+                    if (running) {
+                        // Check again in 5 seconds in case auto-retry created new pending jobs
+                        setTimeout(process_queue, 5000);
+                    }
                 } else {
-                    // Trigger next job immediately
-                    setTimeout(process_queue, 500);
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    if (running) {
+                        // Trigger next job immediately
+                        setTimeout(process_queue, 500);
+                    }
                 }
             },
-            'json'
-        );
+            error: function(xhr, status, error) {
+                activeWorkers = Math.max(0, activeWorkers - 1);
+                consecutiveErrors++;
+
+                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    // Too many consecutive network errors, stop to avoid infinite loop
+                    running = false;
+                    stop_polling();
+                    jQuery('#vcpg-progress').append(
+                        '<br><br><strong style="color: #d63638;">Generation paused: too many consecutive network errors. ' +
+                        'Reload this page to auto-resume from where it stopped.</strong>'
+                    );
+                    jQuery('#vcpg-stop').hide();
+                    return;
+                }
+
+                if (running) {
+                    // Exponential backoff: 3s, 6s, 12s, ... up to 30s
+                    let delay = Math.min(3000 * Math.pow(2, consecutiveErrors - 1), 30000);
+                    setTimeout(process_queue, delay);
+                }
+            }
+        });
     }
 
     let concurrency = <?php echo intval(get_option('vcpg_concurrency', 1)); ?>;
@@ -393,6 +474,7 @@ jQuery(document).ready(function(){
             },
             function(response) {
                 running = false;
+                activeWorkers = 0;
                 stop_polling();
                 jQuery('#vcpg-progress').html('Process stopped.');
                 jQuery('#vcpg-stop').hide();

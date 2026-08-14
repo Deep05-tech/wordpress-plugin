@@ -89,6 +89,8 @@ class VCPG_CSV_Job_Manager
 
             status VARCHAR(50) DEFAULT 'pending',
 
+            retry_count TINYINT UNSIGNED DEFAULT 0,
+
             page_id BIGINT(20) DEFAULT NULL,
 
             message TEXT,
@@ -163,6 +165,8 @@ class VCPG_CSV_Job_Manager
             'country'      => "ALTER TABLE $table ADD country VARCHAR(255) NOT NULL DEFAULT ''",
 
             'state'        => "ALTER TABLE $table ADD state VARCHAR(255) DEFAULT ''",
+
+            'retry_count'  => "ALTER TABLE $table ADD retry_count TINYINT UNSIGNED DEFAULT 0",
 
         );
 
@@ -340,6 +344,45 @@ public function process_job()
 
 
 
+
+
+    /*
+    Auto-Retry: Rescue stuck 'processing' jobs older than 3 minutes.
+    These are jobs where the AJAX request timed out or the browser
+    disconnected before the result was recorded.
+    */
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "
+            UPDATE $table
+            SET status='pending', message=CONCAT(IFNULL(message,''), ' [auto-rescued from stuck processing]')
+            WHERE batch_id=%s
+            AND status='processing'
+            AND updated_at < DATE_SUB(NOW(), INTERVAL 3 MINUTE)
+            ",
+            $batch_id
+        )
+    );
+
+
+    /*
+    Auto-Retry: Reset 'failed' jobs that have been tried fewer
+    than 3 times back to 'pending' so they get another chance.
+    */
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "
+            UPDATE $table
+            SET status='pending', message=CONCAT(IFNULL(message,''), ' [auto-retry]')
+            WHERE batch_id=%s
+            AND status='failed'
+            AND retry_count < 3
+            ",
+            $batch_id
+        )
+    );
 
 
     /*
@@ -575,6 +618,7 @@ public function process_job()
     else
     {
 
+        $current_retry = isset($job->retry_count) ? intval($job->retry_count) : 0;
 
         $wpdb->update(
 
@@ -583,6 +627,8 @@ public function process_job()
             array(
 
                 'status'=>'failed',
+
+                'retry_count' => $current_retry + 1,
 
                 'message'=>isset($result['message'])
 
