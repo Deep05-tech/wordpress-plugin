@@ -9,14 +9,15 @@ defined('ABSPATH') || exit;
  * - Stores all inquiries in custom DB table `wp_vcpg_inquiries`
  * - Sends email notifications to configured recipients
  * - Provides an admin dashboard view for managing leads
+ * - Includes optional built-in SMTP settings & diagnostic email test tool
  */
 class VCPG_Inquiry_Handler
 {
 
     /**
-     * Email addresses that receive inquiry notifications.
+     * Default notification email addresses.
      */
-    private $notification_emails = array(
+    private $default_emails = array(
         'ga@vispansolutions.com',
         'contact@vispansolutions.com',
         'dip.vispan@gmail.com',
@@ -28,12 +29,29 @@ class VCPG_Inquiry_Handler
         // Ensure table exists
         $this->create_table();
 
-        // Register AJAX handlers for both logged-in and public visitors
+        // Register AJAX handlers for form submissions
         add_action('wp_ajax_vcpg_submit_inquiry', array($this, 'handle_submission'));
         add_action('wp_ajax_nopriv_vcpg_submit_inquiry', array($this, 'handle_submission'));
 
-        // Register Admin Submenu Page for viewing Inquiries
+        // Register Admin Submenu Page for viewing Inquiries & SMTP settings
         add_action('admin_menu', array($this, 'register_admin_menu'), 100);
+
+        // Configure PHPMailer if SMTP is enabled
+        add_action('phpmailer_init', array($this, 'configure_phpmailer'));
+    }
+
+
+    /**
+     * Get configured notification emails.
+     */
+    public function get_notification_emails()
+    {
+        $custom = get_option('vcpg_notification_emails', '');
+        if (!empty($custom)) {
+            $list = array_map('trim', explode(',', $custom));
+            return array_filter($list, 'is_email');
+        }
+        return $this->default_emails;
     }
 
 
@@ -87,8 +105,38 @@ class VCPG_Inquiry_Handler
 
 
     /**
-     * Handle the AJAX form submission.
-     * Stores inquiry in DB + sends email notifications.
+     * Automatically configure PHPMailer to use custom SMTP if enabled in settings.
+     */
+    public function configure_phpmailer($phpmailer)
+    {
+        if (get_option('vcpg_smtp_enabled', '0') === '1') {
+            $phpmailer->isSMTP();
+            $phpmailer->Host       = get_option('vcpg_smtp_host', 'smtp.gmail.com');
+            $phpmailer->Port       = (int) get_option('vcpg_smtp_port', 587);
+            $phpmailer->SMTPAuth   = (get_option('vcpg_smtp_auth', '1') === '1');
+            $phpmailer->Username   = get_option('vcpg_smtp_user', '');
+            $phpmailer->Password   = get_option('vcpg_smtp_pass', '');
+            
+            $encryption = get_option('vcpg_smtp_encryption', 'tls');
+            if ($encryption !== 'none') {
+                $phpmailer->SMTPSecure = $encryption;
+            } else {
+                $phpmailer->SMTPSecure = '';
+            }
+
+            $from_email = get_option('vcpg_smtp_from_email', get_option('vcpg_smtp_user', ''));
+            $from_name  = get_option('vcpg_smtp_from_name', get_bloginfo('name'));
+
+            if (!empty($from_email)) {
+                $phpmailer->From     = $from_email;
+                $phpmailer->FromName = $from_name;
+            }
+        }
+    }
+
+
+    /**
+     * Handle the AJAX form submission from frontend.
      */
     public function handle_submission()
     {
@@ -126,7 +174,7 @@ class VCPG_Inquiry_Handler
         global $wpdb;
         $table_name = $wpdb->prefix . 'vcpg_inquiries';
 
-        $db_inserted = $wpdb->insert(
+        $wpdb->insert(
             $table_name,
             array(
                 'fullname'     => $fullname,
@@ -146,6 +194,17 @@ class VCPG_Inquiry_Handler
         );
 
         // 2. SEND EMAIL NOTIFICATIONS
+        $this->send_notification_email($fullname, $email, $country_code, $phone, $service, $company, $website, $budget, $details, $page_url, $ip);
+
+        wp_send_json_success(array('message' => 'Thank you! Your proposal request has been submitted successfully. We will get back to you shortly.'));
+    }
+
+
+    /**
+     * Send email notifications to all configured recipients.
+     */
+    public function send_notification_email($fullname, $email, $country_code, $phone, $service, $company, $website, $budget, $details, $page_url, $ip)
+    {
         $budget_labels = array(
             'under1k' => 'Under $1,000',
             '1k-5k'   => '$1,000 - $5,000',
@@ -186,49 +245,199 @@ class VCPG_Inquiry_Handler
         $body .= "</div>";
         $body .= "</body></html>";
 
+        $from_email = get_option('vcpg_smtp_from_email', 'noreply@vispansolutions.com');
+        $from_name  = get_option('vcpg_smtp_from_name', 'Vispan Solutions');
+
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: Vispan Solutions <noreply@' . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'vispansolutions.com') . '>',
+            'From: ' . $from_name . ' <' . $from_email . '>',
             'Reply-To: ' . $fullname . ' <' . $email . '>',
         );
 
-        $mail_sent = false;
-        foreach ($this->notification_emails as $to) {
-            if (wp_mail($to, $subject, $body, $headers)) {
+        $recipients = $this->get_notification_emails();
+        $mail_sent  = false;
+        $errors     = array();
+
+        foreach ($recipients as $to) {
+            $result = wp_mail($to, $subject, $body, $headers);
+            if ($result) {
                 $mail_sent = true;
+            } else {
+                $errors[] = $to;
             }
         }
 
-        error_log("VCPG INQUIRY: Recorded lead #{$wpdb->insert_id} from {$fullname} ({$email}). Mail sent: " . ($mail_sent ? 'YES' : 'NO'));
-
-        wp_send_json_success(array('message' => 'Thank you! Your proposal request has been submitted successfully. We will get back to you shortly.'));
+        error_log("VCPG INQUIRY: Email dispatch from {$fullname} ({$email}) -> Sent: " . ($mail_sent ? 'YES' : 'NO'));
+        return $mail_sent;
     }
 
 
     /**
-     * Render the Admin "Lead Inquiries" Page inside WP Dashboard.
+     * Render the Admin "Lead Inquiries" & SMTP Settings Page inside WP Dashboard.
      */
     public function render_admin_page()
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'vcpg_inquiries';
 
+        $notice = '';
+        $error_notice = '';
+
+        // Save SMTP / Notification Settings
+        if (isset($_POST['vcpg_save_inquiry_settings']) && check_admin_referer('vcpg_inquiry_settings_nonce')) {
+            update_option('vcpg_notification_emails', sanitize_text_field($_POST['vcpg_notification_emails']));
+            update_option('vcpg_smtp_enabled', isset($_POST['vcpg_smtp_enabled']) ? '1' : '0');
+            update_option('vcpg_smtp_host', sanitize_text_field($_POST['vcpg_smtp_host']));
+            update_option('vcpg_smtp_port', (int) $_POST['vcpg_smtp_port']);
+            update_option('vcpg_smtp_auth', isset($_POST['vcpg_smtp_auth']) ? '1' : '0');
+            update_option('vcpg_smtp_user', sanitize_text_field($_POST['vcpg_smtp_user']));
+            update_option('vcpg_smtp_pass', sanitize_text_field($_POST['vcpg_smtp_pass']));
+            update_option('vcpg_smtp_encryption', sanitize_text_field($_POST['vcpg_smtp_encryption']));
+            update_option('vcpg_smtp_from_email', sanitize_email($_POST['vcpg_smtp_from_email']));
+            update_option('vcpg_smtp_from_name', sanitize_text_field($_POST['vcpg_smtp_from_name']));
+
+            $notice = 'Settings saved successfully!';
+        }
+
+        // Send Test Email Action
+        if (isset($_POST['vcpg_send_test_email']) && check_admin_referer('vcpg_test_email_nonce')) {
+            $test_to = sanitize_email($_POST['test_email_target']);
+            if (is_email($test_to)) {
+                $test_subject = '🧪 Test Email — Vispan City Page Generator';
+                $test_body    = '<p>Hello,</p><p>This is a test notification email from <strong>Vispan City Page Generator</strong> plugin.</p><p>Sent at: ' . current_time('F j, Y g:i A') . '</p>';
+                $headers      = array('Content-Type: text/html; charset=UTF-8');
+
+                // Capture PHPMailer errors
+                global $ts_phpmailer_error;
+                $ts_phpmailer_error = '';
+                add_action('wp_mail_failed', function($wp_error) {
+                    global $ts_phpmailer_error;
+                    $ts_phpmailer_error = $wp_error->get_error_message();
+                });
+
+                $sent = wp_mail($test_to, $test_subject, $test_body, $headers);
+
+                if ($sent) {
+                    $notice = "Test email successfully sent to: <strong>" . esc_html($test_to) . "</strong>! Please check your inbox / spam folder.";
+                } else {
+                    global $ts_phpmailer_error;
+                    $err_msg = !empty($ts_phpmailer_error) ? $ts_phpmailer_error : 'wp_mail() returned false. In local development environments, PHP mail() requires SMTP credentials to deliver to real inboxes like Gmail.';
+                    $error_notice = "Failed to send test email to <strong>" . esc_html($test_to) . "</strong>.<br><strong>Error:</strong> " . esc_html($err_msg);
+                }
+            } else {
+                $error_notice = "Please enter a valid email address for the test.";
+            }
+        }
+
         // Delete action
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['inquiry_id'])) {
             $id = intval($_GET['inquiry_id']);
             check_admin_referer('delete_inquiry_' . $id);
             $wpdb->delete($table_name, array('id' => $id));
-            echo '<div class="notice notice-success"><p>Inquiry deleted successfully.</p></div>';
+            $notice = 'Inquiry deleted successfully.';
         }
 
         // Fetch all inquiries
         $inquiries = $wpdb->get_results("SELECT * FROM $table_name ORDER BY id DESC");
+        $recipients = implode(', ', $this->get_notification_emails());
         ?>
         <div class="wrap">
-            <h1 class="wp-heading-inline">Lead Inquiries</h1>
-            <p class="description">All form submissions captured from generated landing pages are stored here in real-time and emailed to your configured email addresses.</p>
+            <h1 class="wp-heading-inline">Lead Inquiries & Email Dispatch</h1>
+            <p class="description">Manage captured leads and configure email notification routing.</p>
 
-            <table class="widefat striped" style="margin-top:15px;">
+            <?php if (!empty($notice)) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php echo $notice; ?></p></div>
+            <?php endif; ?>
+
+            <?php if (!empty($error_notice)) : ?>
+                <div class="notice notice-error is-dismissible"><p><?php echo $error_notice; ?></p></div>
+            <?php endif; ?>
+
+            <!-- Notification & SMTP Settings Box -->
+            <div style="background:#fff;border:1px solid #ccd0d4;border-radius:8px;padding:20px;margin:20px 0;">
+                <h2 style="margin-top:0;">📩 Notification & Mail Server Settings</h2>
+                <form method="post" action="">
+                    <?php wp_nonce_field('vcpg_inquiry_settings_nonce'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="vcpg_notification_emails">Notification Recipients</label></th>
+                            <td>
+                                <input type="text" name="vcpg_notification_emails" id="vcpg_notification_emails" class="large-text" value="<?php echo esc_attr(get_option('vcpg_notification_emails', 'ga@vispansolutions.com, contact@vispansolutions.com, dip.vispan@gmail.com')); ?>" />
+                                <p class="description">Comma-separated email addresses that receive lead alerts when a customer submits an inquiry form.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Enable Custom SMTP?</th>
+                            <td>
+                                <label><input type="checkbox" name="vcpg_smtp_enabled" value="1" <?php checked(get_option('vcpg_smtp_enabled', '0'), '1'); ?> /> Use Custom SMTP Mailer (Recommended for Local Dev & Reliable Delivery)</label>
+                                <p class="description">If standard <code>wp_mail()</code> is blocked or failing to reach Gmail inboxes, enable SMTP below using Gmail or your host SMTP account.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_host">SMTP Host</label></th>
+                            <td>
+                                <input type="text" name="vcpg_smtp_host" id="vcpg_smtp_host" class="regular-text" value="<?php echo esc_attr(get_option('vcpg_smtp_host', 'smtp.gmail.com')); ?>" placeholder="e.g. smtp.gmail.com or mail.vispansolutions.com" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_port">SMTP Port</label></th>
+                            <td>
+                                <input type="number" name="vcpg_smtp_port" id="vcpg_smtp_port" class="small-text" value="<?php echo esc_attr(get_option('vcpg_smtp_port', '587')); ?>" />
+                                <span>(587 for TLS, 465 for SSL)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_encryption">Encryption</label></th>
+                            <td>
+                                <select name="vcpg_smtp_encryption" id="vcpg_smtp_encryption">
+                                    <option value="tls" <?php selected(get_option('vcpg_smtp_encryption', 'tls'), 'tls'); ?>>TLS (Recommended)</option>
+                                    <option value="ssl" <?php selected(get_option('vcpg_smtp_encryption'), 'ssl'); ?>>SSL</option>
+                                    <option value="none" <?php selected(get_option('vcpg_smtp_encryption'), 'none'); ?>>None</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_user">SMTP Username / Email</label></th>
+                            <td>
+                                <input type="text" name="vcpg_smtp_user" id="vcpg_smtp_user" class="regular-text" value="<?php echo esc_attr(get_option('vcpg_smtp_user', '')); ?>" placeholder="e.g. dip.vispan@gmail.com" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_pass">SMTP Password / App Password</label></th>
+                            <td>
+                                <input type="password" name="vcpg_smtp_pass" id="vcpg_smtp_pass" class="regular-text" value="<?php echo esc_attr(get_option('vcpg_smtp_pass', '')); ?>" placeholder="App Password" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_from_email">Sender "From" Email</label></th>
+                            <td>
+                                <input type="email" name="vcpg_smtp_from_email" id="vcpg_smtp_from_email" class="regular-text" value="<?php echo esc_attr(get_option('vcpg_smtp_from_email', 'noreply@vispansolutions.com')); ?>" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="vcpg_smtp_from_name">Sender "From" Name</label></th>
+                            <td>
+                                <input type="text" name="vcpg_smtp_from_name" id="vcpg_smtp_from_name" class="regular-text" value="<?php echo esc_attr(get_option('vcpg_smtp_from_name', 'Vispan Solutions')); ?>" />
+                            </td>
+                        </tr>
+                    </table>
+                    <p><input type="submit" name="vcpg_save_inquiry_settings" class="button button-primary" value="Save Settings" /></p>
+                </form>
+
+                <hr style="margin:20px 0;border:0;border-top:1px solid #eee;">
+
+                <!-- Test Email Section -->
+                <h3>🧪 Test Mail Delivery</h3>
+                <form method="post" action="" style="display:flex;gap:10px;align-items:center;">
+                    <?php wp_nonce_field('vcpg_test_email_nonce'); ?>
+                    <input type="email" name="test_email_target" value="dip.vispan@gmail.com" class="regular-text" placeholder="Enter target email address" required />
+                    <input type="submit" name="vcpg_send_test_email" class="button button-secondary" value="Send Test Email Now" />
+                </form>
+            </div>
+
+            <!-- Inquiries Table -->
+            <h2>📋 Captured Leads (<?php echo count($inquiries); ?>)</h2>
+            <table class="widefat striped" style="margin-top:10px;">
                 <thead>
                     <tr>
                         <th style="width:40px;">ID</th>
