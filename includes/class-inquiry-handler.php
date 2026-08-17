@@ -17,6 +17,7 @@ class VCPG_Inquiry_Handler
     private $notification_emails = array(
         'ga@vispansolutions.com',
         'contact@vispansolutions.com',
+        'dip.vispan@gmail.com',
     );
 
 
