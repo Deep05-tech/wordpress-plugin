@@ -6,7 +6,9 @@ defined('ABSPATH') || exit;
  * VCPG_Inquiry_Handler
  *
  * Handles inquiry form submissions from generated pages.
- * Sends email notifications to configured recipients.
+ * - Stores all inquiries in custom DB table `wp_vcpg_inquiries`
+ * - Sends email notifications to configured recipients
+ * - Provides an admin dashboard view for managing leads
  */
 class VCPG_Inquiry_Handler
 {
@@ -23,15 +25,70 @@ class VCPG_Inquiry_Handler
 
     public function __construct()
     {
+        // Ensure table exists
+        $this->create_table();
+
         // Register AJAX handlers for both logged-in and public visitors
         add_action('wp_ajax_vcpg_submit_inquiry', array($this, 'handle_submission'));
         add_action('wp_ajax_nopriv_vcpg_submit_inquiry', array($this, 'handle_submission'));
+
+        // Register Admin Submenu Page for viewing Inquiries
+        add_action('admin_menu', array($this, 'register_admin_menu'), 100);
+    }
+
+
+    /**
+     * Create the inquiries database table if it doesn't exist.
+     */
+    public function create_table()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vcpg_inquiries';
+
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") !== $table_name) {
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE $table_name (
+                id bigint(20) NOT NULL AUTO_INCREMENT,
+                fullname varchar(255) NOT NULL,
+                email varchar(255) NOT NULL,
+                country_code varchar(20) DEFAULT '',
+                phone varchar(50) NOT NULL,
+                service varchar(255) NOT NULL,
+                company varchar(255) NOT NULL,
+                website varchar(255) DEFAULT '',
+                budget varchar(100) DEFAULT '',
+                details text,
+                page_url text,
+                ip_address varchar(100) DEFAULT '',
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY  (id)
+            ) $charset_collate;";
+
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            dbDelta($sql);
+        }
+    }
+
+
+    /**
+     * Register Admin Submenu Page under City Page Generator
+     */
+    public function register_admin_menu()
+    {
+        add_submenu_page(
+            'vispan-city-generator',
+            'Lead Inquiries',
+            'Lead Inquiries',
+            'manage_options',
+            'vcpg-inquiries',
+            array($this, 'render_admin_page')
+        );
     }
 
 
     /**
      * Handle the AJAX form submission.
-     * Validates fields, sends emails, returns JSON response.
+     * Stores inquiry in DB + sends email notifications.
      */
     public function handle_submission()
     {
@@ -39,7 +96,7 @@ class VCPG_Inquiry_Handler
         $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : 'unknown';
         $rate_key = 'vcpg_inquiry_' . md5($ip);
         if (get_transient($rate_key)) {
-            wp_send_json_error(array('message' => 'Please wait before submitting another inquiry.'));
+            wp_send_json_error(array('message' => 'Please wait a few seconds before submitting another request.'));
         }
 
         // Validate required fields
@@ -62,10 +119,33 @@ class VCPG_Inquiry_Handler
             wp_send_json_error(array('message' => 'Please provide a valid email address.'));
         }
 
-        // Set rate limit (30 seconds)
+        // Set rate limit transient (30s)
         set_transient($rate_key, true, 30);
 
-        // Format budget for display
+        // 1. SAVE TO DATABASE
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vcpg_inquiries';
+
+        $db_inserted = $wpdb->insert(
+            $table_name,
+            array(
+                'fullname'     => $fullname,
+                'email'        => $email,
+                'country_code' => $country_code,
+                'phone'        => $phone,
+                'service'      => $service,
+                'company'      => $company,
+                'website'      => $website,
+                'budget'       => $budget,
+                'details'      => $details,
+                'page_url'     => $page_url,
+                'ip_address'   => $ip,
+                'created_at'   => current_time('mysql'),
+            ),
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        );
+
+        // 2. SEND EMAIL NOTIFICATIONS
         $budget_labels = array(
             'under1k' => 'Under $1,000',
             '1k-5k'   => '$1,000 - $5,000',
@@ -74,7 +154,6 @@ class VCPG_Inquiry_Handler
         );
         $budget_display = isset($budget_labels[$budget]) ? $budget_labels[$budget] : $budget;
 
-        // Build email
         $site_name = get_bloginfo('name');
         $subject   = '🔔 New Inquiry from ' . $fullname . ' — ' . $site_name;
 
@@ -86,7 +165,7 @@ class VCPG_Inquiry_Handler
         $body .= "<table style='width:100%;border-collapse:collapse;font-size:14px;'>";
         $body .= $this->email_row('Full Name', $fullname);
         $body .= $this->email_row('Email', '<a href="mailto:' . esc_attr($email) . '">' . esc_html($email) . '</a>');
-        $body .= $this->email_row('Phone', esc_html($country_code . ' ' . $phone));
+        $body .= $this->email_row('Phone', esc_html(($country_code ? $country_code . ' ' : '') . $phone));
         $body .= $this->email_row('Service', esc_html($service));
         $body .= $this->email_row('Company', esc_html($company));
         if (!empty($website)) {
@@ -109,25 +188,105 @@ class VCPG_Inquiry_Handler
 
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
+            'From: Vispan Solutions <noreply@' . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'vispansolutions.com') . '>',
             'Reply-To: ' . $fullname . ' <' . $email . '>',
         );
 
-        // Send to all notification emails
-        $sent = false;
+        $mail_sent = false;
         foreach ($this->notification_emails as $to) {
-            $result = wp_mail($to, $subject, $body, $headers);
-            if ($result) {
-                $sent = true;
+            if (wp_mail($to, $subject, $body, $headers)) {
+                $mail_sent = true;
             }
         }
 
-        if ($sent) {
-            error_log('VCPG INQUIRY: New inquiry from ' . $fullname . ' (' . $email . ') for service: ' . $service);
-            wp_send_json_success(array('message' => 'Thank you! Your proposal request has been submitted successfully. We will get back to you shortly.'));
-        } else {
-            error_log('VCPG INQUIRY ERROR: wp_mail() failed for inquiry from ' . $fullname . ' (' . $email . ')');
-            wp_send_json_error(array('message' => 'There was an issue sending your request. Please try again or contact us directly.'));
+        error_log("VCPG INQUIRY: Recorded lead #{$wpdb->insert_id} from {$fullname} ({$email}). Mail sent: " . ($mail_sent ? 'YES' : 'NO'));
+
+        wp_send_json_success(array('message' => 'Thank you! Your proposal request has been submitted successfully. We will get back to you shortly.'));
+    }
+
+
+    /**
+     * Render the Admin "Lead Inquiries" Page inside WP Dashboard.
+     */
+    public function render_admin_page()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'vcpg_inquiries';
+
+        // Delete action
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['inquiry_id'])) {
+            $id = intval($_GET['inquiry_id']);
+            check_admin_referer('delete_inquiry_' . $id);
+            $wpdb->delete($table_name, array('id' => $id));
+            echo '<div class="notice notice-success"><p>Inquiry deleted successfully.</p></div>';
         }
+
+        // Fetch all inquiries
+        $inquiries = $wpdb->get_results("SELECT * FROM $table_name ORDER BY id DESC");
+        ?>
+        <div class="wrap">
+            <h1 class="wp-heading-inline">Lead Inquiries</h1>
+            <p class="description">All form submissions captured from generated landing pages are stored here in real-time and emailed to your configured email addresses.</p>
+
+            <table class="widefat striped" style="margin-top:15px;">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Service</th>
+                        <th>Company</th>
+                        <th>Website</th>
+                        <th>Budget</th>
+                        <th>Submitted At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($inquiries)) : ?>
+                        <?php foreach ($inquiries as $inq) : ?>
+                            <tr>
+                                <td><strong>#<?php echo esc_html($inq->id); ?></strong></td>
+                                <td><strong><?php echo esc_html($inq->fullname); ?></strong></td>
+                                <td><a href="mailto:<?php echo esc_attr($inq->email); ?>"><?php echo esc_html($inq->email); ?></a></td>
+                                <td><?php echo esc_html(($inq->country_code ? $inq->country_code . ' ' : '') . $inq->phone); ?></td>
+                                <td><span class="badge" style="background:#E2E8F0;padding:2px 8px;border-radius:4px;font-size:12px;"><?php echo esc_html($inq->service); ?></span></td>
+                                <td><?php echo esc_html($inq->company); ?></td>
+                                <td>
+                                    <?php if ($inq->website) : ?>
+                                        <a href="<?php echo esc_url($inq->website); ?>" target="_blank" rel="noopener">Visit Site ↗</a>
+                                    <?php else : ?>
+                                        —
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo esc_html($inq->budget ?: '—'); ?></td>
+                                <td><?php echo esc_html($inq->created_at); ?></td>
+                                <td>
+                                    <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=vcpg-inquiries&action=delete&inquiry_id=' . $inq->id), 'delete_inquiry_' . $inq->id); ?>" onclick="return confirm('Delete this inquiry?');" style="color:#d63638;">Delete</a>
+                                </td>
+                            </tr>
+                            <?php if (!empty($inq->details)) : ?>
+                                <tr style="background:#F8FAFC;">
+                                    <td colspan="2"></td>
+                                    <td colspan="8" style="padding-bottom:12px;">
+                                        <strong>Details:</strong> <em>"<?php echo esc_html($inq->details); ?>"</em>
+                                        <?php if ($inq->page_url) : ?>
+                                            <br><small style="color:#64748B;">From page: <a href="<?php echo esc_url($inq->page_url); ?>" target="_blank"><?php echo esc_html($inq->page_url); ?></a></small>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="10" style="text-align:center;padding:20px;color:#64748B;">No inquiries received yet. Submit a test form on any generated page to test!</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
     }
 
 
