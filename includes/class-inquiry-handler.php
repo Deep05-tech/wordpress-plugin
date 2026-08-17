@@ -109,13 +109,17 @@ class VCPG_Inquiry_Handler
      */
     public function configure_phpmailer($phpmailer)
     {
-        if (get_option('vcpg_smtp_enabled', '0') === '1') {
+        $smtp_user = get_option('vcpg_smtp_user', '');
+        $smtp_pass = get_option('vcpg_smtp_pass', '');
+        $smtp_enabled = get_option('vcpg_smtp_enabled', '0') === '1' || (!empty($smtp_user) && !empty($smtp_pass));
+
+        if ($smtp_enabled) {
             $phpmailer->isSMTP();
             $phpmailer->Host       = get_option('vcpg_smtp_host', 'smtp.gmail.com');
             $phpmailer->Port       = (int) get_option('vcpg_smtp_port', 587);
-            $phpmailer->SMTPAuth   = (get_option('vcpg_smtp_auth', '1') === '1');
-            $phpmailer->Username   = get_option('vcpg_smtp_user', '');
-            $phpmailer->Password   = get_option('vcpg_smtp_pass', '');
+            $phpmailer->SMTPAuth   = true;
+            $phpmailer->Username   = $smtp_user;
+            $phpmailer->Password   = $smtp_pass;
             
             $encryption = get_option('vcpg_smtp_encryption', 'tls');
             if ($encryption !== 'none') {
@@ -124,7 +128,7 @@ class VCPG_Inquiry_Handler
                 $phpmailer->SMTPSecure = '';
             }
 
-            $from_email = get_option('vcpg_smtp_from_email', get_option('vcpg_smtp_user', ''));
+            $from_email = get_option('vcpg_smtp_from_email', !empty($smtp_user) ? $smtp_user : 'dip.vispan@gmail.com');
             $from_name  = get_option('vcpg_smtp_from_name', get_bloginfo('name'));
 
             if (!empty($from_email)) {
