@@ -1,9 +1,11 @@
 <?php
 /**
  * Plugin Name: Vispan City Page Generator
- * Description: Generate city-based SEO pages for Vispan Solutions.
- * Version: 1.0.0
+ * Description: Generate city-based SEO pages for Vispan Solutions with automatic inquiry lead handling & SMTP.
+ * Version: 1.1.0
  * Author: Vispan Solutions
+ * GitHub Plugin URI: Deep05-tech/wordpress-plugin
+ * Primary Branch: main
  */
 
 defined('ABSPATH') || exit;
