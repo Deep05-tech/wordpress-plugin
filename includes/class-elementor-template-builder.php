@@ -1892,30 +1892,30 @@ function handleFormSubmit_' . $form_id . '(event) {
         return false;
     }
 
-    var submitBtn = form.querySelector('button[type="submit"]');
-    var originalText = submitBtn ? submitBtn.textContent : 'Request a marketing Proposal';
+    var submitBtn = form.querySelector("button[type=submit]");
+    var originalText = submitBtn ? submitBtn.textContent : "Request a marketing Proposal";
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        submitBtn.textContent = "Submitting...";
     }
 
     var formData = new FormData();
-    formData.append('action', 'vcpg_submit_inquiry');
-    formData.append('fullname', name);
-    formData.append('email', email);
-    formData.append('country_code', form.country_code ? form.country_code.value : '');
-    formData.append('phone', phone);
-    formData.append('service', service);
-    formData.append('company', company);
-    formData.append('website', website);
-    formData.append('budget', budget);
-    formData.append('details', form.details ? form.details.value.trim() : '');
-    formData.append('page_url', window.location.href);
+    formData.append("action", "vcpg_submit_inquiry");
+    formData.append("fullname", name);
+    formData.append("email", email);
+    formData.append("country_code", form.country_code ? form.country_code.value : "");
+    formData.append("phone", phone);
+    formData.append("service", service);
+    formData.append("company", company);
+    formData.append("website", website);
+    formData.append("budget", budget);
+    formData.append("details", form.details ? form.details.value.trim() : "");
+    formData.append("page_url", window.location.href);
 
-    var ajaxUrl = (typeof ajaxurl !== 'undefined') ? ajaxurl : (window.location.origin + '/wp-admin/admin-ajax.php');
+    var ajaxUrl = (typeof ajaxurl !== "undefined") ? ajaxurl : (window.location.origin + "/wp-admin/admin-ajax.php");
 
     fetch(ajaxUrl, {
-        method: 'POST',
+        method: "POST",
         body: formData
     })
     .then(function(res) { return res.json(); })
