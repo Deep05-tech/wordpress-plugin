@@ -27,6 +27,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-template-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-keyword-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-csv-job-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-csv-importer.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-inquiry-handler.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,7 @@ $seo_generator    = new VCPG_SEO_Generator();
 $keyword_manager  = new VCPG_Keyword_Manager();
 $elementor_builder = new VCPG_Elementor_Template_Builder();
 $page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator, $keyword_manager, $elementor_builder);
+$inquiry_handler  = new VCPG_Inquiry_Handler();
 new VCPG_Template_Manager();
 
 /*

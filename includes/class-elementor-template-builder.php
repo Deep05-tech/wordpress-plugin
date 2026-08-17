@@ -1892,9 +1892,56 @@ function handleFormSubmit_' . $form_id . '(event) {
         return false;
     }
 
-    successDiv.textContent = "Thank you! Your proposal request has been submitted successfully.";
-    successDiv.style.display = "block";
-    form.reset();
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalText = submitBtn ? submitBtn.textContent : 'Request a marketing Proposal';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+    }
+
+    var formData = new FormData();
+    formData.append('action', 'vcpg_submit_inquiry');
+    formData.append('fullname', name);
+    formData.append('email', email);
+    formData.append('country_code', form.country_code ? form.country_code.value : '');
+    formData.append('phone', phone);
+    formData.append('service', service);
+    formData.append('company', company);
+    formData.append('website', website);
+    formData.append('budget', budget);
+    formData.append('details', form.details ? form.details.value.trim() : '');
+    formData.append('page_url', window.location.href);
+
+    var ajaxUrl = (typeof ajaxurl !== 'undefined') ? ajaxurl : (window.location.origin + '/wp-admin/admin-ajax.php');
+
+    fetch(ajaxUrl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+        if (data.success) {
+            successDiv.textContent = (data.data && data.data.message) ? data.data.message : "Thank you! Your proposal request has been submitted successfully.";
+            successDiv.style.display = "block";
+            form.reset();
+        } else {
+            errorDiv.textContent = (data.data && data.data.message) ? data.data.message : "Submission failed. Please try again.";
+            errorDiv.style.display = "block";
+        }
+    })
+    .catch(function(err) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+        errorDiv.textContent = "An error occurred while submitting. Please try again.";
+        errorDiv.style.display = "block";
+    });
+
     return false;
 }
 </script>';
