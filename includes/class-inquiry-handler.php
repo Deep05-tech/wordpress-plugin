@@ -58,25 +58,121 @@ class VCPG_Inquiry_Handler
         <script id="vcpg-global-inquiry-script">
         (function() {
             var ajaxUrl = <?php echo wp_json_encode($ajax_url); ?>;
-            document.addEventListener("DOMContentLoaded", function() {
-                var forms = document.querySelectorAll("form");
-                forms.forEach(function(form) {
-                    var hasEmail = form.querySelector("input[name='email']");
-                    var hasName = form.querySelector("input[name='fullname']") || form.querySelector("input[name='name']");
-                    if (hasEmail && hasName && !form.dataset.vcpgBound) {
-                        form.dataset.vcpgBound = "true";
-                        form.addEventListener("submit", function(e) {
-                            if (typeof window.handleFormSubmit === "function" && form.getAttribute("onsubmit")) {
-                                return; // Already handled by inline handler
-                            }
-                            e.preventDefault();
-                            if (typeof window.handleFormSubmit === "function") {
-                                window.handleFormSubmit(form);
-                            }
-                        });
+            document.addEventListener("submit", function(e) {
+                var form = e.target;
+                if (!form || form.tagName !== "FORM") return;
+
+                var emailInput = form.querySelector("input[name='email'], input[type='email']");
+                var nameInput  = form.querySelector("input[name='fullname'], input[name='name'], input[name='your-name']");
+
+                if (!emailInput && !nameInput) return; // Not an inquiry form
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                var name = nameInput ? nameInput.value.trim() : "";
+                var email = emailInput ? emailInput.value.trim() : "";
+                
+                var phoneInput = form.querySelector("input[name='phone'], input[type='tel']");
+                var phone = phoneInput ? phoneInput.value.trim() : "";
+
+                var serviceInput = form.querySelector("input[name='service'], select[name='service']");
+                var service = serviceInput ? serviceInput.value.trim() : "General Inquiry";
+
+                var companyInput = form.querySelector("input[name='company']");
+                var company = companyInput ? companyInput.value.trim() : "N/A";
+
+                var websiteInput = form.querySelector("input[name='website']");
+                var website = websiteInput ? websiteInput.value.trim() : "";
+
+                var budgetInput = form.querySelector("input[name='budget'], select[name='budget']");
+                var budget = budgetInput ? budgetInput.value.trim() : "N/A";
+
+                var detailsInput = form.querySelector("textarea[name='details'], textarea[name='message'], input[name='details']");
+                var details = detailsInput ? detailsInput.value.trim() : "";
+
+                var errorDiv   = form.querySelector(".vcpg-error-msg, [id^='error_']") || document.getElementById("error_" + form.id);
+                var successDiv = form.querySelector(".vcpg-success-msg, [id^='success_']") || document.getElementById("success_" + form.id);
+
+                if (errorDiv) errorDiv.style.display = "none";
+                if (successDiv) successDiv.style.display = "none";
+
+                if (!name || !email) {
+                    if (errorDiv) {
+                        errorDiv.textContent = "Please enter your name and a valid email address.";
+                        errorDiv.style.display = "block";
+                    } else {
+                        alert("Please enter your name and a valid email address.");
+                    }
+                    return false;
+                }
+
+                var submitBtn = form.querySelector("button[type='submit'], input[type='submit']");
+                var origText  = submitBtn ? (submitBtn.textContent || submitBtn.value) : "Submit";
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    if (submitBtn.tagName === "INPUT") submitBtn.value = "Submitting...";
+                    else submitBtn.textContent = "Submitting...";
+                }
+
+                var formData = new FormData();
+                formData.append("action", "vcpg_submit_inquiry");
+                formData.append("fullname", name);
+                formData.append("email", email);
+                formData.append("phone", phone);
+                formData.append("service", service);
+                formData.append("company", company);
+                formData.append("website", website);
+                formData.append("budget", budget);
+                formData.append("details", details);
+                formData.append("page_url", window.location.href);
+
+                fetch(ajaxUrl, {
+                    method: "POST",
+                    body: formData
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        if (submitBtn.tagName === "INPUT") submitBtn.value = origText;
+                        else submitBtn.textContent = origText;
+                    }
+                    if (res.success) {
+                        var msg = (res.data && res.data.message) ? res.data.message : "Thank you! Your proposal request has been submitted successfully.";
+                        if (successDiv) {
+                            successDiv.textContent = msg;
+                            successDiv.style.display = "block";
+                        } else {
+                            alert(msg);
+                        }
+                        form.reset();
+                    } else {
+                        var errMsg = (res.data && res.data.message) ? res.data.message : "Submission failed. Please try again.";
+                        if (errorDiv) {
+                            errorDiv.textContent = errMsg;
+                            errorDiv.style.display = "block";
+                        } else {
+                            alert(errMsg);
+                        }
+                    }
+                })
+                .catch(function() {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        if (submitBtn.tagName === "INPUT") submitBtn.value = origText;
+                        else submitBtn.textContent = origText;
+                    }
+                    if (errorDiv) {
+                        errorDiv.textContent = "An error occurred while submitting. Please try again.";
+                        errorDiv.style.display = "block";
+                    } else {
+                        alert("An error occurred while submitting. Please try again.");
                     }
                 });
-            });
+
+                return false;
+            }, true);
         })();
         </script>
         <?php
@@ -193,20 +289,20 @@ class VCPG_Inquiry_Handler
             wp_send_json_error(array('message' => 'Please wait a few seconds before submitting another request.'));
         }
 
-        // Validate required fields
-        $fullname     = isset($_POST['fullname']) ? sanitize_text_field($_POST['fullname']) : '';
+        // Flexible field extraction for retro-compatibility with all existing generated pages
+        $fullname     = !empty($_POST['fullname']) ? sanitize_text_field($_POST['fullname']) : (!empty($_POST['name']) ? sanitize_text_field($_POST['name']) : (!empty($_POST['your-name']) ? sanitize_text_field($_POST['your-name']) : 'Inquirer'));
         $email        = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
         $country_code = isset($_POST['country_code']) ? sanitize_text_field($_POST['country_code']) : '';
         $phone        = isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : '';
-        $service      = isset($_POST['service']) ? sanitize_text_field($_POST['service']) : '';
-        $company      = isset($_POST['company']) ? sanitize_text_field($_POST['company']) : '';
+        $service      = !empty($_POST['service']) ? sanitize_text_field($_POST['service']) : 'General Inquiry';
+        $company      = !empty($_POST['company']) ? sanitize_text_field($_POST['company']) : 'N/A';
         $website      = isset($_POST['website']) ? esc_url_raw($_POST['website']) : '';
-        $budget       = isset($_POST['budget']) ? sanitize_text_field($_POST['budget']) : '';
-        $details      = isset($_POST['details']) ? sanitize_textarea_field($_POST['details']) : '';
+        $budget       = !empty($_POST['budget']) ? sanitize_text_field($_POST['budget']) : 'N/A';
+        $details      = isset($_POST['details']) ? sanitize_textarea_field($_POST['details']) : (isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : '');
         $page_url     = isset($_POST['page_url']) ? esc_url_raw($_POST['page_url']) : '';
 
-        if (empty($fullname) || empty($email) || empty($phone) || empty($service) || empty($company)) {
-            wp_send_json_error(array('message' => 'Please fill in all required fields.'));
+        if (empty($fullname) || empty($email)) {
+            wp_send_json_error(array('message' => 'Please enter your name and email address.'));
         }
 
         if (!is_email($email)) {
