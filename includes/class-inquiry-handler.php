@@ -38,6 +38,48 @@ class VCPG_Inquiry_Handler
 
         // Configure PHPMailer if SMTP is enabled
         add_action('phpmailer_init', array($this, 'configure_phpmailer'));
+
+        // Inject global script on frontend so all existing pages automatically capture leads
+        add_action('wp_footer', array($this, 'inject_global_inquiry_script'));
+    }
+
+
+    /**
+     * Inject global fallback JS script into footer of all frontend pages.
+     * Ensures existing generated pages automatically capture leads without regenerating.
+     */
+    public function inject_global_inquiry_script()
+    {
+        if (is_admin()) {
+            return;
+        }
+        $ajax_url = admin_url('admin-ajax.php');
+        ?>
+        <script id="vcpg-global-inquiry-script">
+        (function() {
+            var ajaxUrl = <?php echo wp_json_encode($ajax_url); ?>;
+            document.addEventListener("DOMContentLoaded", function() {
+                var forms = document.querySelectorAll("form");
+                forms.forEach(function(form) {
+                    var hasEmail = form.querySelector("input[name='email']");
+                    var hasName = form.querySelector("input[name='fullname']") || form.querySelector("input[name='name']");
+                    if (hasEmail && hasName && !form.dataset.vcpgBound) {
+                        form.dataset.vcpgBound = "true";
+                        form.addEventListener("submit", function(e) {
+                            if (typeof window.handleFormSubmit === "function" && form.getAttribute("onsubmit")) {
+                                return; // Already handled by inline handler
+                            }
+                            e.preventDefault();
+                            if (typeof window.handleFormSubmit === "function") {
+                                window.handleFormSubmit(form);
+                            }
+                        });
+                    }
+                });
+            });
+        })();
+        </script>
+        <?php
     }
 
 
