@@ -49,7 +49,16 @@ $keyword_manager  = new VCPG_Keyword_Manager();
 $elementor_builder = new VCPG_Elementor_Template_Builder();
 $page_generator   = new VCPG_Page_Generator($ai_generator, $city_manager, $seo_generator, $keyword_manager, $elementor_builder);
 $inquiry_handler  = new VCPG_Inquiry_Handler();
-new VCPG_Template_Manager();
+/*
+|--------------------------------------------------------------------------
+| Plugin Activation & Deactivation Hooks
+|--------------------------------------------------------------------------
+*/
+register_deactivation_hook(__FILE__, 'vcpg_deactivate_plugin');
+function vcpg_deactivate_plugin() {
+    delete_option('vcpg_job_activity');
+    delete_transient('vcpg_bulk_job');
+}
 
 /*
 |--------------------------------------------------------------------------
