@@ -262,8 +262,8 @@ class VCPG_Inquiry_Handler
      */
     public function configure_phpmailer($phpmailer)
     {
-        $smtp_user = get_option('vcpg_smtp_user', '');
-        $smtp_pass = get_option('vcpg_smtp_pass', '');
+        $smtp_user = trim(get_option('vcpg_smtp_user', ''));
+        $smtp_pass = str_replace(' ', '', trim(get_option('vcpg_smtp_pass', '')));
         $smtp_enabled = get_option('vcpg_smtp_enabled', '0') === '1' || (!empty($smtp_user) && !empty($smtp_pass));
 
         if ($smtp_enabled) {
