@@ -1552,6 +1552,7 @@ function vcpgSwitchTab(idx) {
         );
         $select_arrow = 'data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20fill%3D%22%231E293B%22%20d%3D%22M5.293%207.293a1%201%200%20011.414%200L10%2010.586l3.293-3.293a1%201%200%20111.414%201.414l-4%204a1%201%200%2001-1.414%200l-4-4a1%201%200%20010-1.414z%22%2F%3E%3C%2Fsvg%3E';
         return '<form id="' . $form_id . '" style="display:flex;flex-direction:column;gap:16px;" onsubmit="return handleFormSubmit_' . $form_id . '(event);">
+  <input type="text" name="vcpg_hp_trap" style="display:none !important;" tabindex="-1" autocomplete="off">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <input name="fullname" placeholder="Full Name*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="text" required>
     <input name="email" placeholder="Email Address*" style="width:100%;padding:13px 22px;border-radius:50px;border:1px solid #7E7E7E;background:#F3F4F6;color:#1E293B;font-size:14px;box-sizing:border-box;outline:none;font-family:inherit;" type="email" required>

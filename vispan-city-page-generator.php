@@ -53,13 +53,36 @@ new VCPG_Template_Manager();
 
 /*
 |--------------------------------------------------------------------------
+| VCPG Page Isolation Helper
+|--------------------------------------------------------------------------
+*/
+function is_vcpg_generated_page($post_id = 0)
+{
+    if (!$post_id && is_singular('page')) {
+        $post_id = get_the_ID();
+    }
+    if (!$post_id) {
+        return false;
+    }
+    if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
+        return true;
+    }
+    $post = get_post($post_id);
+    if ($post && (strpos($post->post_content, 'vcpg') !== false || strpos($post->post_content, 'hero_proposal') !== false || strpos($post->post_content, 'contact_proposal') !== false)) {
+        return true;
+    }
+    return false;
+}
+
+/*
+|--------------------------------------------------------------------------
 | CSS Handler — prevents <style> from being stripped in VCPG pages
 |--------------------------------------------------------------------------
 */
 add_action('wp', 'vcpg_capture_page_styles');
 function vcpg_capture_page_styles()
 {
-    if(is_singular('page'))
+    if(is_singular('page') && is_vcpg_generated_page())
     {
         $post = get_post();
         if($post && preg_match('/<style>.*?<\/style>/s', $post->post_content, $matches))
@@ -72,6 +95,9 @@ function vcpg_capture_page_styles()
 add_action('wp_head', 'vcpg_output_styles', 99999);
 function vcpg_output_styles()
 {
+    if (!is_vcpg_generated_page()) {
+        return; // ZERO CSS output on built-in website pages!
+    }
     if(!empty($GLOBALS['vcpg_inline_styles']))
     {
         echo $GLOBALS['vcpg_inline_styles'];

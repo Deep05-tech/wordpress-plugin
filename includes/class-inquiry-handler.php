@@ -50,8 +50,8 @@ class VCPG_Inquiry_Handler
      */
     public function inject_global_inquiry_script()
     {
-        if (is_admin()) {
-            return;
+        if (is_admin() || !function_exists('is_vcpg_generated_page') || !is_vcpg_generated_page()) {
+            return; // ZERO JS execution or interference on built-in website pages!
         }
         $ajax_url = admin_url('admin-ajax.php');
         ?>
@@ -62,13 +62,23 @@ class VCPG_Inquiry_Handler
                 var form = e.target;
                 if (!form || form.tagName !== "FORM") return;
 
-                var emailInput = form.querySelector("input[name='email'], input[type='email']");
-                var nameInput  = form.querySelector("input[name='fullname'], input[name='name'], input[name='your-name']");
+                // STRICT ISOLATION: Only target forms explicitly belonging to VCPG generated pages
+                var formId = form.id || "";
+                var formClass = form.className || "";
+                var formAction = form.getAttribute("action") || "";
+                var isVcpgForm = formId.indexOf("proposal") !== -1 || 
+                                 formId.indexOf("vcpg") !== -1 || 
+                                 formClass.indexOf("vcpg") !== -1 || 
+                                 formAction.indexOf("vcpg_submit_inquiry") !== -1 ||
+                                 form.querySelector("input[name='action'][value='vcpg_submit_inquiry']");
 
-                if (!emailInput && !nameInput) return; // Not an inquiry form
+                if (!isVcpgForm) return; // Leave all theme & built-in native forms 100% untouched!
 
                 e.preventDefault();
                 e.stopPropagation();
+
+                var emailInput = form.querySelector("input[name='email'], input[type='email']");
+                var nameInput  = form.querySelector("input[name='fullname'], input[name='name'], input[name='your-name']");
 
                 var name = nameInput ? nameInput.value.trim() : "";
                 var email = emailInput ? emailInput.value.trim() : "";
@@ -90,6 +100,10 @@ class VCPG_Inquiry_Handler
 
                 var detailsInput = form.querySelector("textarea[name='details'], textarea[name='message'], input[name='details']");
                 var details = detailsInput ? detailsInput.value.trim() : "";
+
+                // Anti-Spam Honeypot Field Check
+                var hpInput = form.querySelector("input[name='vcpg_hp_trap']");
+                var hpVal = hpInput ? hpInput.value : "";
 
                 var errorDiv   = form.querySelector(".vcpg-error-msg, [id^='error_']") || document.getElementById("error_" + form.id);
                 var successDiv = form.querySelector(".vcpg-success-msg, [id^='success_']") || document.getElementById("success_" + form.id);
@@ -125,6 +139,7 @@ class VCPG_Inquiry_Handler
                 formData.append("website", website);
                 formData.append("budget", budget);
                 formData.append("details", details);
+                formData.append("vcpg_hp_trap", hpVal);
                 formData.append("page_url", window.location.href);
 
                 fetch(ajaxUrl, {
@@ -282,6 +297,13 @@ class VCPG_Inquiry_Handler
      */
     public function handle_submission()
     {
+        // Anti-Spam / Anti-Malware Honeypot Trap Verification
+        if (!empty($_POST['vcpg_hp_trap'])) {
+            // Automated bot detected filling hidden trap field. Return success to trick bot and abort.
+            wp_send_json_success(array('message' => 'Thank you! Your proposal request has been submitted successfully.'));
+            exit;
+        }
+
         // Rate limiting: 1 submission per IP per 30 seconds
         $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : 'unknown';
         $rate_key = 'vcpg_inquiry_' . md5($ip);
