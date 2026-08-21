@@ -281,6 +281,15 @@ class VCPG_Inquiry_Handler
                 $phpmailer->SMTPSecure = '';
             }
 
+            // Bypass local SSL peer verification so local CA cert bundle mismatches don't break SMTP auth
+            $phpmailer->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true
+                )
+            );
+
             $from_email = get_option('vcpg_smtp_from_email', !empty($smtp_user) ? $smtp_user : 'dip.vispan@gmail.com');
             $from_name  = get_option('vcpg_smtp_from_name', get_bloginfo('name'));
 
