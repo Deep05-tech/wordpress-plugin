@@ -161,43 +161,46 @@ class VCPG_Keyword_Manager
 
     private function get_stored_keywords_for_service($service)
     {
-
         global $wpdb;
 
-
         $service = trim($service);
-
-        if(empty($service))
-        {
-            return array();
-        }
-
-
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT keyword
-                 FROM $this->table
-                 WHERE service = %s
-                 ORDER BY used_count ASC, avg_volume DESC, id ASC
-                 LIMIT 200",
-                $service
-            )
-        );
-
-
         $keywords = array();
 
-        if($rows)
-        {
-            foreach($rows as $row)
-            {
-                $keywords[] = $row->keyword;
+        if (!empty($service)) {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT keyword
+                     FROM $this->table
+                     WHERE LOWER(service) = LOWER(%s) OR service = ''
+                     ORDER BY used_count ASC, avg_volume DESC, id ASC
+                     LIMIT 200",
+                    $service
+                )
+            );
+
+            if (!empty($rows)) {
+                foreach ($rows as $row) {
+                    $keywords[] = $row->keyword;
+                }
             }
         }
 
+        if (empty($keywords)) {
+            $rows = $wpdb->get_results(
+                "SELECT keyword
+                 FROM $this->table
+                 ORDER BY used_count ASC, avg_volume DESC, id ASC
+                 LIMIT 200"
+            );
+
+            if ($rows) {
+                foreach ($rows as $row) {
+                    $keywords[] = $row->keyword;
+                }
+            }
+        }
 
         return $keywords;
-
     }
 
 
@@ -509,6 +512,11 @@ class VCPG_Keyword_Manager
             $this->reset_usage();
         }
 
+        if(isset($_POST['vcpg_clear_all_keywords']) && check_admin_referer('vcpg_clear_all_keywords'))
+        {
+            $this->clear_all_keywords();
+        }
+
 
         global $wpdb;
 
@@ -569,12 +577,18 @@ class VCPG_Keyword_Manager
 <?php submit_button('Import Keywords', 'secondary', 'vcpg_import_keywords'); ?>
 </form>
 
-<h2>Reset Coverage Status</h2>
-<p class="description">Resets the "used" counter so all keywords become available again for future pages.</p>
-<form method="post">
+<h2>Reset & Manage Keywords</h2>
+<p class="description">Manage your keyword list status or reset keywords completely:</p>
+<div style="display:flex; gap:16px; align-items:center; margin-top:10px; margin-bottom:20px;">
+<form method="post" style="display:inline-block;">
 <?php wp_nonce_field('vcpg_reset_keywords'); ?>
-<?php submit_button('Reset Keyword Usage', 'secondary', 'vcpg_reset_keywords'); ?>
+<?php submit_button('Reset Keyword Usage (Set Count to 0)', 'secondary', 'vcpg_reset_keywords', false); ?>
 </form>
+<form method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete all uploaded keywords from the database?');">
+<?php wp_nonce_field('vcpg_clear_all_keywords'); ?>
+<?php submit_button('Delete & Clear All Keywords', 'delete', 'vcpg_clear_all_keywords', false); ?>
+</form>
+</div>
 
 <h2>Keyword List</h2>
 <form method="get">
@@ -619,8 +633,17 @@ class VCPG_Keyword_Manager
         );
 
 
-        echo '<div class="notice notice-success"><p>Keyword usage reset successfully.</p></div>';
+        echo '<div class="notice notice-success"><p>Keyword usage count reset successfully.</p></div>';
 
+    }
+
+    private function clear_all_keywords()
+    {
+        global $wpdb;
+
+        $wpdb->query("TRUNCATE TABLE $this->table");
+
+        echo '<div class="notice notice-success"><p>All uploaded keywords cleared/deleted successfully.</p></div>';
     }
 
 

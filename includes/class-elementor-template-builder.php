@@ -203,33 +203,47 @@ class VCPG_Elementor_Template_Builder
 
         $home = function_exists('home_url') ? home_url('/') : '/';
 
+        $city_clean = trim(preg_replace('/\bcounty\b/i', '', $city));
+        if (empty($city_clean)) {
+            $city_clean = $city;
+        }
+        $city_display = (preg_match('/\bcity\b/i', $city_clean)) ? $city_clean : $city_clean . ' City';
+        $county_display = $city_clean . ' County';
+        $city_and_county = $city_display . ' & ' . $county_display;
+        $loc_first_sec = $city_and_county . (!empty($state) ? ', ' . $state : '');
+
         $nouns = $this->get_service_nouns($svc);
 
         $hero_small = $this->t(isset($data['hero_subtitle']) ? $data['hero_subtitle'] : '');
         if(empty($hero_small))
         {
-            $hero_small = strtoupper(trim($city . ' ' . $svc));
+            $hero_small = strtoupper(trim($loc_first_sec . ' — Digital Marketing for ' . $svc));
         }
 
         $hero_title = $this->t(isset($data['hero_title']) ? $data['hero_title'] : '');
         if(empty($hero_title))
         {
-            $hero_title = $svc . ' in ' . $city;
+            $dm_prefix = (stripos($svc, 'digital marketing') !== false) ? '' : 'Digital Marketing for ';
+            $hero_title = $dm_prefix . $svc . ' in ' . $loc_first_sec;
+        } else {
+            if (stripos($hero_title, 'digital marketing') === false) {
+                $hero_title = 'Digital Marketing for ' . $hero_title;
+            }
         }
 
         $hero_description = $this->t(isset($data['hero_description']) ? $data['hero_description'] : '');
         if(empty($hero_description))
         {
-            $hero_description = "Welcome to our team in " . $city . "! In " . $city . "’s competitive landscape, exceptional offerings alone are insufficient. Partnering with a top agency can elevate your " . $nouns['business_type'] . ".\n\nWe specialize in customized outreach strategies for your team. Our expertise in tailored layouts ensures maximum web visibility, attracting new " . $nouns['client_type'] . "s and retaining existing ones.\n\nAs leaders in the area, we offer solutions from optimization to engaging branding. Our websites are user-friendly and attractive, helping you stand out.\n\nLet us help you grow with top-notch designs, effective promotions, and comprehensive search strategies. Our social campaign and website development will ensure your " . $nouns['business_type'] . " reaches its full potential.";
+            $hero_description = "Welcome to our team in " . $loc_first_sec . "! In " . $loc_first_sec . "’s competitive commercial landscape, exceptional offerings alone are insufficient. Partnering with a top digital marketing agency can elevate your " . $nouns['business_type'] . ".\n\nWe specialize in customized digital marketing outreach strategies for your team in " . $loc_first_sec . ". Our expertise in tailored campaigns ensures maximum web visibility, attracting new " . $nouns['client_type'] . "s and retaining existing ones.\n\nAs digital marketing leaders across " . $loc_first_sec . ", we offer comprehensive solutions from search optimization to engaging branding. Our campaign strategies and web development ensure your " . $nouns['business_type'] . " reaches its full potential.";
         }
 
         $about_title = $this->t(isset($data['about_title']) ? $data['about_title'] : '');
         if(empty($about_title))
         {
             if(stripos($svc, 'agency') !== false || stripos($svc, 'marketing') !== false) {
-                $about_title = 'Creating a Strong Online Presence for Local Businesses with our ' . $svc . ' in ' . $city . '.';
+                $about_title = 'Creating a Strong Online Presence for Local Businesses with our ' . $svc . ' in ' . $loc_first_sec . '.';
             } else {
-                $about_title = 'Creating a Strong Online Presence for ' . $svc . ' with our Digital Marketing Agency in ' . $city . '.';
+                $about_title = 'Creating a Strong Online Presence for ' . $svc . ' with our Digital Marketing Agency in ' . $loc_first_sec . '.';
             }
         }
 

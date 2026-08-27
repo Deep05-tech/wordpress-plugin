@@ -970,21 +970,22 @@ class VCPG_Page_Generator
 
     private function build_page_title($service, $city, $state)
     {
-        $title = $this->vcpg_title_case($service);
+        $city_clean = trim(preg_replace('/\bcounty\b/i', '', $city));
+        if (empty($city_clean)) {
+            $city_clean = $city;
+        }
+        $city_display = (preg_match('/\bcity\b/i', $city_clean)) ? $city_clean : $city_clean . ' City';
+        $county_display = $city_clean . ' County';
 
-        $location = '';
+        $dm_prefix = (stripos($service, 'digital marketing') !== false) ? '' : 'Digital Marketing for ';
+        $title = $dm_prefix . $this->vcpg_title_case($service);
 
-        if (!empty($city) && !empty($state)) {
-            $location = $city . ', ' . $state;
-        } elseif (!empty($state)) {
-            $location = $state;
-        } elseif (!empty($city)) {
-            $location = $city;
+        $location = $this->vcpg_title_case($city_display) . ' & ' . $this->vcpg_title_case($county_display);
+        if (!empty($state)) {
+            $location .= ', ' . strtoupper($state);
         }
 
-        if (!empty($location)) {
-            $title .= ' in ' . $this->vcpg_title_case($location);
-        }
+        $title .= ' in ' . $location;
 
         return $title;
     }

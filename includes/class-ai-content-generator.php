@@ -374,9 +374,9 @@ class VCPG_AI_Content_Generator
         SECTION REQUIREMENTS — FOLLOW EXACTLY:
 
         === HERO ===
-        hero_title: Unique headline specific to THIS service (not generic marketing). Use the service-specific context provided above. MUST be exactly 8 to 10 words long. CRITICAL: Do NOT use any word from the forbidden list above. If a word was used in any previous page's title, you must use a different word. Vary your MODIFIER choice from previous pages. DO NOT start with only 'Best', 'Top', 'Expert', 'Leading' — combine them with specifics. Never open with just 'Best X' — that pattern has been overused.
-        hero_subtitle: Short tagline with city-specific angle. Use city-specific landmarks, culture, or business climate. MUST be exactly 10 to 15 words long, and MUST contain the state name: ".(isset($data['state']) ? $data['state'] : '').".
-        hero_description: Deep local introduction covering the market need, why this specific service matters in [city]. MUST be exactly 45 to 50 words long. DO NOT start with 'At Vispan Solutions', 'We help', 'We specialize'.
+        hero_title: Unique headline specific to THIS service (not generic marketing). MUST explicitly contain the keyword 'Digital Marketing' and MUST include BOTH the city name and county name (e.g., 'Jefferson City & Jefferson County'). MUST be a COMPLETE, grammatically sound sentence or title (10-15 words). Never cut off mid-sentence or end with dangling prepositions. CRITICAL: Do NOT use any word from the forbidden list above. If a word was used in any previous page's title, you must use a different word. Vary your MODIFIER choice from previous pages. DO NOT start with only 'Best', 'Top', 'Expert', 'Leading' — combine them with specifics.
+        hero_subtitle: Short tagline with city and county angle. Use local market context. MUST contain the keyword 'Digital Marketing' and mention BOTH the city and county as well as state name: ".(isset($data['state']) ? $data['state'] : '').". MUST be a complete sentence (10-15 words).
+        hero_description: Deep local introduction covering the market need for digital marketing and why this specific service matters in both [city] and its county. MUST be exactly 45 to 50 words long. DO NOT start with 'At Vispan Solutions', 'We help', 'We specialize'.
 
         === ABOUT ===
         about_title: Compelling headline about the agency's {{service}} expertise in [city]. 8-12 words. Tailor to this specific service, not generic marketing.
@@ -538,6 +538,18 @@ class VCPG_AI_Content_Generator
             $svc = $data['service'];
             $state = isset($data['state']) ? $data['state'] : '';
             $svc_name = ucwords($svc);
+
+            $city_clean = trim(preg_replace('/\bcounty\b/i', '', $city));
+            if (empty($city_clean)) {
+                $city_clean = $city;
+            }
+            $city_display = (preg_match('/\bcity\b/i', $city_clean)) ? $city_clean : $city_clean . ' City';
+            $county_display = $city_clean . ' County';
+            $city_and_county = $city_display . ' & ' . $county_display;
+
+            $dm_svc_title = (stripos($svc, 'digital marketing') !== false) ? $svc_name : 'Digital Marketing for ' . $svc_name;
+            $dm_svc_phrase = (stripos($svc, 'digital marketing') !== false) ? $svc_name : 'Digital Marketing & ' . $svc_name;
+
             $angle_idx = abs(crc32($city . '-' . $svc)) % 8;
             $city_idx = abs(crc32($city)) % 8;
             $svc_idx = abs(crc32($svc)) % 8;
@@ -552,14 +564,14 @@ class VCPG_AI_Content_Generator
             $shifted_idx = ($shifted_idx + $rot_idx) % 8;
             $deep_idx = ($deep_idx + $rot_idx) % 8;
             $hero_patterns = array(
-                'Award-Winning '.$data['service'].' Serving '.$data['city'].' Businesses',
-                ''.$data['city'].' '.$data['service'].' — Data-Backed Strategies for Measurable Growth',
-                ''.$data['service'].' Agency in '.$data['city'].' — Bringing Your Brand to the Forefront',
-                'Result-Proven '.$data['service'].' for Companies in '.$data['city'],
-                'Modern '.$data['service'].' Solutions for '.$data['city'].' Enterprises',
-                'Strategic '.$data['service'].' Partner in '.$data['city'].' — Built on Trust and Expertise',
-                'Tailored '.$data['service'].' for '.$data['city'].' — Custom Plans for Every Business',
-                'Performance-Driven '.$data['service'].' in '.$data['city'].' — Maximize Your Investment',
+                'Award-Winning ' . $dm_svc_title . ' Serving ' . $city_and_county . ' Businesses',
+                'Data-Backed ' . $dm_svc_title . ' in ' . $city_and_county . ' for Measurable Growth',
+                'Leading ' . $dm_svc_title . ' Agency in ' . $city_and_county . ' — Bringing Your Brand to the Forefront',
+                'Result-Proven ' . $dm_svc_title . ' for Companies in ' . $city_and_county,
+                'Modern ' . $dm_svc_title . ' Solutions for ' . $city_and_county . ' Enterprises',
+                'Strategic ' . $dm_svc_title . ' Partner in ' . $city_and_county . ' — Built on Trust and Expertise',
+                'Tailored ' . $dm_svc_title . ' for ' . $city_and_county . ' — Custom Plans for Every Business',
+                'Performance-Driven ' . $dm_svc_title . ' in ' . $city_and_county . ' — Maximize Your Investment',
             );
             $cta_title_assembler = array(
                 'Schedule Your Free ',
@@ -592,14 +604,14 @@ class VCPG_AI_Content_Generator
                 ' with a Local Expert',
             );
             $hero_subtitles = array(
-                ''.$svc_name.' Tailored for the '.$city.' Market — Helping Local Businesses Succeed Online',
-                'Data-Backed '.$svc_name.' Strategies Designed for '.$city.' Businesses',
-                'Helping '.$city.' Companies Grow with Proven '.$svc_name.' Expertise',
-                'Your Trusted '.$svc_name.' Partner Serving the '.$city.' Community',
-                'Innovative '.$svc_name.' Solutions Built for '.$city.'\'s Business Landscape',
-                'Growth-Focused '.$svc_name.' for Ambitious '.$city.' Businesses',
-                'Custom '.$svc_name.' Plans Tailored to '.$city.'\'s Unique Market',
-                'Cost-Effective '.$svc_name.' Strategies for Maximum ROI in '.$city,
+                'Dedicated ' . $dm_svc_phrase . ' Strategies Tailored for ' . $city_and_county . ($state ? ', ' . $state : ''),
+                'Data-Backed ' . $dm_svc_phrase . ' Campaigns Built to Scale Businesses in ' . $city_and_county,
+                'Empowering ' . $city_and_county . ' Companies with High-Impact ' . $dm_svc_phrase . ' Expertise',
+                'Your Trusted ' . $dm_svc_phrase . ' Partner Serving ' . $city_and_county . ' Community',
+                'Innovative ' . $dm_svc_phrase . ' Solutions Engine Built for ' . $city_and_county,
+                'Growth-Focused ' . $dm_svc_phrase . ' for Ambitious ' . $city_and_county . ' Organizations',
+                'Custom ' . $dm_svc_phrase . ' Plans Tailored to ' . $city_and_county . '\'s Unique Market',
+                'Cost-Effective ' . $dm_svc_phrase . ' Strategies for Maximum ROI in ' . $city_and_county,
             );
             $cta_opener = array(
                 'Take the first step toward data-driven growth in '.$city.'. ',
@@ -1362,19 +1374,16 @@ class VCPG_AI_Content_Generator
             return $content;
         }
 
-        // Enforce hero_title word count: exactly 8 to 10 words
+        // Enforce hero_title quality & keyword inclusion
         if (isset($content['hero_title'])) {
-            $words = preg_split('/\s+/', trim($content['hero_title']));
-            $count = count($words);
-            if ($count < 8) {
-                $padding = array('for', 'Business', 'Growth', 'and', 'Brand', 'Success', 'Online', 'Authority');
-                while (count($words) < 9) {
-                    $words[] = array_shift($padding);
-                }
-            } elseif ($count > 10) {
-                $words = array_slice($words, 0, 9);
+            $title = trim($content['hero_title']);
+            if (stripos($title, 'digital marketing') === false) {
+                $title = 'Digital Marketing for ' . $title;
             }
-            $content['hero_title'] = implode(' ', $words);
+            // Remove any trailing prepositions/conjunctions/dangling words
+            $title = preg_replace('/\s+\b(for|in|and|of|with|the|a|an|to|at|by|or|from|as)\b[\s.,!?]*$/i', '', $title);
+            $title = rtrim($title, ' ,-:;');
+            $content['hero_title'] = $title;
         }
 
         // Enforce hero_subtitle word count: exactly 10 to 15 words
