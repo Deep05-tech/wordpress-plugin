@@ -67,20 +67,144 @@ function vcpg_deactivate_plugin() {
 */
 function is_vcpg_generated_page($post_id = 0)
 {
+    if (!$post_id) {
+        $post_id = get_queried_object_id();
+    }
     if (!$post_id && is_singular('page')) {
         $post_id = get_the_ID();
     }
     if (!$post_id) {
+        global $post;
+        if (isset($post->ID)) {
+            $post_id = $post->ID;
+        }
+    }
+    if (!$post_id) {
         return false;
     }
+    // 1. Direct postmeta check
     if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
         return true;
     }
-    $post = get_post($post_id);
-    if ($post && (strpos($post->post_content, 'vcpg') !== false || strpos($post->post_content, 'hero_proposal') !== false || strpos($post->post_content, 'contact_proposal') !== false)) {
+    // 2. Specific VCPG location meta check
+    if (get_post_meta($post_id, '_vcpg_city', true) || get_post_meta($post_id, '_vcpg_service', true) || get_post_meta($post_id, '_vcpg_country', true) || get_post_meta($post_id, '_vcpg_state', true) || get_post_meta($post_id, '_vcpg_county', true)) {
+        update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
+    // 3. Page Template check
+    if (get_post_meta($post_id, '_wp_page_template', true) === 'templates/page-template.php') {
+        update_post_meta($post_id, '_vcpg_page', '1');
+        return true;
+    }
+    // 4. Post content and Elementor builder data check
+    $post_obj = get_post($post_id);
+    if ($post_obj && $post_obj->post_type === 'page') {
+        $content = $post_obj->post_content;
+        if (empty($content)) {
+            $elem_data = get_post_meta($post_id, '_elementor_data', true);
+            if (is_array($elem_data)) {
+                $content = wp_json_encode($elem_data);
+            } elseif (is_string($elem_data)) {
+                $content = $elem_data;
+            }
+        }
+        if (is_string($content) && (
+            strpos($content, 'vcpg') !== false ||
+            strpos($content, 'vpg-container') !== false ||
+            strpos($content, 'hero_proposal') !== false ||
+            strpos($content, 'contact_proposal') !== false ||
+            strpos($content, 'vp-footer') !== false ||
+            strpos($content, 'vcpg-nav-item') !== false ||
+            strpos($content, 'vcpg-dual-btn') !== false ||
+            strpos($content, 'e000003') !== false ||
+            strpos($content, 'vispansolutions') !== false
+        )) {
+            update_post_meta($post_id, '_vcpg_page', '1');
+            return true;
+        }
+        // 5. Parent page ISO country code slug check
+        if ($post_obj->post_parent > 0) {
+            $parent = get_post($post_obj->post_parent);
+            if ($parent) {
+                $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
+                if (in_array(strtolower($parent->post_name), $known_cc) || get_post_meta($parent->ID, '_vcpg_country', true)) {
+                    update_post_meta($post_id, '_vcpg_page', '1');
+                    return true;
+                }
+            }
+        }
+    }
     return false;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Suppress Elementor Pro & Hello Elementor Theme Global Header/Footer
+| ONLY on VCPG Generated Pages (Preserves VCPG's internal Header & Footer)
+|--------------------------------------------------------------------------
+*/
+add_filter('elementor/theme/should_render_location', 'vcpg_suppress_elementor_theme_locations', 99999, 3);
+function vcpg_suppress_elementor_theme_locations($should_render, $location_name, $location_manager)
+{
+    if (is_vcpg_generated_page()) {
+        if ($location_name === 'header' || $location_name === 'footer') {
+            return false;
+        }
+    }
+    return $should_render;
+}
+
+add_filter('hello_elementor_display_header_footer', 'vcpg_suppress_hello_header_footer', 99999);
+add_filter('hello_elementor_header_display', 'vcpg_suppress_hello_header_footer', 99999);
+add_filter('hello_elementor_footer_display', 'vcpg_suppress_hello_header_footer', 99999);
+function vcpg_suppress_hello_header_footer($display)
+{
+    return is_vcpg_generated_page() ? false : $display;
+}
+
+add_filter('hfe_header_enabled', 'vcpg_suppress_hfe_header', 99999);
+function vcpg_suppress_hfe_header($enabled)
+{
+    return is_vcpg_generated_page() ? false : $enabled;
+}
+
+add_filter('hfe_footer_enabled', 'vcpg_suppress_hfe_footer', 99999);
+function vcpg_suppress_hfe_footer($enabled)
+{
+    return is_vcpg_generated_page() ? false : $enabled;
+}
+
+add_filter('body_class', 'vcpg_add_body_class');
+function vcpg_add_body_class($classes)
+{
+    if (is_vcpg_generated_page()) {
+        $classes[] = 'vcpg-page';
+        $classes[] = 'is-vcpg-page';
+    }
+    return $classes;
+}
+
+/*
+|--------------------------------------------------------------------------
+| One-Time Legacy Metadata Sync Utility for 3500+ Generated Pages
+|--------------------------------------------------------------------------
+*/
+add_action('admin_init', 'vcpg_sync_legacy_page_meta');
+function vcpg_sync_legacy_page_meta()
+{
+    if (!get_option('vcpg_legacy_meta_synced_v1')) {
+        global $wpdb;
+        $wpdb->query("
+            INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value)
+            SELECT DISTINCT post_id, '_vcpg_page', '1'
+            FROM {$wpdb->postmeta}
+            WHERE meta_key IN ('_vcpg_city', '_vcpg_service', '_vcpg_country')
+            AND post_id NOT IN (
+                SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_vcpg_page'
+            )
+        ");
+        update_option('vcpg_legacy_meta_synced_v1', time());
+    }
 }
 
 /*
@@ -102,37 +226,99 @@ function vcpg_capture_page_styles()
 }
 
 add_action('wp_head', 'vcpg_output_styles', 99999);
+add_action('wp_footer', 'vcpg_output_styles', 99999);
+add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
+function vcpg_clean_content_inline_styles($content) {
+    if (is_singular('page') && is_vcpg_generated_page()) {
+        // Strip old conflicting position: absolute or top: 0 rules from inline <style> tags in post_content on output
+        $content = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $content);
+    }
+    return $content;
+}
+
 function vcpg_output_styles()
 {
     if (!is_vcpg_generated_page()) {
         return; // ZERO CSS output on built-in website pages!
     }
-    if(!empty($GLOBALS['vcpg_inline_styles']))
+    if(!empty($GLOBALS['vcpg_inline_styles']) && !did_action('wp_footer'))
     {
-        echo $GLOBALS['vcpg_inline_styles'];
+        // Clean conflicting header position rules from captured inline styles
+        $clean_captured = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $GLOBALS['vcpg_inline_styles']);
+        echo $clean_captured;
     }
 
     echo '<style id="vcpg-brand-overrides">
+    /* Suppress outer Theme & Elementor Pro headers & footers ONLY on VCPG pages */
+    html body.vcpg-page header,
+    html body.vcpg-page #site-header,
+    html body.vcpg-page .site-header,
+    html body.vcpg-page div[data-elementor-type="header"],
+    html body.vcpg-page .elementor-location-header,
+    html body.vcpg-page footer:not(.vp-footer),
+    html body.vcpg-page #site-footer,
+    html body.vcpg-page .site-footer,
+    html body.vcpg-page div[data-elementor-type="footer"],
+    html body.vcpg-page .elementor-location-footer,
+    html body.vcpg-page #masthead,
+    html body.vcpg-page #colophon,
+    header.site-header,
+    footer.site-footer,
+    #site-header,
+    #site-footer,
+    #masthead,
+    #colophon {
+        display: none !important;
+    }
+
     html body footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
     html body footer.vp-footer a:hover { color: #FFFFFF !important; }
     html body .vp-footer a[href^="tel:"] { color: #FFFFFF !important; font-weight: 700 !important; }
     html body .vp-footer a[href^="mailto:"] { color: #38BDF8 !important; font-weight: 600 !important; }
-    .elementor-background-video-hosted { transform: translate(-50%, -50%) scale(1.4) !important; }
-    .elementor-element-e000003 { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; z-index: 9999 !important; background: transparent !important; background-color: transparent !important; }
-    .admin-bar .elementor-element-e000003 { top: 32px !important; }
-    .admin-bar #smooth-wrapper .elementor-element-e000003,
-    .admin-bar #smooth-content .elementor-element-e000003 { top: 0 !important; }
-    @media screen and (max-width: 782px) {
-        .admin-bar .elementor-element-e000003 { top: 46px !important; }
-        .admin-bar #smooth-wrapper .elementor-element-e000003,
-        .admin-bar #smooth-content .elementor-element-e000003 { top: 0 !important; }
+    /* Fixed Centered Background Video Positioning System */
+    .elementor-background-video-container {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        z-index: 0 !important;
+        pointer-events: none !important;
     }
-    .elementor-element-e000001 div:nth-of-type(2),
-    .elementor-element-e000003 div[style*="background:#FFFFFF"],
-    .elementor-element-e000003 div[style*="background: #FFFFFF"],
-    .elementor-element-e000003 div[style*="background:#ffffff"],
-    .elementor-element-e000003 div[style*="background: #ffffff"] { background: transparent !important; background-color: transparent !important; border-bottom: none !important; }
-    .elementor-element-e00000b { padding-top: 190px !important; }
+    .elementor-background-video-hosted,
+    .elementor-background-video,
+    video.elementor-background-video-hosted {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(1.35) !important;
+        min-width: 100% !important;
+        min-height: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        object-position: center center !important;
+        pointer-events: none !important;
+        display: block !important;
+    }
+    .elementor-element-e00000b {
+        position: relative !important;
+        z-index: 1 !important;
+        padding-top: 190px !important;
+    }
+    .elementor-element-e00000b .elementor-container {
+        position: relative !important;
+        z-index: 2 !important;
+    }
+    html body.vcpg-page .elementor-element-e00000b h1,
+    html body.vcpg-page .elementor-element-e00000b p {
+        position: relative !important;
+        z-index: 2 !important;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+    }
     
     /* Typography Spacing Legibility Overrides */
     html body h1, html body h2, html body h3, html body h4, html body h5, html body h6 {
@@ -158,6 +344,279 @@ function vcpg_output_styles()
         .vp-casestudy-grid > div:first-child { order: 1 !important; }
         .vp-casestudy-grid > div:last-child { order: 2 !important; }
     }
+
+    /* ==========================================================================
+       Global Nav Item Safety - Prevent Text Line-Wrapping inside Nav Links
+       ========================================================================== */
+    .vcpg-nav-link {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+    }
+
+    /* ==========================================================================
+       VCPG Comprehensive Responsive Breakpoint System (Mobile, Tablet, Desktop)
+       ========================================================================== */
+    
+    /* Box Safety & Global Media Responsiveness */
+    html body.vcpg-page img,
+    html body.vcpg-page iframe,
+    html body.vcpg-page video {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* TABLET & MOBILE RESPONSIVE HEADER & LAYOUT (max-width: 1024px) */
+    @media (max-width: 1024px) {
+        html body.vcpg-page .elementor-container,
+        html body.vcpg-page .vpg-container {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 1. Header non-overlap fix: make header relative on mobile/tablet with solid white backdrop */
+        html body.vcpg-page .elementor-element-e000003 {
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            z-index: 99999 !important;
+            background: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        }
+
+        /* Main navbar bar background white on mobile/tablet */
+        html body.vcpg-page .elementor-element-e000003 div[style*="height:60px"],
+        html body.vcpg-page .elementor-element-e000003 div[style*="height: 60px"] {
+            background: #FFFFFF !important;
+            height: auto !important;
+            padding: 12px 16px !important;
+        }
+
+        /* Main navbar layout: logo & button on top row */
+        html body.vcpg-page .elementor-element-e000003 div[style*="height:60px"] > div,
+        html body.vcpg-page .elementor-element-e000003 div[style*="height: 60px"] > div {
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+
+        /* Navigation Links horizontally scrollable row */
+        html body.vcpg-page .elementor-element-e000003 ul {
+            width: 100% !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            -webkit-overflow-scrolling: touch !important;
+            justify-content: flex-start !important;
+            padding: 8px 0 !important;
+            margin: 6px 0 0 0 !important;
+            scrollbar-width: none !important;
+            display: flex !important;
+            gap: 8px !important;
+        }
+        html body.vcpg-page .elementor-element-e000003 ul::-webkit-scrollbar {
+            display: none !important;
+        }
+
+        /* Individual nav items styling on mobile/tablet */
+        html body.vcpg-page .vcpg-nav-item {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            display: inline-block !important;
+        }
+        html body.vcpg-page .vcpg-nav-link {
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            padding: 8px 14px !important;
+            font-size: 14px !important;
+            height: auto !important;
+            line-height: 1.4 !important;
+            background: #F8FAFC !important;
+            border-radius: 20px !important;
+            color: #02426A !important;
+        }
+
+        /* Hero section top padding adjustment since header is no longer absolute on mobile */
+        html body.vcpg-page .elementor-element-e00000b {
+            padding-top: 40px !important;
+        }
+
+        /* Force hero 2 columns (title/text vs proposal card) to stack vertically */
+        html body.vcpg-page .elementor-element-e00000b .elementor-container {
+            flex-direction: column !important;
+        }
+        html body.vcpg-page .elementor-element-e00000b .elementor-column {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* Tablet 3+ grid columns reflow to 2 columns */
+        html body.vcpg-page div[style*="grid-template-columns:repeat(3"],
+        html body.vcpg-page div[style*="grid-template-columns: repeat(3"],
+        html body.vcpg-page div[style*="grid-template-columns:repeat(4"],
+        html body.vcpg-page div[style*="grid-template-columns: repeat(4"] {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 20px !important;
+        }
+
+        .vcpg-dual-btn .vcpg-btn-pill {
+            font-size: 14px !important;
+            padding: 0 16px !important;
+        }
+    }
+
+    /* MOBILE & SMALL TABLET RESPONSIVE STYLES (max-width: 768px) */
+    @media (max-width: 768px) {
+        html, body.vcpg-page {
+            overflow-x: hidden !important;
+        }
+        
+        /* Force ALL Elementor columns and inline grid containers to single column on mobile */
+        html body.vcpg-page .elementor-column,
+        html body.vcpg-page .elementor-col-10,
+        html body.vcpg-page .elementor-col-20,
+        html body.vcpg-page .elementor-col-25,
+        html body.vcpg-page .elementor-col-30,
+        html body.vcpg-page .elementor-col-33,
+        html body.vcpg-page .elementor-col-40,
+        html body.vcpg-page .elementor-col-50,
+        html body.vcpg-page .elementor-col-60,
+        html body.vcpg-page .elementor-col-66,
+        html body.vcpg-page .elementor-col-70,
+        html body.vcpg-page .elementor-col-75,
+        html body.vcpg-page .elementor-col-80,
+        html body.vcpg-page .elementor-col-100 {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        html body.vcpg-page div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+        }
+
+        /* Tabs container wrap on mobile */
+        html body.vcpg-page div[style*="flex-direction:row"][style*="flex-wrap:nowrap"],
+        html body.vcpg-page div[style*="flex-direction: row"][style*="flex-wrap: nowrap"] {
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }
+        .vcpg-tab-btn {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Google Partner + Certifications section wrap */
+        html body.vcpg-page div[style*="max-width:1180px"][style*="display:flex"],
+        html body.vcpg-page div[style*="max-width: 1180px"][style*="display: flex"] {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 24px !important;
+        }
+
+        /* Testimonial slider navigation buttons on mobile */
+        .vcpg-t-prev, .vcpg-t-next {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 0.9rem !important;
+        }
+
+        /* Typography Scaling on Mobile */
+        html body.vcpg-page h1,
+        html body.vcpg-page h1.elementor-heading-title {
+            font-size: 1.85rem !important;
+            line-height: 1.25 !important;
+        }
+        html body.vcpg-page h2,
+        html body.vcpg-page h2.elementor-heading-title {
+            font-size: 1.5rem !important;
+            line-height: 1.3 !important;
+        }
+        html body.vcpg-page h3,
+        html body.vcpg-page h3.elementor-heading-title {
+            font-size: 1.25rem !important;
+            line-height: 1.35 !important;
+        }
+
+        /* Topbar Mobile Formatting */
+        .elementor-element-e000003 div[style*="background:#02426A"],
+        .elementor-element-e000003 div[style*="background: #02426A"] {
+            height: auto !important;
+            padding: 8px 12px !important;
+        }
+        .elementor-element-e000003 div[style*="background:#02426A"] > div,
+        .elementor-element-e000003 div[style*="background: #02426A"] > div {
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 8px 16px !important;
+            text-align: center !important;
+        }
+
+        /* Forms Layout on Mobile */
+        html body.vcpg-page form div[style*="grid-template-columns:1fr 1fr"],
+        html body.vcpg-page form div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+
+        /* Mega Menu Mobile Popup */
+        .vcpg-mega-menu {
+            padding: 16px !important;
+        }
+        .vcpg-mega-grid {
+            grid-template-columns: 1fr !important;
+            gap: 4px !important;
+        }
+
+        /* Case Study & Grid Mobile Reflow */
+        .vp-casestudy-grid {
+            grid-template-columns: 1fr !important;
+            gap: 24px !important;
+        }
+
+        /* Footer Column Stacking */
+        html body footer.vp-footer > div,
+        html body .vp-footer > div {
+            flex-direction: column !important;
+            gap: 30px !important;
+        }
+
+        /* Button Sizing on Mobile */
+        .vcpg-dual-btn .vcpg-btn-pill {
+            padding: 0 14px !important;
+            font-size: 13px !important;
+            height: 36px !important;
+        }
+        .vcpg-dual-btn .vcpg-btn-circle-left,
+        .vcpg-dual-btn .vcpg-btn-circle-right {
+            height: 36px !important;
+            width: 36px !important;
+        }
+
+        /* Back to Top button position on mobile */
+        .vcpg-back-to-top {
+            bottom: 20px !important;
+            right: 20px !important;
+        }
+    }
+
+    /* EXTRA SMALL MOBILE RESPONSIVE STYLES (max-width: 480px) */
+    @media (max-width: 480px) {
+        html body.vcpg-page h1,
+        html body.vcpg-page h1.elementor-heading-title {
+            font-size: 1.6rem !important;
+        }
+        html body.vcpg-page h2,
+        html body.vcpg-page h2.elementor-heading-title {
+            font-size: 1.35rem !important;
+        }
+        html body.vcpg-page .elementor-element-e00000b {
+            padding-top: 20px !important;
+        }
+    }
     </style>';
 }
 
@@ -166,7 +625,7 @@ function vcpg_filter_page_title($title)
 {
     if (is_singular('page')) {
         $pid = get_the_ID();
-        if (get_post_meta($pid, '_vcpg_page', true) === '1') {
+        if (is_vcpg_generated_page($pid)) {
             // Check if there is an AI generated title saved
             $ai_title = get_post_meta($pid, 'rank_math_title', true);
             if (!$ai_title) {
@@ -190,7 +649,7 @@ function vcpg_output_seo_meta_and_schema()
     }
 
     $page_id = get_the_ID();
-    if (get_post_meta($page_id, '_vcpg_page', true) !== '1') {
+    if (!is_vcpg_generated_page($page_id)) {
         return;
     }
 
@@ -324,16 +783,12 @@ function vcpg_protect_styles($content)
 | Custom Page Template — bypasses theme header/footer for VCPG pages
 |--------------------------------------------------------------------------
 */
-add_filter('template_include', 'vcpg_custom_template');
+add_filter('template_include', 'vcpg_custom_template', 99999);
 function vcpg_custom_template($template)
 {
-    if(is_singular('page'))
+    if(is_singular('page') || is_page())
     {
-        $post = get_post();
-        $is_vcpg = get_post_meta($post->ID, '_vcpg_page', true)
-                || strpos($post->post_content, 'vpg-container') !== false;
-
-        if($is_vcpg)
+        if(is_vcpg_generated_page())
         {
             $plugin_template = plugin_dir_path(__FILE__) . 'templates/page-template.php';
             if(file_exists($plugin_template))
