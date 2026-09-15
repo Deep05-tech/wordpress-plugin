@@ -241,26 +241,279 @@ Generation Progress
 
 
 
+<div id="vcpg-progress-container" style="background: #fff; border: 1px solid #ccd0d4; padding: 20px; border-radius: 6px; max-width: 750px; margin-top: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
 <div id="vcpg-progress">
+Waiting for generation to start...
+</div>
+</div>
 
-Waiting...
+<div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
+<button 
+id="vcpg-stop"
+class="button button-secondary button-hero"
+style="display:none; background: #d63638; color: #fff; border-color: #d63638;"
+>
+⏹ Stop Generation
+</button>
 
+<button 
+id="vcpg-resume"
+class="button button-primary button-hero"
+style="display:none; background: #2271b1; color: #fff; border-color: #2271b1;"
+>
+▶ Resume Generation
+</button>
 </div>
 
 
+<script>
 
-<br>
+jQuery(document).ready(function(){
 
+    let autoStart = <?php echo ($has_incomplete_batch || isset($_POST['upload_csv'])) ? 'true' : 'false'; ?>;
+    let running = autoStart;
+    let pollInterval = null;
+    let activeWorkers = 0;
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 10;
+    let concurrency = <?php echo intval(get_option('vcpg_concurrency', 1)); ?>;
 
-<button 
-id="vcpg-stop"
-class="button button-secondary"
-style="display:none;"
->
+    function start_polling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
+        fetch_progress();
+        pollInterval = setInterval(fetch_progress, 2000);
+    }
 
-Stop Generation
+    function stop_polling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
 
-</button>
+    function fetch_progress() {
+        jQuery.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action: 'vcpg_get_csv_progress' },
+            dataType: 'json',
+            timeout: 15000,
+            success: function(response) {
+                if (!response || !response.success) {
+                    return;
+                }
+                let data = response.data;
+                let total = parseInt(data.total) || 0;
+                let completed = parseInt(data.completed) || 0;
+                let processing = parseInt(data.processing) || 0;
+                let failed = parseInt(data.failed) || 0;
+                let pending = Math.max(0, total - (completed + processing + failed));
+                let percentage = total > 0 ? Math.round(((completed + failed) / total) * 100) : 0;
+
+                if (total === 0) {
+                    jQuery('#vcpg-progress').html('<p style="margin:0; color:#666;">No active or past batch found. Upload a CSV to start generation.</p>');
+                    jQuery('#vcpg-stop').hide();
+                    jQuery('#vcpg-resume').hide();
+                    stop_polling();
+                    return;
+                }
+
+                let html = '<div style="margin-bottom: 15px;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">' +
+                    '<span style="font-size: 14px; font-weight: 600;">Overall Progress: ' + percentage + '%</span>' +
+                    '<span style="font-size: 13px; color: #666;">' + (completed + failed) + ' of ' + total + ' processed</span>' +
+                    '</div>' +
+                    '<div style="background:#f0f0f1; border-radius:6px; height:22px; overflow:hidden; border: 1px solid #dcdcde;">' +
+                    '<div id="vcpg-bar" style="width:' + percentage + '%; height:100%; background: linear-gradient(90deg, #2271b1 0%, #135e96 100%); transition: width 0.4s ease;"></div>' +
+                    '</div>' +
+                    '</div>';
+
+                html += '<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; text-align: center;">' +
+                    '<div style="background:#f6f7f7; padding: 10px; border-radius: 4px; border: 1px solid #dcdcde;"><strong>Total:</strong><br><span style="font-size: 16px; font-weight: 600;">' + total + '</span></div>' +
+                    '<div style="background:#f0f9eb; padding: 10px; border-radius: 4px; border: 1px solid #e1f3d8; color: #67c23a;"><strong>Completed:</strong><br><span style="font-size: 16px; font-weight: 600;">' + completed + '</span></div>' +
+                    '<div style="background:#eef6fe; padding: 10px; border-radius: 4px; border: 1px solid #d9ecff; color: #409eff;"><strong>Pending:</strong><br><span style="font-size: 16px; font-weight: 600;">' + (pending + processing) + '</span></div>' +
+                    '<div style="background:#fef0f0; padding: 10px; border-radius: 4px; border: 1px solid #fde2e2; color: #f56c6c;"><strong>Failed (3x):</strong><br><span style="font-size: 16px; font-weight: 600;">' + failed + '</span></div>' +
+                    '</div>';
+
+                html += '<div style="margin-bottom: 10px;">' +
+                    '<strong>Current Page:</strong> ' + (data.current ? '<code style="background:#f0f0f1; padding:2px 6px; border-radius:3px;">' + data.current + '</code>' : '<i>None</i>') + '<br>' +
+                    '<strong>Live Activity:</strong> <span style="color: #2271b1; font-weight: 500;">' + (data.activity || 'Waiting...') + '</span>' +
+                    '</div>';
+
+                if (data.failures && data.failures.length > 0) {
+                    html += '<div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">' +
+                        '<strong style="color: #d63638;">Recent Failures (auto-retrying up to 3x):</strong>' +
+                        '<ul style="margin: 5px 0 0 20px; list-style-type: disc; color: #d63638;">';
+                    data.failures.forEach(function(fail) {
+                        html += '<li><strong>' + fail.city + ' - ' + fail.service + ':</strong> ' + fail.message + '</li>';
+                    });
+                    html += '</ul></div>';
+                }
+
+                jQuery('#vcpg-progress').html(html);
+
+                if (completed + failed >= total && total > 0 && processing === 0) {
+                    stop_polling();
+                    running = false;
+                    jQuery('#vcpg-stop').hide();
+                    jQuery('#vcpg-resume').hide();
+                    if (!jQuery('#vcpg-progress').text().includes('Generation Completed Successfully')) {
+                        let summary = '<div style="margin-top: 15px; padding: 10px 15px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px; color: #67c23a; font-weight: 600; font-size: 14px;">' +
+                            '✓ Generation Completed Successfully!';
+                        if (failed > 0) {
+                            summary += ' <span style="color: #d63638; font-weight: normal;">(' + failed + ' failed after 3 retries)</span>';
+                        }
+                        summary += '</div>';
+                        jQuery('#vcpg-progress').append(summary);
+                    }
+                } else if (!running && total > 0 && (completed + failed) < total) {
+                    jQuery('#vcpg-stop').hide();
+                    jQuery('#vcpg-resume').show();
+                } else if (running) {
+                    jQuery('#vcpg-stop').show();
+                    jQuery('#vcpg-resume').hide();
+                }
+
+                if (running && activeWorkers === 0 && (completed + failed) < total && total > 0) {
+                    for (let i = 0; i < concurrency; i++) {
+                        setTimeout(process_queue, i * 400);
+                    }
+                }
+            },
+            error: function() {
+                // Polling error, ignore transient issue
+            }
+        });
+    }
+
+    function process_queue() {
+        if (!running) {
+            activeWorkers = Math.max(0, activeWorkers - 1);
+            return;
+        }
+
+        activeWorkers++;
+
+        jQuery.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action: 'vcpg_process_csv_job' },
+            dataType: 'json',
+            timeout: 120000,
+            success: function(response) {
+                consecutiveErrors = 0;
+
+                if (!response || !response.success) {
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    if (running) {
+                        setTimeout(process_queue, 3000);
+                    }
+                    return;
+                }
+
+                let data = response.data;
+
+                if (data.stopped) {
+                    running = false;
+                    activeWorkers = 0;
+                    stop_polling();
+                    jQuery('#vcpg-stop').hide();
+                    jQuery('#vcpg-resume').show();
+                    return;
+                }
+
+                if (data.finished) {
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    if (running) {
+                        setTimeout(process_queue, 5000);
+                    }
+                } else {
+                    activeWorkers = Math.max(0, activeWorkers - 1);
+                    if (running) {
+                        setTimeout(process_queue, 500);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                activeWorkers = Math.max(0, activeWorkers - 1);
+                consecutiveErrors++;
+
+                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    running = false;
+                    stop_polling();
+                    jQuery('#vcpg-stop').hide();
+                    jQuery('#vcpg-resume').show();
+                    jQuery('#vcpg-progress').append(
+                        '<div style="margin-top:15px; padding:10px 15px; background:#fef0f0; border:1px solid #fde2e2; border-radius:4px; color:#f56c6c; font-weight:600;">' +
+                        '⚠️ Generation paused due to network timeouts. Click "Resume Generation" to continue.</div>'
+                    );
+                    return;
+                }
+
+                if (running) {
+                    let delay = Math.min(3000 * Math.pow(2, consecutiveErrors - 1), 30000);
+                    setTimeout(process_queue, delay);
+                }
+            }
+        });
+    }
+
+    if (autoStart) {
+        running = true;
+        jQuery('#vcpg-stop').show();
+        jQuery('#vcpg-resume').hide();
+        start_polling();
+        for (let i = 0; i < concurrency; i++) {
+            setTimeout(process_queue, i * 400);
+        }
+    } else {
+        fetch_progress();
+    }
+
+    jQuery('#vcpg-stop').on('click', function(e) {
+        e.preventDefault();
+        running = false;
+        activeWorkers = 0;
+        stop_polling();
+        jQuery('#vcpg-stop').hide();
+        jQuery('#vcpg-resume').show();
+        jQuery.post(
+            ajaxurl,
+            { action: 'vcpg_stop_csv_job' },
+            function(response) {
+                if (!jQuery('#vcpg-progress').text().includes('stopped by user')) {
+                    jQuery('#vcpg-progress').append(
+                        '<div style="margin-top:15px; padding:10px 15px; background:#fdf6ec; border:1px solid #faecd8; border-radius:4px; color:#e6a23c; font-weight:600;">' +
+                        '⏸ Generation stopped by user. Click "Resume Generation" to continue.</div>'
+                    );
+                }
+            }
+        );
+    });
+
+    jQuery('#vcpg-resume').on('click', function(e) {
+        e.preventDefault();
+        jQuery.post(
+            ajaxurl,
+            { action: 'vcpg_resume_csv_job' },
+            function(response) {
+                consecutiveErrors = 0;
+                running = true;
+                jQuery('#vcpg-resume').hide();
+                jQuery('#vcpg-stop').show();
+                start_polling();
+                for (let i = 0; i < concurrency; i++) {
+                    setTimeout(process_queue, i * 400);
+                }
+            }
+        );
+    });
+
+});
+
+</script>
 
 
 

@@ -44,6 +44,15 @@ class VCPG_CSV_Job_Manager
 
 
         add_action(
+            'wp_ajax_vcpg_resume_csv_job',
+            array(
+                $this,
+                'resume_job'
+            )
+        );
+
+
+        add_action(
             'wp_ajax_vcpg_get_csv_progress',
             array(
                 $this,
@@ -908,6 +917,23 @@ public function process_job()
         delete_option(
             'vcpg_csv_stop'
         );
+
+
+    }
+
+
+
+
+    public function resume_job()
+    {
+
+
+        delete_option(
+            'vcpg_csv_stop'
+        );
+
+
+        wp_send_json_success();
 
 
     }
