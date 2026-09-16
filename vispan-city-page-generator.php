@@ -315,19 +315,33 @@ function vcpg_capture_page_styles()
 
 add_action('wp_head', 'vcpg_output_styles', 99999);
 add_action('wp_footer', 'vcpg_output_styles', 99999);
+add_action('template_redirect', 'vcpg_disable_wpautop_for_vcpg_pages');
+function vcpg_disable_wpautop_for_vcpg_pages() {
+    if (is_singular('page') && is_vcpg_generated_page()) {
+        remove_filter('the_content', 'wpautop');
+    }
+}
+add_filter('the_content', 'vcpg_clean_content_inline_styles', 1);
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
     if (is_singular('page') && is_vcpg_generated_page()) {
         // 1. Strip conflicting CSS rules
         $content = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $content);
-        // 2. Strip legacy topbar & header HTML blocks from post_content
-        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
-        $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
+        // 2. Strip commented-out template blocks that wpautop corrupts
+        $content = preg_replace('/<!--\s*1\.\s*TOPBAR\s*&\s*HEADER.*?-->/is', '', $content);
+        $content = preg_replace('/<!--\s*13\.\s*FOOTER.*?-->/is', '', $content);
+        // 3. Strip legacy topbar & header HTML blocks from post_content
+        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>(?:(?!<header|<section).)*?<\/div>\s*<\/div>\s*<\/div>/is', '', $content);
+        $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>(?:(?!<section).)*?<\/header>/is', '', $content);
         $content = preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
-        // 3. Strip legacy footer HTML blocks from post_content
-        $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
+        // 4. Strip legacy footer HTML blocks from post_content
+        $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>(?:(?!<\/body|<\/html).)*?<\/footer>/is', '', $content);
         $content = preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
         $content = preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
+        // 5. Strip any isolated stray fragments and unbalanced closing divs
+        $content = preg_replace('/<p>\s*<!--\s*VCPG-TEMPLATE.*?-->\s*<!--\s*1\.\s*TOPBAR\s*&\s*HEADER\s*-->\s*<\/p>/is', '', $content);
+        $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>\s*(?:<\/p>)?\s*(?:<\/div>\s*){1,3}/is', '', $content);
+        $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>/is', '', $content);
     }
     return $content;
 }
@@ -376,6 +390,39 @@ function vcpg_output_styles()
     html body.vcpg-page .elementor-element-e000043,
     html body.vcpg-page .elementor-element-e000044 {
         display: none !important;
+    }
+
+    /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
+    html body.vcpg-page .ekit-template-content-header,
+    html body.vcpg-page header.elementskit-menu-container,
+    html body.vcpg-page .elementor-location-header,
+    html body.vcpg-page .elementor-35930 {
+        position: relative !important;
+        z-index: 999999 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #FFFFFF !important;
+        width: 100% !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb9496 {
+        position: relative !important;
+        z-index: 999999 !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #FFFFFF !important;
+    }
+    html body.vcpg-page .vp-hero {
+        position: relative !important;
+        z-index: 1 !important;
+        margin-top: 0 !important;
     }
 
     html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }

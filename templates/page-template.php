@@ -9,21 +9,37 @@ html body.vcpg-page .elementor-widget-text-editor { color: #334155; line-height:
 html body.vcpg-page footer a, html body.vcpg-page .vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
 html body.vcpg-page footer a:hover, html body.vcpg-page .vp-footer a:hover { color: #FFFFFF !important; }
 
-/* Lenis Smooth Scroll Styles */
-html.lenis, html.lenis body {
-  height: auto;
+/* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
+html body.vcpg-page .ekit-template-content-header,
+html body.vcpg-page header.elementskit-menu-container,
+html body.vcpg-page .elementor-location-header,
+html body.vcpg-page .elementor-35930 {
+    position: relative !important;
+    z-index: 999999 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background-color: #FFFFFF !important;
+    width: 100% !important;
 }
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb9496 {
+    position: relative !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
 }
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background-color: #FFFFFF !important;
 }
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
+html body.vcpg-page .vp-hero {
+    position: relative !important;
+    z-index: 1 !important;
+    margin-top: 0 !important;
 }
 
 /* Custom Interactive Cursor Styles */
@@ -219,33 +235,14 @@ html.lenis, html.lenis body {
 
 
 <?php
+remove_filter('the_content', 'wpautop');
 while(have_posts()): the_post();
     the_content();
 endwhile;
 get_footer();
 ?>
 
-<!-- Lenis Smooth Scrolling CDN -->
-<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
 <script>
-// Initialize Lenis Smooth Scroll
-const lenis = new Lenis({
-  duration: 1.2,
-  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-  direction: 'vertical',
-  gestureDirection: 'vertical',
-  smooth: true,
-  mouseMultiplier: 1,
-  smoothTouch: false,
-  touchMultiplier: 2,
-  infinite: false,
-});
-
-function raf(time) {
-  lenis.raf(time);
-  requestAnimationFrame(raf);
-}
-requestAnimationFrame(raf);
 
 // Custom Interactive Cursor Script
 document.addEventListener('DOMContentLoaded', () => {
@@ -363,11 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateScrollProgress();
 
   backToTop.addEventListener('click', () => {
-    if (typeof lenis !== 'undefined') {
-      lenis.scrollTo(0, { duration: 1.2 });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 });
 </script>

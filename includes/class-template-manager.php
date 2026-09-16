@@ -83,7 +83,6 @@ class VCPG_Template_Manager
             if(
                 $stored &&
                 (strpos($stored, 'vp-hero-city-label') === false ||
-                 strpos($stored, 'vp-topbar') === false ||
                  strpos($stored, '<style>') === false ||
                  strpos($stored, '{{about_title}}') === false ||
                  strpos($stored, '{{local_insight}}') === false ||
@@ -91,7 +90,7 @@ class VCPG_Template_Manager
                  strpos($stored, '{{services_title}}') === false ||
                  strpos($stored, '{{case_studies}}') === false ||
                  strpos($stored, '{{case_studies_description}}') === false ||
-                 strpos($stored, 'VCPG-TEMPLATE-V4') === false)
+                 strpos($stored, 'VCPG-TEMPLATE-V6') === false)
             )
             {
                 $wpdb->update(

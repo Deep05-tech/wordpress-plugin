@@ -1,4 +1,4 @@
-<!-- VCPG-TEMPLATE-V5 -->
+<!-- VCPG-TEMPLATE-V6 -->
 <style>
 :root {
   --vp-primary: #0B63F6;
@@ -24,18 +24,6 @@ body { font-family: var(--vp-font); color: var(--vp-text); line-height: 1.6; bac
 .vp-desc { font-size: 1rem; color: #334155; line-height: 1.8; max-width: 800px; }
 .vp-title-center { text-align: center; }
 .vp-desc-center { margin-left: auto; margin-right: auto; text-align: center; }
-
-/* TOP BAR & HEADER (COMMENTED OUT FOR ELEMENTOR THEME HEADER INTEGRATION)
-.vp-topbar { background: #0F172A; padding: 8px 0; color: #94A3B8; font-size: 0.85rem; }
-.vp-topbar-inner { display: flex; justify-content: space-between; align-items: center; }
-.vp-topbar a { color: #FFFFFF; text-decoration: none; font-weight: 600; }
-.vp-header { background: transparent; padding: 18px 0; border-bottom: none; position: absolute; left: 0; width: 100%; z-index: 100; }
-.vp-header-inner { display: flex; justify-content: space-between; align-items: center; }
-.vp-logo { font-size: 1.8rem; font-weight: 900; color: var(--vp-primary); text-decoration: none; letter-spacing: -0.5px; }
-.vp-nav { display: flex; gap: 24px; list-style: none; }
-.vp-nav a { color: var(--vp-dark); text-decoration: none; font-weight: 600; font-size: 0.92rem; }
-.vp-btn-talk { background: #0F172A; color: #FFFFFF; padding: 10px 22px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; }
-*/
 
 /* HERO */
 .vp-hero { position: relative; padding: 190px 0 90px; color: #000000; overflow: hidden; background: #FFFFFF; }
@@ -87,11 +75,6 @@ body { font-family: var(--vp-font); color: var(--vp-text); line-height: 1.6; bac
 .vp-contact-sec { background: linear-gradient(rgba(11, 11, 26, 0.85), rgba(11, 11, 26, 0.85)), url('{{contact_bg}}') center/cover no-repeat; padding: 90px 0; }
 .vp-contact-card { max-width: 760px; margin: 0 auto; background: #FFFFFF; border-radius: 20px; padding: 44px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
 
-/* FOOTER (COMMENTED OUT FOR ELEMENTOR THEME FOOTER INTEGRATION)
-.vp-footer { background: #FFFFFF; padding: 60px 0 30px; border-top: 1px solid var(--vp-border); font-size: 0.9rem; }
-.vp-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 40px; }
-*/
-
 @media (max-width: 900px) {
   .vp-hero-grid, .vp-about-grid, .vp-footer-grid, .vp-casestudy-grid { grid-template-columns: 1fr; gap: 40px; }
   .vp-casestudy-grid > div:first-child { order: 1 !important; }
@@ -99,25 +82,6 @@ body { font-family: var(--vp-font); color: var(--vp-text); line-height: 1.6; bac
   .vp-header-inner { flex-direction: column; gap: 16px; }
 }
 </style>
-
-<!-- 1. TOPBAR & HEADER (COMMENTED OUT FOR ELEMENTOR THEME HEADER INTEGRATION)
-<div class="vp-topbar">
-  <div class="vp-container vp-topbar-inner">
-    <div>📞 <a href="tel:{{phone}}">{{phone}}</a> &nbsp;|&nbsp; ✉️ <a href="mailto:{{email}}">{{email}}</a></div>
-    <div>Vispan Solutions Pvt. Ltd.</div>
-  </div>
-</div>
-
-<header class="vp-header">
-  <div class="vp-container vp-header-inner">
-    <a href="{{home_url}}" class="vp-logo">vispan</a>
-    <ul class="vp-nav">
-      {{nav_menu}}
-    </ul>
-    <a href="#contact" class="vp-btn-talk">LET'S TALK ↗</a>
-  </div>
-</header>
--->
 
 <!-- 2. HERO -->
 <section class="vp-hero" style="position:relative;padding:90px 0;overflow:hidden;background:#FFFFFF;">
@@ -271,26 +235,3 @@ body { font-family: var(--vp-font); color: var(--vp-text); line-height: 1.6; bac
   </div>
 </section>
 
-<!-- 13. FOOTER (COMMENTED OUT FOR ELEMENTOR THEME FOOTER INTEGRATION)
-<footer class="vp-footer">
-  <div class="vp-container vp-footer-grid">
-    <div>
-      <a href="{{home_url}}" class="vp-logo">vispan</a>
-      <p style="margin:16px 0;color:#4A5678;">{{footer_about}}</p>
-      <div>{{social_icons}}</div>
-    </div>
-    <div>
-      <h4 style="margin-bottom:14px;color:#0A3663;font-weight:700;">Services</h4>
-      <ul style="padding:0;">{{footer_services}}</ul>
-    </div>
-    <div>
-      <h4 style="margin-bottom:14px;color:#0A3663;font-weight:700;">Quick Links</h4>
-      <ul style="padding:0;">{{footer_links}}</ul>
-    </div>
-    <div>
-      <h4 style="margin-bottom:14px;color:#0A3663;font-weight:700;">Reach Us</h4>
-      {{footer_contact}}
-    </div>
-  </div>
-</footer>
--->
