@@ -58,6 +58,12 @@ $inquiry_handler  = new VCPG_Inquiry_Handler();
 */
 register_activation_hook(__FILE__, 'vcpg_activate_plugin');
 function vcpg_activate_plugin() {
+    if (!function_exists('wp_clean_plugins_cache') && defined('ABSPATH')) {
+        $plugin_inc = ABSPATH . 'wp-admin/includes/plugin.php';
+        if (file_exists($plugin_inc)) {
+            require_once $plugin_inc;
+        }
+    }
     if (function_exists('wp_clean_plugins_cache')) {
         wp_clean_plugins_cache(true);
     }
@@ -76,6 +82,11 @@ function vcpg_deactivate_plugin() {
 */
 function is_vcpg_generated_page($post_id = 0)
 {
+    // NEVER apply VCPG page logic to front page or blog home
+    if (function_exists('is_front_page') && (is_front_page() || is_home())) {
+        return false;
+    }
+
     if (!$post_id) {
         $post_id = get_queried_object_id();
     }
@@ -91,6 +102,14 @@ function is_vcpg_generated_page($post_id = 0)
     if (!$post_id) {
         return false;
     }
+
+    // Exclude front page or posts page explicitly by ID
+    $front_id = (int) get_option('page_on_front');
+    $home_id  = (int) get_option('page_for_posts');
+    if (($front_id && (int)$post_id === $front_id) || ($home_id && (int)$post_id === $home_id)) {
+        return false;
+    }
+
     // 1. Direct postmeta check
     if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
         return true;
@@ -105,7 +124,7 @@ function is_vcpg_generated_page($post_id = 0)
         update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
-    // 4. Post content and Elementor builder data check
+    // 4. Strict VCPG container markers check (NO generic domain string checks)
     $post_obj = get_post($post_id);
     if ($post_obj && $post_obj->post_type === 'page') {
         $content = $post_obj->post_content;
@@ -118,25 +137,20 @@ function is_vcpg_generated_page($post_id = 0)
             }
         }
         if (is_string($content) && (
-            strpos($content, 'vcpg') !== false ||
             strpos($content, 'vpg-container') !== false ||
             strpos($content, 'hero_proposal') !== false ||
             strpos($content, 'contact_proposal') !== false ||
-            strpos($content, 'vp-footer') !== false ||
-            strpos($content, 'vcpg-nav-item') !== false ||
-            strpos($content, 'vcpg-dual-btn') !== false ||
-            strpos($content, 'e000003') !== false ||
-            strpos($content, 'vispansolutions') !== false
+            strpos($content, 'vcpg-dual-btn') !== false
         )) {
             update_post_meta($post_id, '_vcpg_page', '1');
             return true;
         }
-        // 5. Parent page ISO country code slug check
+        // 5. Parent page ISO country code slug check with location meta verification
         if ($post_obj->post_parent > 0) {
             $parent = get_post($post_obj->post_parent);
             if ($parent) {
                 $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
-                if (in_array(strtolower($parent->post_name), $known_cc) || get_post_meta($parent->ID, '_vcpg_country', true)) {
+                if (in_array(strtolower($parent->post_name), $known_cc) && get_post_meta($parent->ID, '_vcpg_country', true)) {
                     update_post_meta($post_id, '_vcpg_page', '1');
                     return true;
                 }
@@ -213,6 +227,50 @@ function vcpg_sync_legacy_page_meta()
     }
 }
 
+add_action('admin_init', 'vcpg_clean_db_legacy_header_footer');
+function vcpg_clean_db_legacy_header_footer()
+{
+    if (!get_option('vcpg_db_cleaned_header_footer_v1')) {
+        global $wpdb;
+        $posts = $wpdb->get_col("
+            SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_vcpg_page' AND meta_value = '1'
+        ");
+        if (!empty($posts)) {
+            foreach ($posts as $pid) {
+                $pid = (int)$pid;
+                $elem_raw = get_post_meta($pid, '_elementor_data', true);
+                if (!empty($elem_raw)) {
+                    $elem_data = is_array($elem_raw) ? $elem_raw : json_decode($elem_raw, true);
+                    if (is_array($elem_data)) {
+                        $filtered = array_values(array_filter($elem_data, function($section) {
+                            if (isset($section['id']) && in_array($section['id'], array('e000003', 'e000043', 'e000044'), true)) {
+                                return false;
+                            }
+                            return true;
+                        }));
+                        update_post_meta($pid, '_elementor_data', wp_json_encode($filtered));
+                    }
+                }
+                $post = get_post($pid);
+                if ($post && !empty($post->post_content)) {
+                    $content = $post->post_content;
+                    $orig_len = strlen($content);
+                    $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
+                    $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
+                    $content = preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
+                    $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
+                    $content = preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
+                    $content = preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
+                    if (strlen($content) !== $orig_len) {
+                        $wpdb->update($wpdb->posts, array('post_content' => $content), array('ID' => $pid));
+                    }
+                }
+            }
+        }
+        update_option('vcpg_db_cleaned_header_footer_v1', time());
+    }
+}
+
 /*
 |--------------------------------------------------------------------------
 | CSS Handler — prevents <style> from being stripped in VCPG pages
@@ -236,8 +294,16 @@ add_action('wp_footer', 'vcpg_output_styles', 99999);
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
     if (is_singular('page') && is_vcpg_generated_page()) {
-        // Strip old conflicting position: absolute or top: 0 rules from inline <style> tags in post_content on output
+        // 1. Strip conflicting CSS rules
         $content = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $content);
+        // 2. Strip legacy topbar & header HTML blocks from post_content
+        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
+        $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
+        $content = preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
+        // 3. Strip legacy footer HTML blocks from post_content
+        $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
+        $content = preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
     }
     return $content;
 }
@@ -630,6 +696,9 @@ function vcpg_output_styles()
 add_filter('pre_get_document_title', 'vcpg_filter_page_title', 99999);
 function vcpg_filter_page_title($title)
 {
+    if (function_exists('is_front_page') && (is_front_page() || is_home())) {
+        return $title;
+    }
     if (is_singular('page')) {
         $pid = get_the_ID();
         if (is_vcpg_generated_page($pid)) {
@@ -638,10 +707,14 @@ function vcpg_filter_page_title($title)
             if (!$ai_title) {
                 $ai_title = get_post_meta($pid, '_yoast_wpseo_title', true);
             }
-            if ($ai_title) {
-                // Remove RankMath variable patterns just in case
-                $ai_title = str_replace(array('%title%', '%sep%', '%sitename%'), '', $ai_title);
-                return trim($ai_title);
+            if ($ai_title && is_string($ai_title)) {
+                // Remove Yoast and RankMath double-percent placeholders (%%title%%, %%sitedesc%%, etc.)
+                $cleaned = preg_replace('/%%[^%]+%%/', '', $ai_title);
+                $cleaned = preg_replace('/%[^%]+%/', '', $cleaned);
+                $cleaned = trim($cleaned, " \t\n\r\0\x0B|-:");
+                if (!empty($cleaned)) {
+                    return $cleaned;
+                }
             }
         }
     }
