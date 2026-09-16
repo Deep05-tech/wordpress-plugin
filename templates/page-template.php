@@ -75,6 +75,103 @@ html body.vcpg-page .elementor-element-e000044 {
     color: #02426A !important;
 }
 
+/* Legacy hero left column & typography */
+.vp-hero-left h1 {
+    font-size: 3.2rem !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    margin-bottom: 15px !important;
+    color: #02426A !important;
+}
+.vp-hero-left h3 {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #0A3663 !important;
+    margin-bottom: 20px !important;
+    line-height: 1.3 !important;
+}
+.vp-hero-left p {
+    font-size: 1.1rem !important;
+    color: #334155 !important;
+    line-height: 1.65 !important;
+    margin-bottom: 24px !important;
+}
+.vp-hero-left a[href="#contact"] {
+    background: #02426A !important;
+    color: #FFFFFF !important;
+    padding: 14px 32px !important;
+    border-radius: 50px !important;
+    text-decoration: none !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+/* Legacy page body container & typography */
+.vp-legacy-content {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 40px 24px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    color: #334155 !important;
+    line-height: 1.8 !important;
+}
+.vp-legacy-content h2 {
+    color: #0A3663 !important;
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    margin: 40px 0 20px !important;
+}
+.vp-legacy-content h3 {
+    color: #02426A !important;
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    margin: 30px 0 16px !important;
+}
+.vp-legacy-content p {
+    font-size: 1.05rem !important;
+    color: #334155 !important;
+    line-height: 1.8 !important;
+    margin-bottom: 20px !important;
+}
+
+/* Proposal form styling */
+#hero_proposal {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+}
+#hero_proposal input[type="text"],
+#hero_proposal input[type="email"],
+#hero_proposal input[type="tel"],
+#hero_proposal textarea,
+#hero_proposal select {
+    width: 100% !important;
+    padding: 13px 22px !important;
+    border-radius: 50px !important;
+    border: 1px solid #7E7E7E !important;
+    background: #F3F4F6 !important;
+    color: #1E293B !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+}
+#hero_proposal button[type="submit"],
+#hero_proposal input[type="submit"] {
+    width: 100% !important;
+    padding: 15px !important;
+    border-radius: 50px !important;
+    background: #02426A !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
 /* INTRO */
 .vp-intro { background: #FFFFFF !important; text-align: center !important; }
 
@@ -363,11 +460,9 @@ remove_filter('the_content', 'wpautop');
 while(have_posts()): the_post();
     the_content();
 endwhile;
-get_footer();
 ?>
 
 <script>
-
 // Custom Interactive Cursor Script
 document.addEventListener('DOMContentLoaded', () => {
   return; // Temporarily paused trailing mouse-follow cursor
@@ -488,5 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-</body>
-</html>
+<?php
+get_footer();
+?>

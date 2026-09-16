@@ -82,6 +82,8 @@ function vcpg_deactivate_plugin() {
 */
 function is_vcpg_generated_page($post_id = 0)
 {
+    static $cache = array();
+
     // NEVER apply VCPG page logic to front page or blog home
     if (function_exists('is_front_page') && is_front_page()) {
         return false;
@@ -106,39 +108,43 @@ function is_vcpg_generated_page($post_id = 0)
         return false;
     }
 
+    if (isset($cache[$post_id])) {
+        return $cache[$post_id];
+    }
+
     // Exclude front page or posts page explicitly by ID
     $front_id = (int) get_option('page_on_front');
     $home_id  = (int) get_option('page_for_posts');
     if (($front_id && (int)$post_id === $front_id) || ($home_id && (int)$post_id === $home_id)) {
+        $cache[$post_id] = false;
         return false;
     }
 
     // 1. Direct explicit VCPG postmeta check
     if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
+        $cache[$post_id] = true;
         return true;
     }
 
     // 2. Specific VCPG location meta check
     if (get_post_meta($post_id, '_vcpg_city', true) || get_post_meta($post_id, '_vcpg_service', true) || get_post_meta($post_id, '_vcpg_country', true) || get_post_meta($post_id, '_vcpg_state', true) || get_post_meta($post_id, '_vcpg_county', true)) {
-        update_post_meta($post_id, '_vcpg_page', '1');
+        $cache[$post_id] = true;
         return true;
     }
 
     // 3. Page Template check
     if (get_post_meta($post_id, '_wp_page_template', true) === 'templates/page-template.php') {
-        update_post_meta($post_id, '_vcpg_page', '1');
+        $cache[$post_id] = true;
         return true;
     }
 
-    // 4. Content / Elementor Data Structural Markers check
+    // 4. Content / Structural Markers check
     $post_obj = get_post($post_id);
     if ($post_obj && $post_obj->post_type === 'page') {
         $content = $post_obj->post_content;
         if (empty($content)) {
             $elem_data = get_post_meta($post_id, '_elementor_data', true);
-            if (is_array($elem_data)) {
-                $content = wp_json_encode($elem_data);
-            } elseif (is_string($elem_data)) {
+            if (is_string($elem_data)) {
                 $content = $elem_data;
             }
         }
@@ -154,7 +160,7 @@ function is_vcpg_generated_page($post_id = 0)
             strpos($content, 'e000007') !== false ||
             strpos($content, 'e000018') !== false
         )) {
-            update_post_meta($post_id, '_vcpg_page', '1');
+            $cache[$post_id] = true;
             return true;
         }
 
@@ -163,14 +169,15 @@ function is_vcpg_generated_page($post_id = 0)
             $parent = get_post($post_obj->post_parent);
             if ($parent) {
                 $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
-                if (in_array(strtolower($parent->post_name), $known_cc)) {
-                    update_post_meta($post_id, '_vcpg_page', '1');
+                if (in_array(strtolower($parent->post_name), $known_cc, true)) {
+                    $cache[$post_id] = true;
                     return true;
                 }
             }
         }
     }
 
+    $cache[$post_id] = false;
     return false;
 }
 
@@ -221,7 +228,6 @@ function vcpg_safe_preg_replace($pattern, $replacement, $subject) {
     return $res;
 }
 
-add_filter('the_content', 'vcpg_clean_content_inline_styles', 1);
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
     if (!is_string($content) || empty($content)) {
@@ -233,24 +239,40 @@ function vcpg_clean_content_inline_styles($content) {
         // 2. Strip commented-out template blocks that wpautop corrupts
         $content = vcpg_safe_preg_replace('/<!--\s*1\.\s*TOPBAR\s*&\s*HEADER.*?-->/is', '', $content);
         $content = vcpg_safe_preg_replace('/<!--\s*13\.\s*FOOTER.*?-->/is', '', $content);
-        // 3. Strip legacy topbar & header HTML blocks from post_content safely
+        // 3. Strip rogue legacy navbar from older pages (phone/email SVG/logo through nav list and LET'S TALK)
+        $content = vcpg_safe_preg_replace('/(?:<p[^>]*>\s*)?(?:<svg[^>]*>.*?<\/svg>\s*<a[^>]*href=[\x22\x27]tel:[^>]*>.*?<\/a>.*?)(?:<ul[^>]*style=[\x22\x27][^\x22\x27]*list-style:none[^\x22\x27]*[\x22\x27][^>]*>.*?<\/ul>\s*)(?:<p[^>]*>\s*)?<a[^>]*href=[\x22\x27][^\x22\x27]*contact-us[^\x22\x27]*[\x22\x27][^>]*>.*?LET(?:&#8217;|\x27)S TALK.*?<\/a>(?:\s*<\/p>)?/is', '', $content);
+        // Fallbacks for any remaining stray nav list or topbar phone block
+        $content = vcpg_safe_preg_replace('/<ul[^>]*style=[\x22\x27][^\x22\x27]*list-style:none[^\x22\x27]*display:flex[^\x22\x27]*[\x22\x27][^>]*>.*?<\/ul>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<p[^>]*>\s*<svg[^>]*>.*?<\/svg>\s*<a[^>]*href=[\x22\x27]tel:[^>]*>.*?<\/a>.*?<\/p>/is', '', $content);
+        // 4. Strip legacy topbar & header HTML blocks from post_content safely
         $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>\s*<\/div>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
-        // 4. Strip legacy footer HTML blocks from post_content safely
+        // 5. Strip legacy footer HTML blocks (both older raw HTML footer and newer section/class footers)
+        $content = vcpg_safe_preg_replace('/(?:<p[^>]*>\s*)?(?:<img[^>]*VSPL-Web-Logo\.webp[^>]*>.*?)(?:<p[^>]*>)?\s*Feel free to reach out.*?©\s*202\d\s*Vispan Solutions Pvt\.\s*Ltd\.\s*All rights reserved\.(?:\s*<\/p>)?/is', '', $content);
         $content = vcpg_safe_preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
-        // 5. Strip any isolated stray fragments and unbalanced closing divs
+        // 6. Strip any isolated stray fragments and unbalanced closing divs
         $content = vcpg_safe_preg_replace('/<p>\s*<!--\s*VCPG-TEMPLATE.*?-->\s*<!--\s*1\.\s*TOPBAR\s*&\s*HEADER\s*-->\s*<\/p>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>\s*(?:<\/p>)?\s*(?:<\/div>\s*){1,3}/is', '', $content);
         $content = vcpg_safe_preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>/is', '', $content);
-        // 6. Strip unwanted portfolio section if present in post_content
+        // 7. Strip unwanted portfolio section if present in post_content
         $content = vcpg_safe_preg_replace('/<!--\s*8\.\s*PORTFOLIO\s*-->\s*<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
-        // 7. Strip unwanted capsule box above hero header
+        // 8. Strip unwanted capsule box above hero header
         $content = vcpg_safe_preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
+        // 9. Format legacy unwrapped hero elements and proposal form
+        if (strpos($content, 'vp-hero-grid') === false && strpos($content, 'hero_proposal') !== false) {
+            $hero_regex = '/(<h1[^>]*>.*?)(<h3[^>]*>Request A Marketing Proposal<\/h3>\s*<form id=[\x22\x27]hero_proposal[\x22\x27].*?<\/form>)/is';
+            if (preg_match($hero_regex, $content, $m)) {
+                $left = '<div class="vp-hero-left">' . $m[1] . '</div>';
+                $right = '<div class="vp-hero-form-card vp-hero-right" style="background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:35px 30px;box-shadow:0 10px 30px rgba(0,0,0,0.1);box-sizing:border-box;">' . $m[2] . '</div>';
+                $hero_html = '<section class="vp-hero" style="position:relative;padding:90px 0;overflow:hidden;background:#FFFFFF;"><div class="vp-container vp-hero-grid" style="position:relative;z-index:1;">' . $left . $right . '</div></section><div class="vp-container vp-legacy-content" style="max-width:1200px;margin:0 auto;padding:40px 24px;">';
+                $content = vcpg_safe_preg_replace($hero_regex, $hero_html, $content) . '</div>';
+            }
+        }
     }
     return $content;
 }
@@ -361,6 +383,103 @@ function vcpg_output_styles()
         margin-bottom: 24px !important;
         text-align: left !important;
         color: #02426A !important;
+    }
+
+    /* Legacy hero left column & typography */
+    .vp-hero-left h1 {
+        font-size: 3.2rem !important;
+        font-weight: 800 !important;
+        line-height: 1.15 !important;
+        margin-bottom: 15px !important;
+        color: #02426A !important;
+    }
+    .vp-hero-left h3 {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: #0A3663 !important;
+        margin-bottom: 20px !important;
+        line-height: 1.3 !important;
+    }
+    .vp-hero-left p {
+        font-size: 1.1rem !important;
+        color: #334155 !important;
+        line-height: 1.65 !important;
+        margin-bottom: 24px !important;
+    }
+    .vp-hero-left a[href="#contact"] {
+        background: #02426A !important;
+        color: #FFFFFF !important;
+        padding: 14px 32px !important;
+        border-radius: 50px !important;
+        text-decoration: none !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    /* Legacy page body container & typography */
+    .vp-legacy-content {
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        padding: 40px 24px !important;
+        font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif !important;
+        color: #334155 !important;
+        line-height: 1.8 !important;
+    }
+    .vp-legacy-content h2 {
+        color: #0A3663 !important;
+        font-size: 2.2rem !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        margin: 40px 0 20px !important;
+    }
+    .vp-legacy-content h3 {
+        color: #02426A !important;
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+        margin: 30px 0 16px !important;
+    }
+    .vp-legacy-content p {
+        font-size: 1.05rem !important;
+        color: #334155 !important;
+        line-height: 1.8 !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Proposal form styling */
+    #hero_proposal {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    #hero_proposal input[type="text"],
+    #hero_proposal input[type="email"],
+    #hero_proposal input[type="tel"],
+    #hero_proposal textarea,
+    #hero_proposal select {
+        width: 100% !important;
+        padding: 13px 22px !important;
+        border-radius: 50px !important;
+        border: 1px solid #7E7E7E !important;
+        background: #F3F4F6 !important;
+        color: #1E293B !important;
+        font-size: 14px !important;
+        box-sizing: border-box !important;
+        outline: none !important;
+    }
+    #hero_proposal button[type="submit"],
+    #hero_proposal input[type="submit"] {
+        width: 100% !important;
+        padding: 15px !important;
+        border-radius: 50px !important;
+        background: #02426A !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        border: none !important;
+        cursor: pointer !important;
     }
 
     /* INTRO */
