@@ -210,33 +210,47 @@ function vcpg_disable_wpautop_for_vcpg_pages() {
         remove_filter('the_content', 'wpautop');
     }
 }
+function vcpg_safe_preg_replace($pattern, $replacement, $subject) {
+    if (!is_string($subject) || empty($subject)) {
+        return $subject;
+    }
+    $res = preg_replace($pattern, $replacement, $subject);
+    if ($res === null) {
+        return $subject; // Never return null on PCRE failure
+    }
+    return $res;
+}
+
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 1);
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
+    if (!is_string($content) || empty($content)) {
+        return $content;
+    }
     if (is_singular('page') && is_vcpg_generated_page()) {
         // 1. Strip conflicting CSS rules
-        $content = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $content);
+        $content = vcpg_safe_preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $content);
         // 2. Strip commented-out template blocks that wpautop corrupts
-        $content = preg_replace('/<!--\s*1\.\s*TOPBAR\s*&\s*HEADER.*?-->/is', '', $content);
-        $content = preg_replace('/<!--\s*13\.\s*FOOTER.*?-->/is', '', $content);
-        // 3. Strip legacy topbar & header HTML blocks from post_content
-        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>(?:(?!<header|<section).)*?<\/div>\s*<\/div>\s*<\/div>/is', '', $content);
-        $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>(?:(?!<section).)*?<\/header>/is', '', $content);
-        $content = preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
-        // 4. Strip legacy footer HTML blocks from post_content
-        $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>(?:(?!<\/body|<\/html).)*?<\/footer>/is', '', $content);
-        $content = preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
-        $content = preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<!--\s*1\.\s*TOPBAR\s*&\s*HEADER.*?-->/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<!--\s*13\.\s*FOOTER.*?-->/is', '', $content);
+        // 3. Strip legacy topbar & header HTML blocks from post_content safely
+        $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>\s*<\/div>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
+        // 4. Strip legacy footer HTML blocks from post_content safely
+        $content = vcpg_safe_preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
         // 5. Strip any isolated stray fragments and unbalanced closing divs
-        $content = preg_replace('/<p>\s*<!--\s*VCPG-TEMPLATE.*?-->\s*<!--\s*1\.\s*TOPBAR\s*&\s*HEADER\s*-->\s*<\/p>/is', '', $content);
-        $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>\s*(?:<\/p>)?\s*(?:<\/div>\s*){1,3}/is', '', $content);
-        $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<p>\s*<!--\s*VCPG-TEMPLATE.*?-->\s*<!--\s*1\.\s*TOPBAR\s*&\s*HEADER\s*-->\s*<\/p>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>\s*(?:<\/p>)?\s*(?:<\/div>\s*){1,3}/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>/is', '', $content);
         // 6. Strip unwanted portfolio section if present in post_content
-        $content = preg_replace('/<!--\s*8\.\s*PORTFOLIO\s*-->\s*<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
-        $content = preg_replace('/<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<!--\s*8\.\s*PORTFOLIO\s*-->\s*<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
         // 7. Strip unwanted capsule box above hero header
-        $content = preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
-        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
+        $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
     }
     return $content;
 }
@@ -278,13 +292,127 @@ function vcpg_output_styles()
     */
 
     /* Hide legacy custom template header & footer to display single Elementor theme header & footer */
+    .vp-topbar,
+    .vp-header,
+    header.vp-header,
+    .vp-nav,
+    .vp-footer,
+    footer.vp-footer,
     html body.vcpg-page .vp-topbar,
     html body.vcpg-page .vp-header,
+    html body.vcpg-page header.vp-header,
+    html body.vcpg-page .vp-nav,
+    html body.vcpg-page .vp-footer,
+    html body.vcpg-page footer.vp-footer,
     html body.vcpg-page #vcpg-header,
     html body.vcpg-page .elementor-element-e000003,
     html body.vcpg-page .elementor-element-e000043,
     html body.vcpg-page .elementor-element-e000044 {
         display: none !important;
+    }
+
+    /* Core Layout & Colors for all VCPG pages */
+    :root {
+      --vp-primary: #0B63F6;
+      --vp-primary-dark: #094bc4;
+      --vp-dark: #0A3663;
+      --vp-dark-2: #070D18;
+      --vp-white: #FFFFFF;
+      --vp-bg: #F8FAFC;
+      --vp-text: #334155;
+      --vp-text-light: #64748B;
+      --vp-border: #E2E8F0;
+      --vp-radius: 12px;
+      --vp-radius-lg: 16px;
+      --vp-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      --vp-font: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .vp-container { max-width: 1200px !important; margin: 0 auto !important; padding: 0 24px !important; width: 100% !important; box-sizing: border-box !important; }
+    .vp-section { padding: 80px 0 !important; }
+    .vp-title { font-size: 2.2rem !important; font-weight: 800 !important; color: #0A3663 !important; line-height: 1.25 !important; margin-bottom: 16px !important; }
+    .vp-desc { font-size: 1rem !important; color: #334155 !important; line-height: 1.8 !important; max-width: 800px !important; }
+    .vp-title-center { text-align: center !important; }
+    .vp-desc-center { margin-left: auto !important; margin-right: auto !important; text-align: center !important; }
+
+    /* HERO */
+    .vp-hero { position: relative !important; padding: 190px 0 90px !important; color: #000000 !important; overflow: hidden !important; background: #FFFFFF !important; }
+    .vp-hero video { transform: translate(-50%, -50%) scale(1.4) !important; }
+    .vp-hero-grid { display: grid !important; grid-template-columns: 1fr 480px !important; gap: 60px !important; align-items: center !important; position: relative !important; z-index: 1 !important; }
+    .vp-hero h1 { font-size: 3.2rem !important; font-weight: 800 !important; line-height: 1.15 !important; margin-bottom: 10px !important; color: #02426A !important; }
+    .vp-hero h2 { color: #000000 !important; font-size: 1.6rem !important; font-weight: 500 !important; margin-bottom: 20px !important; line-height: 1.3 !important; }
+    .vp-hero p { font-size: 1.1rem !important; color: #334155 !important; line-height: 1.65 !important; margin-bottom: 30px !important; }
+    .vp-btn-hero { background: #02426A !important; color: #FFFFFF !important; padding: 14px 32px !important; border-radius: 50px !important; text-decoration: none !important; font-weight: 700 !important; font-size: 0.95rem !important; display: inline-flex !important; align-items: center !important; gap: 10px !important; }
+
+    /* Hero inquiry form card border */
+    .vp-hero-form-card,
+    .vp-hero-right {
+        background: rgba(255, 255, 255, 0.92) !important;
+        border: 2px solid #02426A !important;
+        border-radius: 30px !important;
+        padding: 35px 30px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        box-sizing: border-box !important;
+    }
+    .vp-hero-form-card h3,
+    .vp-hero-right h3 {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+        margin-bottom: 24px !important;
+        text-align: left !important;
+        color: #02426A !important;
+    }
+
+    /* INTRO */
+    .vp-intro { background: #FFFFFF !important; text-align: center !important; }
+
+    /* ABOUT */
+    .vp-about { background: #FFFFFF !important; }
+    .vp-about-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 60px !important; align-items: center !important; }
+    .vp-feature-card { background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important; padding: 18px !important; display: flex !important; gap: 14px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; }
+
+    /* SERVICES */
+    .vp-services-sec { color: #FFFFFF !important; }
+    .vp-services-sec .vp-title { color: #0A3663 !important; }
+    .vp-services-sec .vp-desc { color: #334155 !important; }
+    .vp-service-card { background: #FFFFFF !important; border-radius: 16px !important; padding: 28px !important; color: #0A3663 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important; }
+
+    /* WHY CHOOSE */
+    .vp-why-sec { background: #FFFFFF !important; }
+    .vp-tabs { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: center !important; margin-top: 30px !important; }
+    .vp-tab-active { background: #FFFFFF !important; color: #081828 !important; border: 1px solid #CBD5E1 !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 700 !important; }
+    .vp-tab-dark { background: #0F172A !important; color: #FFFFFF !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 600 !important; }
+
+    .vp-casestudy-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px !important; align-items: stretch !important; }
+
+    /* LOGOS */
+    .vp-logos-bar { padding: 40px 0 !important; background: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; border-bottom: 1px solid #E2E8F0 !important; }
+
+    /* TESTIMONIAL */
+    .vp-testi-sec { background: #FFFFFF !important; text-align: center !important; }
+
+    /* CERTIFICATIONS */
+    .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
+
+    /* CONTACT FORM */
+    .vp-contact-card { max-width: 760px !important; margin: 0 auto !important; background: #FFFFFF !important; border-radius: 20px !important; padding: 44px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important; }
+
+    /* Suppress unwanted portfolio section */
+    .vp-portfolio-sec {
+        display: none !important;
+    }
+
+    /* Suppress unwanted empty capsule box above hero header */
+    .vp-hero div[style*="border-radius:30px"]:empty,
+    .vp-hero div[style*="border-radius: 30px"]:empty,
+    .vp-hero-city-label {
+        display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .vp-hero-grid, .vp-about-grid, .vp-footer-grid, .vp-casestudy-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+      .vp-casestudy-grid > div:first-child { order: 1 !important; }
+      .vp-casestudy-grid > div:last-child { order: 2 !important; }
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
@@ -318,29 +446,6 @@ function vcpg_output_styles()
         position: relative !important;
         z-index: 1 !important;
         margin-top: 0 !important;
-    }
-
-    /* Hero inquiry form card border */
-    html body.vcpg-page .vp-hero-form-card,
-    html body.vcpg-page .vp-hero-right {
-        background: rgba(255, 255, 255, 0.92) !important;
-        border: 2px solid #02426A !important;
-        border-radius: 30px !important;
-        padding: 35px 30px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
-        box-sizing: border-box !important;
-    }
-
-    /* Suppress unwanted portfolio section */
-    html body.vcpg-page .vp-portfolio-sec {
-        display: none !important;
-    }
-
-    /* Suppress unwanted empty capsule box above hero header */
-    html body.vcpg-page .vp-hero div[style*="border-radius:30px"]:empty,
-    html body.vcpg-page .vp-hero div[style*="border-radius: 30px"]:empty,
-    html body.vcpg-page .vp-hero-city-label {
-        display: none !important;
     }
 
     html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
