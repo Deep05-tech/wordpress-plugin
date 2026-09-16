@@ -83,7 +83,10 @@ function vcpg_deactivate_plugin() {
 function is_vcpg_generated_page($post_id = 0)
 {
     // NEVER apply VCPG page logic to front page or blog home
-    if (function_exists('is_front_page') && (is_front_page() || is_home())) {
+    if (function_exists('is_front_page') && is_front_page()) {
+        return false;
+    }
+    if (function_exists('is_home') && is_home()) {
         return false;
     }
 
@@ -117,63 +120,58 @@ function is_vcpg_generated_page($post_id = 0)
 
     // 2. Specific VCPG location meta check
     if (get_post_meta($post_id, '_vcpg_city', true) || get_post_meta($post_id, '_vcpg_service', true) || get_post_meta($post_id, '_vcpg_country', true) || get_post_meta($post_id, '_vcpg_state', true) || get_post_meta($post_id, '_vcpg_county', true)) {
+        update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
 
     // 3. Page Template check
     if (get_post_meta($post_id, '_wp_page_template', true) === 'templates/page-template.php') {
+        update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
 
-    return false;
-}
+    // 4. Content / Elementor Data Structural Markers check
+    $post_obj = get_post($post_id);
+    if ($post_obj && $post_obj->post_type === 'page') {
+        $content = $post_obj->post_content;
+        if (empty($content)) {
+            $elem_data = get_post_meta($post_id, '_elementor_data', true);
+            if (is_array($elem_data)) {
+                $content = wp_json_encode($elem_data);
+            } elseif (is_string($elem_data)) {
+                $content = $elem_data;
+            }
+        }
+        if (is_string($content) && (
+            strpos($content, 'vpg-container') !== false ||
+            strpos($content, 'hero_proposal') !== false ||
+            strpos($content, 'contact_proposal') !== false ||
+            strpos($content, 'vcpg-dual-btn') !== false ||
+            strpos($content, 'vp-hero') !== false ||
+            strpos($content, 'vp-footer') !== false ||
+            strpos($content, 'vcpg-nav-item') !== false ||
+            strpos($content, 'e00000b') !== false ||
+            strpos($content, 'e000007') !== false ||
+            strpos($content, 'e000018') !== false
+        )) {
+            update_post_meta($post_id, '_vcpg_page', '1');
+            return true;
+        }
 
-/*
-|--------------------------------------------------------------------------
-| Elementor Pro & Hello Elementor Theme Global Header/Footer Display
-| (Allows VCPG generated pages to use the site's Elementor Theme Header & Footer)
-|--------------------------------------------------------------------------
-*/
-add_filter('elementor/theme/should_render_location', 'vcpg_suppress_elementor_theme_locations', 99999, 3);
-function vcpg_suppress_elementor_theme_locations($should_render, $location_name, $location_manager)
-{
-    return $should_render;
-}
-
-add_filter('hello_elementor_display_header_footer', 'vcpg_suppress_hello_header_footer', 99999);
-add_filter('hello_elementor_header_display', 'vcpg_suppress_hello_header_footer', 99999);
-add_filter('hello_elementor_footer_display', 'vcpg_suppress_hello_header_footer', 99999);
-function vcpg_suppress_hello_header_footer($display)
-{
-    return $display;
-}
-
-add_filter('hfe_header_enabled', 'vcpg_suppress_hfe_header', 99999);
-function vcpg_suppress_hfe_header($enabled)
-{
-    return $enabled;
-}
-
-add_filter('hfe_footer_enabled', 'vcpg_suppress_hfe_footer', 99999);
-function vcpg_suppress_hfe_footer($enabled)
-{
-    return $enabled;
-}
-
-add_action('admin_init', 'vcpg_cleanup_stray_non_vcpg_meta');
-function vcpg_cleanup_stray_non_vcpg_meta() {
-    if (!get_option('vcpg_stray_meta_cleaned_v1')) {
-        global $wpdb;
-        $wpdb->query("
-            DELETE FROM {$wpdb->postmeta}
-            WHERE meta_key = '_vcpg_page'
-            AND post_id NOT IN (
-                SELECT DISTINCT post_id FROM {$wpdb->postmeta}
-                WHERE meta_key IN ('_vcpg_city', '_vcpg_service', '_vcpg_country', '_vcpg_state')
-            )
-        ");
-        update_option('vcpg_stray_meta_cleaned_v1', time());
+        // 5. Parent page ISO country code slug check
+        if ($post_obj->post_parent > 0) {
+            $parent = get_post($post_obj->post_parent);
+            if ($parent) {
+                $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
+                if (in_array(strtolower($parent->post_name), $known_cc)) {
+                    update_post_meta($post_id, '_vcpg_page', '1');
+                    return true;
+                }
+            }
+        }
     }
+
+    return false;
 }
 
 add_filter('body_class', 'vcpg_add_body_class');
@@ -258,6 +256,16 @@ function vcpg_output_styles()
         display: none !important;
     }
     */
+
+    /* Hide legacy custom template header & footer to display single Elementor theme header & footer */
+    html body.vcpg-page .vp-topbar,
+    html body.vcpg-page .vp-header,
+    html body.vcpg-page #vcpg-header,
+    html body.vcpg-page .elementor-element-e000003,
+    html body.vcpg-page .elementor-element-e000043,
+    html body.vcpg-page .elementor-element-e000044 {
+        display: none !important;
+    }
 
     html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
     html body.vcpg-page footer.vp-footer a:hover { color: #FFFFFF !important; }
@@ -758,6 +766,9 @@ function vcpg_output_seo_meta_and_schema()
 add_filter('the_content', 'vcpg_protect_styles', 1);
 function vcpg_protect_styles($content)
 {
+    if (!is_singular('page') || !is_vcpg_generated_page()) {
+        return $content;
+    }
     if(!empty($GLOBALS['vcpg_inline_styles']))
     {
         $content = str_replace($GLOBALS['vcpg_inline_styles'], '', $content);
