@@ -95,7 +95,7 @@ function is_vcpg_generated_page($post_id = 0)
     if (!$post_id) {
         $post_id = get_queried_object_id();
     }
-    if (!$post_id && is_singular('page')) {
+    if (!$post_id && function_exists('is_singular') && is_singular('page')) {
         $post_id = get_the_ID();
     }
     if (!$post_id) {
@@ -120,6 +120,28 @@ function is_vcpg_generated_page($post_id = 0)
         return false;
     }
 
+    $post_obj = get_post($post_id);
+    if (!$post_obj || $post_obj->post_type !== 'page') {
+        $cache[$post_id] = false;
+        return false;
+    }
+
+    // Explicit blacklist of known built-in website pages: NEVER hijack these
+    $built_in_slugs = array(
+        'home', '', 'about-us', 'about', 'what-we-do', 'contact-us', 'contact',
+        'blog', 'career', 'careers', 'investor', 'financial-reporting',
+        'digital-marketing-services', 'google-ads-services-in-india',
+        'branding-services', 'seo-services', 'web-development',
+        'social-media-management-services', 'online-reputation-management',
+        'video-production', 'cgi-services', 'vfx-services-in-rajkot',
+        'privacy-policy', 'terms-and-conditions', 'terms-of-service',
+        'sample-page'
+    );
+    if (in_array(strtolower($post_obj->post_name), $built_in_slugs, true)) {
+        $cache[$post_id] = false;
+        return false;
+    }
+
     // 1. Direct explicit VCPG postmeta check
     if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
         $cache[$post_id] = true;
@@ -138,41 +160,22 @@ function is_vcpg_generated_page($post_id = 0)
         return true;
     }
 
-    // 4. Content / Structural Markers check
-    $post_obj = get_post($post_id);
-    if ($post_obj && $post_obj->post_type === 'page') {
-        $content = $post_obj->post_content;
-        if (empty($content)) {
-            $elem_data = get_post_meta($post_id, '_elementor_data', true);
-            if (is_string($elem_data)) {
-                $content = $elem_data;
-            }
-        }
-        if (is_string($content) && (
-            strpos($content, 'vpg-container') !== false ||
-            strpos($content, 'hero_proposal') !== false ||
-            strpos($content, 'contact_proposal') !== false ||
-            strpos($content, 'vcpg-dual-btn') !== false ||
-            strpos($content, 'vp-hero') !== false ||
-            strpos($content, 'vp-footer') !== false ||
-            strpos($content, 'vcpg-nav-item') !== false ||
-            strpos($content, 'e00000b') !== false ||
-            strpos($content, 'e000007') !== false ||
-            strpos($content, 'e000018') !== false
-        )) {
-            $cache[$post_id] = true;
-            return true;
-        }
+    // CRITICAL: Top-level pages (post_parent == 0) without VCPG postmeta are NEVER generated city pages!
+    // They are 100% built-in site pages. Do NOT perform loose content sniffing on root pages.
+    if ((int)$post_obj->post_parent === 0) {
+        $cache[$post_id] = false;
+        return false;
+    }
 
-        // 5. Parent page ISO country code slug check
-        if ($post_obj->post_parent > 0) {
-            $parent = get_post($post_obj->post_parent);
-            if ($parent) {
-                $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
-                if (in_array(strtolower($parent->post_name), $known_cc, true)) {
-                    $cache[$post_id] = true;
-                    return true;
-                }
+    // 4. Parent page ISO country code check
+    // ALL generated city pages (modern and legacy like 48349) are child pages of a country slug ('us', 'in', etc.)
+    if ($post_obj->post_parent > 0) {
+        $parent = get_post($post_obj->post_parent);
+        if ($parent) {
+            $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
+            if (in_array(strtolower($parent->post_name), $known_cc, true)) {
+                $cache[$post_id] = true;
+                return true;
             }
         }
     }
@@ -210,7 +213,6 @@ function vcpg_capture_page_styles()
 }
 
 add_action('wp_head', 'vcpg_output_styles', 99999);
-add_action('wp_footer', 'vcpg_output_styles', 99999);
 add_action('template_redirect', 'vcpg_disable_wpautop_for_vcpg_pages');
 function vcpg_disable_wpautop_for_vcpg_pages() {
     if (is_singular('page') && is_vcpg_generated_page()) {
@@ -289,10 +291,18 @@ function vcpg_clean_content_inline_styles($content) {
 
 function vcpg_output_styles()
 {
-    if (!is_vcpg_generated_page()) {
+    static $already_output = false;
+    if ($already_output) {
+        return;
+    }
+
+    if (!function_exists('is_singular') || !is_singular('page') || !is_vcpg_generated_page()) {
         return; // ZERO CSS output on built-in website pages!
     }
-    if(!empty($GLOBALS['vcpg_inline_styles']) && !did_action('wp_footer'))
+
+    $already_output = true;
+
+    if(!empty($GLOBALS['vcpg_inline_styles']))
     {
         // Clean conflicting header position rules from captured inline styles
         $clean_captured = preg_replace('/\.elementor-element-e000003\s*\{[^}]*\}/i', '', $GLOBALS['vcpg_inline_styles']);
@@ -300,36 +310,7 @@ function vcpg_output_styles()
     }
 
     echo '<style id="vcpg-brand-overrides">
-    /* Theme & Elementor Pro header & footer display suppression (COMMENTED OUT FOR ELEMENTOR THEME INTEGRATION)
-    html body.vcpg-page header,
-    html body.vcpg-page #site-header,
-    html body.vcpg-page .site-header,
-    html body.vcpg-page div[data-elementor-type="header"],
-    html body.vcpg-page .elementor-location-header,
-    html body.vcpg-page footer:not(.vp-footer),
-    html body.vcpg-page #site-footer,
-    html body.vcpg-page .site-footer,
-    html body.vcpg-page div[data-elementor-type="footer"],
-    html body.vcpg-page .elementor-location-footer,
-    html body.vcpg-page #masthead,
-    html body.vcpg-page #colophon,
-    header.site-header,
-    footer.site-footer,
-    #site-header,
-    #site-footer,
-    #masthead,
-    #colophon {
-        display: none !important;
-    }
-    */
-
     /* Hide legacy custom template header & footer to display single Elementor theme header & footer */
-    .vp-topbar,
-    .vp-header,
-    header.vp-header,
-    .vp-nav,
-    .vp-footer,
-    footer.vp-footer,
     html body.vcpg-page .vp-topbar,
     html body.vcpg-page .vp-header,
     html body.vcpg-page header.vp-header,
@@ -344,7 +325,7 @@ function vcpg_output_styles()
     }
 
     /* Core Layout & Colors for all VCPG pages */
-    :root {
+    html body.vcpg-page {
       --vp-primary: #0B63F6;
       --vp-primary-dark: #094bc4;
       --vp-dark: #0A3663;
@@ -360,25 +341,25 @@ function vcpg_output_styles()
       --vp-font: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;
     }
 
-    .vp-container { max-width: 1200px !important; margin: 0 auto !important; padding: 0 24px !important; width: 100% !important; box-sizing: border-box !important; }
-    .vp-section { padding: 80px 0 !important; }
-    .vp-title { font-size: 2.2rem !important; font-weight: 800 !important; color: #0A3663 !important; line-height: 1.25 !important; margin-bottom: 16px !important; }
-    .vp-desc { font-size: 1rem !important; color: #334155 !important; line-height: 1.8 !important; max-width: 800px !important; }
-    .vp-title-center { text-align: center !important; }
-    .vp-desc-center { margin-left: auto !important; margin-right: auto !important; text-align: center !important; }
+    html body.vcpg-page .vp-container { max-width: 1200px !important; margin: 0 auto !important; padding: 0 24px !important; width: 100% !important; box-sizing: border-box !important; }
+    html body.vcpg-page .vp-section { padding: 80px 0 !important; }
+    html body.vcpg-page .vp-title { font-size: 2.2rem !important; font-weight: 800 !important; color: #0A3663 !important; line-height: 1.25 !important; margin-bottom: 16px !important; }
+    html body.vcpg-page .vp-desc { font-size: 1rem !important; color: #334155 !important; line-height: 1.8 !important; max-width: 800px !important; }
+    html body.vcpg-page .vp-title-center { text-align: center !important; }
+    html body.vcpg-page .vp-desc-center { margin-left: auto !important; margin-right: auto !important; text-align: center !important; }
 
     /* HERO */
-    .vp-hero { position: relative !important; padding: 190px 0 90px !important; color: #000000 !important; overflow: hidden !important; background: #FFFFFF !important; }
-    .vp-hero video { transform: translate(-50%, -50%) scale(1.4) !important; }
-    .vp-hero-grid { display: grid !important; grid-template-columns: 1fr 480px !important; gap: 60px !important; align-items: center !important; position: relative !important; z-index: 1 !important; }
-    .vp-hero h1 { font-size: 3.2rem !important; font-weight: 800 !important; line-height: 1.15 !important; margin-bottom: 10px !important; color: #02426A !important; }
-    .vp-hero h2 { color: #000000 !important; font-size: 1.6rem !important; font-weight: 500 !important; margin-bottom: 20px !important; line-height: 1.3 !important; }
-    .vp-hero p { font-size: 1.1rem !important; color: #334155 !important; line-height: 1.65 !important; margin-bottom: 30px !important; }
-    .vp-btn-hero { background: #02426A !important; color: #FFFFFF !important; padding: 14px 32px !important; border-radius: 50px !important; text-decoration: none !important; font-weight: 700 !important; font-size: 0.95rem !important; display: inline-flex !important; align-items: center !important; gap: 10px !important; }
+    html body.vcpg-page .vp-hero { position: relative !important; padding: 190px 0 90px !important; color: #000000 !important; overflow: hidden !important; background: #FFFFFF !important; }
+    html body.vcpg-page .vp-hero video { transform: translate(-50%, -50%) scale(1.4) !important; }
+    html body.vcpg-page .vp-hero-grid { display: grid !important; grid-template-columns: 1fr 480px !important; gap: 60px !important; align-items: center !important; position: relative !important; z-index: 1 !important; }
+    html body.vcpg-page .vp-hero h1 { font-size: 3.2rem !important; font-weight: 800 !important; line-height: 1.15 !important; margin-bottom: 10px !important; color: #02426A !important; }
+    html body.vcpg-page .vp-hero h2 { color: #000000 !important; font-size: 1.6rem !important; font-weight: 500 !important; margin-bottom: 20px !important; line-height: 1.3 !important; }
+    html body.vcpg-page .vp-hero p { font-size: 1.1rem !important; color: #334155 !important; line-height: 1.65 !important; margin-bottom: 30px !important; }
+    html body.vcpg-page .vp-btn-hero { background: #02426A !important; color: #FFFFFF !important; padding: 14px 32px !important; border-radius: 50px !important; text-decoration: none !important; font-weight: 700 !important; font-size: 0.95rem !important; display: inline-flex !important; align-items: center !important; gap: 10px !important; }
 
     /* Hero inquiry form card border */
-    .vp-hero-form-card,
-    .vp-hero-right {
+    html body.vcpg-page .vp-hero-form-card,
+    html body.vcpg-page .vp-hero-right {
         background: rgba(255, 255, 255, 0.92) !important;
         border: 2px solid #02426A !important;
         border-radius: 30px !important;
@@ -386,8 +367,8 @@ function vcpg_output_styles()
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
         box-sizing: border-box !important;
     }
-    .vp-hero-form-card h3,
-    .vp-hero-right h3 {
+    html body.vcpg-page .vp-hero-form-card h3,
+    html body.vcpg-page .vp-hero-right h3 {
         font-size: 28px !important;
         font-weight: 700 !important;
         margin-bottom: 24px !important;
@@ -396,27 +377,27 @@ function vcpg_output_styles()
     }
 
     /* Legacy hero left column & typography */
-    .vp-hero-left h1 {
+    html body.vcpg-page .vp-hero-left h1 {
         font-size: 3.2rem !important;
         font-weight: 800 !important;
         line-height: 1.15 !important;
         margin-bottom: 15px !important;
         color: #02426A !important;
     }
-    .vp-hero-left h3 {
+    html body.vcpg-page .vp-hero-left h3 {
         font-size: 1.5rem !important;
         font-weight: 600 !important;
         color: #0A3663 !important;
         margin-bottom: 20px !important;
         line-height: 1.3 !important;
     }
-    .vp-hero-left p {
+    html body.vcpg-page .vp-hero-left p {
         font-size: 1.1rem !important;
         color: #334155 !important;
         line-height: 1.65 !important;
         margin-bottom: 24px !important;
     }
-    .vp-hero-left a[href="#contact"] {
+    html body.vcpg-page .vp-hero-left a[href="#contact"] {
         background: #02426A !important;
         color: #FFFFFF !important;
         padding: 14px 32px !important;
@@ -430,7 +411,7 @@ function vcpg_output_styles()
     }
 
     /* Legacy page body container & typography */
-    .vp-legacy-content {
+    html body.vcpg-page .vp-legacy-content {
         max-width: 1200px !important;
         margin: 0 auto !important;
         padding: 60px 24px 100px !important;
@@ -439,7 +420,7 @@ function vcpg_output_styles()
         line-height: 1.8 !important;
         box-sizing: border-box !important;
     }
-    .vp-legacy-content h2 {
+    html body.vcpg-page .vp-legacy-content h2 {
         color: #0A3663 !important;
         font-size: 2.3rem !important;
         font-weight: 800 !important;
@@ -448,10 +429,10 @@ function vcpg_output_styles()
         margin-bottom: 24px !important;
         text-align: center !important;
     }
-    .vp-legacy-content h2:first-of-type {
+    html body.vcpg-page .vp-legacy-content h2:first-of-type {
         margin-top: 30px !important;
     }
-    .vp-legacy-content h2 + p {
+    html body.vcpg-page .vp-legacy-content h2 + p {
         font-size: 1.05rem !important;
         color: #334155 !important;
         line-height: 1.8 !important;
@@ -461,28 +442,28 @@ function vcpg_output_styles()
         margin-bottom: 35px !important;
         text-align: center !important;
     }
-    .vp-legacy-content h3 {
+    html body.vcpg-page .vp-legacy-content h3 {
         color: #02426A !important;
         font-size: 1.5rem !important;
         font-weight: 700 !important;
         margin-top: 36px !important;
         margin-bottom: 12px !important;
     }
-    .vp-legacy-content h4 {
+    html body.vcpg-page .vp-legacy-content h4 {
         font-size: 1.25rem !important;
         font-weight: 700 !important;
         color: #02426A !important;
         margin-top: 28px !important;
         margin-bottom: 10px !important;
     }
-    .vp-legacy-content p {
+    html body.vcpg-page .vp-legacy-content p {
         font-size: 1.05rem !important;
         color: #334155 !important;
         line-height: 1.8 !important;
         margin-bottom: 20px !important;
     }
-    .vp-legacy-content svg[width="40"],
-    .vp-legacy-content svg[width="42"] {
+    html body.vcpg-page .vp-legacy-content svg[width="40"],
+    html body.vcpg-page .vp-legacy-content svg[width="42"] {
         display: inline-block !important;
         padding: 12px !important;
         background: #EFF6FF !important;
@@ -491,7 +472,7 @@ function vcpg_output_styles()
         margin-top: 24px !important;
         margin-bottom: 10px !important;
     }
-    .vp-legacy-content img {
+    html body.vcpg-page .vp-legacy-content img {
         max-width: 100% !important;
         height: auto !important;
         border-radius: 20px !important;
@@ -499,8 +480,8 @@ function vcpg_output_styles()
         display: block !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
     }
-    .vp-legacy-content p:has(> button[onclick*="vcpgSwitchTab"]),
-    .vp-legacy-content p:has(button) {
+    html body.vcpg-page .vp-legacy-content p:has(> button[onclick*="vcpgSwitchTab"]),
+    html body.vcpg-page .vp-legacy-content p:has(button) {
         display: flex !important;
         gap: 12px !important;
         flex-wrap: wrap !important;
@@ -509,22 +490,22 @@ function vcpg_output_styles()
     }
 
     /* Proposal form styling */
-    #hero_proposal,
-    #contact_proposal {
+    html body.vcpg-page #hero_proposal,
+    html body.vcpg-page #contact_proposal {
         display: flex !important;
         flex-direction: column !important;
         gap: 16px !important;
     }
-    #hero_proposal input[type="text"],
-    #hero_proposal input[type="email"],
-    #hero_proposal input[type="tel"],
-    #hero_proposal textarea,
-    #hero_proposal select,
-    #contact_proposal input[type="text"],
-    #contact_proposal input[type="email"],
-    #contact_proposal input[type="tel"],
-    #contact_proposal textarea,
-    #contact_proposal select {
+    html body.vcpg-page #hero_proposal input[type="text"],
+    html body.vcpg-page #hero_proposal input[type="email"],
+    html body.vcpg-page #hero_proposal input[type="tel"],
+    html body.vcpg-page #hero_proposal textarea,
+    html body.vcpg-page #hero_proposal select,
+    html body.vcpg-page #contact_proposal input[type="text"],
+    html body.vcpg-page #contact_proposal input[type="email"],
+    html body.vcpg-page #contact_proposal input[type="tel"],
+    html body.vcpg-page #contact_proposal textarea,
+    html body.vcpg-page #contact_proposal select {
         width: 100% !important;
         padding: 13px 22px !important;
         border-radius: 50px !important;
@@ -535,10 +516,10 @@ function vcpg_output_styles()
         box-sizing: border-box !important;
         outline: none !important;
     }
-    #hero_proposal button[type="submit"],
-    #hero_proposal input[type="submit"],
-    #contact_proposal button[type="submit"],
-    #contact_proposal input[type="submit"] {
+    html body.vcpg-page #hero_proposal button[type="submit"],
+    html body.vcpg-page #hero_proposal input[type="submit"],
+    html body.vcpg-page #contact_proposal button[type="submit"],
+    html body.vcpg-page #contact_proposal input[type="submit"] {
         width: 100% !important;
         padding: 15px !important;
         border-radius: 50px !important;
@@ -551,38 +532,38 @@ function vcpg_output_styles()
     }
 
     /* INTRO */
-    .vp-intro { background: #FFFFFF !important; text-align: center !important; }
+    html body.vcpg-page .vp-intro { background: #FFFFFF !important; text-align: center !important; }
 
     /* ABOUT */
-    .vp-about { background: #FFFFFF !important; }
-    .vp-about-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 60px !important; align-items: center !important; }
-    .vp-feature-card { background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important; padding: 18px !important; display: flex !important; gap: 14px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; }
+    html body.vcpg-page .vp-about { background: #FFFFFF !important; }
+    html body.vcpg-page .vp-about-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 60px !important; align-items: center !important; }
+    html body.vcpg-page .vp-feature-card { background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important; padding: 18px !important; display: flex !important; gap: 14px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; }
 
     /* SERVICES */
-    .vp-services-sec { color: #FFFFFF !important; }
-    .vp-services-sec .vp-title { color: #0A3663 !important; }
-    .vp-services-sec .vp-desc { color: #334155 !important; }
-    .vp-service-card { background: #FFFFFF !important; border-radius: 16px !important; padding: 28px !important; color: #0A3663 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important; }
+    html body.vcpg-page .vp-services-sec { color: #FFFFFF !important; }
+    html body.vcpg-page .vp-services-sec .vp-title { color: #0A3663 !important; }
+    html body.vcpg-page .vp-services-sec .vp-desc { color: #334155 !important; }
+    html body.vcpg-page .vp-service-card { background: #FFFFFF !important; border-radius: 16px !important; padding: 28px !important; color: #0A3663 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important; }
 
     /* WHY CHOOSE */
-    .vp-why-sec { background: #FFFFFF !important; }
-    .vp-tabs { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: center !important; margin-top: 30px !important; }
-    .vp-tab-active { background: #FFFFFF !important; color: #081828 !important; border: 1px solid #CBD5E1 !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 700 !important; }
-    .vp-tab-dark { background: #0F172A !important; color: #FFFFFF !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 600 !important; }
+    html body.vcpg-page .vp-why-sec { background: #FFFFFF !important; }
+    html body.vcpg-page .vp-tabs { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: center !important; margin-top: 30px !important; }
+    html body.vcpg-page .vp-tab-active { background: #FFFFFF !important; color: #081828 !important; border: 1px solid #CBD5E1 !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 700 !important; }
+    html body.vcpg-page .vp-tab-dark { background: #0F172A !important; color: #FFFFFF !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 600 !important; }
 
-    .vp-casestudy-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px !important; align-items: stretch !important; }
+    html body.vcpg-page .vp-casestudy-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px !important; align-items: stretch !important; }
 
     /* LOGOS */
-    .vp-logos-bar { padding: 40px 0 !important; background: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; border-bottom: 1px solid #E2E8F0 !important; }
+    html body.vcpg-page .vp-logos-bar { padding: 40px 0 !important; background: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; border-bottom: 1px solid #E2E8F0 !important; }
 
     /* TESTIMONIAL */
-    .vp-testi-sec { background: #FFFFFF !important; text-align: center !important; }
+    html body.vcpg-page .vp-testi-sec { background: #FFFFFF !important; text-align: center !important; }
 
     /* CERTIFICATIONS */
-    .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
+    html body.vcpg-page .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
 
     /* CONTACT FORM */
-    .vp-contact-card {
+    html body.vcpg-page .vp-contact-card {
         max-width: 760px !important;
         margin: 80px auto !important;
         background: #FFFFFF !important;
@@ -592,8 +573,8 @@ function vcpg_output_styles()
         border: 2px solid #02426A !important;
         box-sizing: border-box !important;
     }
-    .vp-contact-card h2,
-    .vp-contact-card h3 {
+    html body.vcpg-page .vp-contact-card h2,
+    html body.vcpg-page .vp-contact-card h3 {
         text-align: center !important;
         color: #02426A !important;
         margin-top: 0 !important;
@@ -601,21 +582,21 @@ function vcpg_output_styles()
     }
 
     /* Suppress unwanted portfolio section */
-    .vp-portfolio-sec {
+    html body.vcpg-page .vp-portfolio-sec {
         display: none !important;
     }
 
     /* Suppress unwanted empty capsule box above hero header */
-    .vp-hero div[style*="border-radius:30px"]:empty,
-    .vp-hero div[style*="border-radius: 30px"]:empty,
-    .vp-hero-city-label {
+    html body.vcpg-page .vp-hero div[style*="border-radius:30px"]:empty,
+    html body.vcpg-page .vp-hero div[style*="border-radius: 30px"]:empty,
+    html body.vcpg-page .vp-hero-city-label {
         display: none !important;
     }
 
     @media (max-width: 900px) {
-      .vp-hero-grid, .vp-about-grid, .vp-footer-grid, .vp-casestudy-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-      .vp-casestudy-grid > div:first-child { order: 1 !important; }
-      .vp-casestudy-grid > div:last-child { order: 2 !important; }
+      html body.vcpg-page .vp-hero-grid, html body.vcpg-page .vp-about-grid, html body.vcpg-page .vp-footer-grid, html body.vcpg-page .vp-casestudy-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+      html body.vcpg-page .vp-casestudy-grid > div:first-child { order: 1 !important; }
+      html body.vcpg-page .vp-casestudy-grid > div:last-child { order: 2 !important; }
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
@@ -882,7 +863,7 @@ function vcpg_output_styles()
             flex-wrap: wrap !important;
             gap: 8px !important;
         }
-        .vcpg-tab-btn {
+        html body.vcpg-page .vcpg-tab-btn {
             flex: 1 1 100% !important;
             width: 100% !important;
             box-sizing: border-box !important;
@@ -898,7 +879,7 @@ function vcpg_output_styles()
         }
 
         /* Testimonial slider navigation buttons on mobile */
-        .vcpg-t-prev, .vcpg-t-next {
+        html body.vcpg-page .vcpg-t-prev, html body.vcpg-page .vcpg-t-next {
             width: 36px !important;
             height: 36px !important;
             font-size: 0.9rem !important;
@@ -922,13 +903,13 @@ function vcpg_output_styles()
         }
 
         /* Topbar Mobile Formatting */
-        .elementor-element-e000003 div[style*="background:#02426A"],
-        .elementor-element-e000003 div[style*="background: #02426A"] {
+        html body.vcpg-page .elementor-element-e000003 div[style*="background:#02426A"],
+        html body.vcpg-page .elementor-element-e000003 div[style*="background: #02426A"] {
             height: auto !important;
             padding: 8px 12px !important;
         }
-        .elementor-element-e000003 div[style*="background:#02426A"] > div,
-        .elementor-element-e000003 div[style*="background: #02426A"] > div {
+        html body.vcpg-page .elementor-element-e000003 div[style*="background:#02426A"] > div,
+        html body.vcpg-page .elementor-element-e000003 div[style*="background: #02426A"] > div {
             flex-wrap: wrap !important;
             justify-content: center !important;
             gap: 8px 16px !important;
@@ -943,41 +924,41 @@ function vcpg_output_styles()
         }
 
         /* Mega Menu Mobile Popup */
-        .vcpg-mega-menu {
+        html body.vcpg-page .vcpg-mega-menu {
             padding: 16px !important;
         }
-        .vcpg-mega-grid {
+        html body.vcpg-page .vcpg-mega-grid {
             grid-template-columns: 1fr !important;
             gap: 4px !important;
         }
 
         /* Case Study & Grid Mobile Reflow */
-        .vp-casestudy-grid {
+        html body.vcpg-page .vp-casestudy-grid {
             grid-template-columns: 1fr !important;
             gap: 24px !important;
         }
 
         /* Footer Column Stacking */
-        html body footer.vp-footer > div,
-        html body .vp-footer > div {
+        html body.vcpg-page footer.vp-footer > div,
+        html body.vcpg-page .vp-footer > div {
             flex-direction: column !important;
             gap: 30px !important;
         }
 
         /* Button Sizing on Mobile */
-        .vcpg-dual-btn .vcpg-btn-pill {
+        html body.vcpg-page .vcpg-dual-btn .vcpg-btn-pill {
             padding: 0 14px !important;
             font-size: 13px !important;
             height: 36px !important;
         }
-        .vcpg-dual-btn .vcpg-btn-circle-left,
-        .vcpg-dual-btn .vcpg-btn-circle-right {
+        html body.vcpg-page .vcpg-dual-btn .vcpg-btn-circle-left,
+        html body.vcpg-page .vcpg-dual-btn .vcpg-btn-circle-right {
             height: 36px !important;
             width: 36px !important;
         }
 
         /* Back to Top button position on mobile */
-        .vcpg-back-to-top {
+        html body.vcpg-page .vcpg-back-to-top {
             bottom: 20px !important;
             right: 20px !important;
         }
