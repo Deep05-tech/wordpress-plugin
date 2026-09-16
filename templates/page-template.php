@@ -3,13 +3,11 @@ defined('ABSPATH') || exit;
 get_header();
 ?>
 <style>
-/* Hide legacy custom template header & footer to display single Elementor theme header & footer */
+/* Hide legacy custom template header & duplicate widgets to display single Elementor theme header */
 html body.vcpg-page .vp-topbar,
 html body.vcpg-page .vp-header,
 html body.vcpg-page header.vp-header,
 html body.vcpg-page .vp-nav,
-html body.vcpg-page .vp-footer,
-html body.vcpg-page footer.vp-footer,
 html body.vcpg-page #vcpg-header,
 html body.vcpg-page .elementor-element-e000003,
 html body.vcpg-page .elementor-element-e000043,
@@ -344,9 +342,75 @@ html body.vcpg-page .vcpg-marquee-container {
 
 html body.vcpg-page .elementor-widget-heading .elementor-heading-title { color: #0A3663; font-weight: 800 !important; }
 html body.vcpg-page h1.elementor-heading-title, html body.vcpg-page .vp-hero .elementor-heading-title { color: #02426A !important; }
-html body.vcpg-page .elementor-widget-text-editor { color: #334155; line-height: 1.8 !important; }
-html body.vcpg-page footer a, html body.vcpg-page .vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
-html body.vcpg-page footer a:hover, html body.vcpg-page .vp-footer a:hover { color: #FFFFFF !important; }
+/* Standardized modern Vispan footer display */
+html body.vcpg-page .vp-footer,
+html body.vcpg-page footer.vp-footer {
+    display: block !important;
+    background: #FFFFFF !important;
+    padding: 70px 0 30px !important;
+    border-top: 1px solid #E2E8F0 !important;
+    font-size: 0.92rem !important;
+    color: #334155 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+html body.vcpg-page .vp-footer-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr !important;
+    gap: 40px !important;
+}
+@media (max-width: 900px) {
+    html body.vcpg-page .vp-footer-grid {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+    }
+}
+html body.vcpg-page .vp-footer a,
+html body.vcpg-page footer.vp-footer a {
+    color: #475569 !important;
+    text-decoration: none !important;
+    transition: color 0.2s ease !important;
+}
+html body.vcpg-page .vp-footer a:hover,
+html body.vcpg-page footer.vp-footer a:hover {
+    color: #0A3663 !important;
+}
+html body.vcpg-page .vp-footer a[href^="tel:"] {
+    color: #0A3663 !important;
+    font-weight: 700 !important;
+}
+html body.vcpg-page .vp-footer a[href^="mailto:"] {
+    color: #0B63F6 !important;
+    font-weight: 600 !important;
+}
+
+/* Global Image Sizing & Aspect Ratio Protections */
+html body.vcpg-page img {
+    max-width: 100%;
+    height: auto;
+}
+html body.vcpg-page .vp-about-grid img,
+html body.vcpg-page .vp-about img {
+    max-height: 520px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+html body.vcpg-page .vp-cta-sec img,
+html body.vcpg-page .vp-cta img {
+    max-height: 380px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+}
+html body.vcpg-page .vp-casestudy-grid img,
+html body.vcpg-page .vp-casestudy img {
+    max-height: 500px !important;
+    width: 100% !important;
+    object-fit: cover !important;
+}
 
 /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
 html body.vcpg-page .ekit-template-content-header,

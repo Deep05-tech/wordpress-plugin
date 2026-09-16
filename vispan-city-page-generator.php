@@ -243,6 +243,72 @@ function vcpg_safe_preg_replace($pattern, $replacement, $subject) {
     return $res;
 }
 
+/**
+ * Returns the standardized modern 4-column Vispan footer HTML
+ */
+function vcpg_get_standard_footer_html() {
+    $logo_url = plugins_url('assets/VSPL-Web-Logo.webp', __FILE__);
+    $home_url = function_exists('home_url') ? home_url('/') : '/';
+    $year = date('Y');
+
+    $socials = array(
+        array('name' => 'Facebook',  'url' => 'https://www.facebook.com/VispanSolutions/', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>'),
+        array('name' => 'Instagram', 'url' => 'https://www.instagram.com/vispan_solutions/', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>'),
+        array('name' => 'Pinterest', 'url' => 'https://in.pinterest.com/vispansolutions/', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/></svg>'),
+        array('name' => 'X-Twitter', 'url' => 'https://twitter.com/vispansolutions', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'),
+        array('name' => 'LinkedIn',  'url' => 'https://www.linkedin.com/company/vispan-solutions/', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>'),
+        array('name' => 'YouTube',   'url' => 'https://www.youtube.com/user/vispansolutions', 'icon' => '<svg width="14" height="14" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>')
+    );
+    $socials_html = '<div style="display:flex;gap:8px;margin-top:14px;">';
+    foreach ($socials as $s) {
+        $socials_html .= '<a href="' . esc_url($s['url']) . '" target="_blank" rel="noopener noreferrer" style="width:34px;height:34px;border-radius:50%;background:#0A3663;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:opacity 0.2s;" title="' . esc_attr($s['name']) . '">' . $s['icon'] . '</a>';
+    }
+    $socials_html .= '</div>';
+
+    $services = array('Digital Marketing', 'Google Ads', 'Branding Services', 'SEO', 'Web Development', 'Social Media Management', 'Online Reputation Management', 'Video Production', 'VFX', 'CGI Services');
+    $services_html = '';
+    foreach ($services as $svc) {
+        $services_html .= '<li style="list-style:none;margin-bottom:8px;"><a style="color:#475569;text-decoration:none;font-size:0.9rem;" href="' . esc_url($home_url . '#services') . '">' . esc_html($svc) . '</a></li>';
+    }
+
+    $links = array('Home', 'About Us', 'Blog', 'Career', 'Contact Us', 'Financial Reporting');
+    $links_html = '';
+    foreach ($links as $l) {
+        $slug = function_exists('sanitize_title') ? sanitize_title($l) : strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $l)));
+        $links_html .= '<li style="list-style:none;margin-bottom:8px;"><a style="color:#475569;text-decoration:none;font-size:0.9rem;" href="' . esc_url($home_url . '#' . $slug) . '">' . esc_html($l) . '</a></li>';
+    }
+
+    return '<footer class="vp-footer" style="background:#FFFFFF;padding:70px 0 30px;border-top:1px solid #E2E8F0;font-size:0.92rem;color:#334155;">'
+         . '<div class="vp-container vp-footer-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:40px;">'
+         . '<div>'
+         . '<a href="' . esc_url($home_url) . '" class="vp-logo"><img src="' . esc_url($logo_url) . '" alt="Vispan Solutions" style="height:38px;width:auto;display:block;"></a>'
+         . '<p style="margin:18px 0 20px;color:#475569;line-height:1.65;max-width:320px;">Feel free to reach out if you want to collaborate with us, or simply have a chat.</p>'
+         . '<h4 style="color:#02426A;font-size:16px;font-weight:700;margin:0 0 10px 0;">Follow Us</h4>'
+         . $socials_html
+         . '</div>'
+         . '<div>'
+         . '<h4 style="margin-bottom:16px;color:#0A3663;font-weight:700;font-size:16px;">Services</h4>'
+         . '<ul style="padding:0;margin:0;list-style:none;line-height:2.1;">' . $services_html . '</ul>'
+         . '</div>'
+         . '<div>'
+         . '<h4 style="margin-bottom:16px;color:#0A3663;font-weight:700;font-size:16px;">Quick Links</h4>'
+         . '<ul style="padding:0;margin:0;list-style:none;line-height:2.1;">' . $links_html . '</ul>'
+         . '</div>'
+         . '<div>'
+         . '<h4 style="margin-bottom:16px;color:#0A3663;font-weight:700;font-size:16px;">Reach Us</h4>'
+         . '<div style="font-size:0.88rem;color:#475569;line-height:1.8;">'
+         . 'R K Complex, 16/28-Vijay Plot, Gondal Road, RAIKOT - 360002.<br><br>'
+         . 'Call: <a style="color:#0A3663;text-decoration:none;font-weight:700;" href="tel:+918485986860">+918485986860</a><br>'
+         . 'Email: <a style="color:#0B63F6;text-decoration:none;font-weight:600;" href="mailto:contact@vispansolutions.com">contact@vispansolutions.com</a>'
+         . '</div>'
+         . '</div>'
+         . '</div>'
+         . '<div class="vp-container" style="margin-top:50px;padding-top:24px;border-top:1px solid #E2E8F0;text-align:center;color:#64748B;font-size:0.85rem;">'
+         . '&copy; ' . esc_html($year) . ' Vispan Solutions Pvt. Ltd. All Rights Reserved.'
+         . '</div>'
+         . '</footer>';
+}
+
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
     if (!is_string($content) || empty($content)) {
@@ -332,35 +398,53 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9b. Intro Section
-        $intro_regex = '/<h2[^>]*>((?:Get .*?:\s*)?Why Your .*? Needs Online Marketing.*?)<\/h2>\s*<p[^>]*>(.*?)<\/p>/is';
+        $intro_regex = '/<h2[^>]*>((?:Get\b|Why .*?(?:Needs|Require|Choose)|Elevate).*?)<\/h2>(.*?)(?=<h2|<section|$)/is';
         if (preg_match($intro_regex, $content, $m)) {
+            $intro_title = trim(strip_tags($m[1]));
+            $intro_body = trim($m[2]);
+            $intro_body = preg_replace('/style=[\x22\x27][^\x22\x27]*[\x22\x27]/i', '', $intro_body);
             $intro_html = '<section class="vp-section vp-intro" style="background:#FFFFFF;padding:80px 0;text-align:center;">'
                         . '<div class="vp-container">'
-                        . '<h2 class="vp-title vp-title-center" style="color:#0A3663;font-size:36px;font-weight:800;line-height:1.25;max-width:920px;margin:0 auto 24px;text-align:center;">' . trim(strip_tags($m[1])) . '</h2>'
-                        . '<div class="vp-desc vp-desc-center" style="color:#334155;font-size:16px;line-height:1.8;max-width:960px;margin:0 auto;text-align:center;">' . trim($m[2]) . '</div>'
+                        . '<h2 class="vp-title vp-title-center" style="color:#0A3663;font-size:36px;font-weight:800;line-height:1.25;max-width:920px;margin:0 auto 24px;text-align:center;">' . esc_html($intro_title) . '</h2>'
+                        . '<div class="vp-desc vp-desc-center" style="color:#334155;font-size:16px;line-height:1.8;max-width:960px;margin:0 auto;text-align:center;">' . $intro_body . '</div>'
                         . '</div></section>';
             $content = vcpg_safe_preg_replace($intro_regex, $intro_html, $content);
         }
 
         // 9c. About / Value Section
-        $about_regex = '/(<h2[^>]*>(?:Creating a Strong Online Presence|About).*?<\/h2>)(.*?)(?:<style[^>]*>.*?<\/style>\s*)?(<p>\s*<img[^>]*src=[\x22\x27][^\x22\x27]*section-3\.webp[\x22\x27][^>]*>\s*<\/p>)/is';
+        $about_regex = '/(<h2[^>]*>(?:Creating a Strong Online Presence|About|Proven|Dedicated|Comprehensive|Transform|Unlock|Strategic|Elevate|Driving).*?<\/h2>)(.*?)(?:<style[^>]*>.*?<\/style>\s*)?(?:<p[^>]*>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*(?:section-3|image-1|image-2|section-1|section-5|demo)[^\x22\x27]*[\x22\x27][^>]*>)(?:\s*<\/p>)?/is';
         if (preg_match($about_regex, $content, $m)) {
             $about_title = trim(strip_tags($m[1]));
             $middle = $m[2];
-            $img_src = '';
+            $img_src = plugins_url('assets/section-3.webp', __FILE__);
             if (preg_match('/src=[\x22\x27]([^\x22\x27]+)[\x22\x27]/i', $m[3], $im)) {
                 $img_src = $im[1];
             }
-            preg_match_all('/(?:<p>\s*)?(<svg[^>]*>.*?<\/svg>)(?:\s*<\/p>)?\s*<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>(.*?)<\/p>/is', $middle, $cards, PREG_SET_ORDER);
+            preg_match_all('/(?:<p[^>]*>\s*)?(?:(<svg[^>]*>.*?<\/svg>)|(?:<span[^>]*class=[\x22\x27][^\x22\x27]*num[^\x22\x27]*[\x22\x27]>)?(0?\d+)(?:<\/span>)?|(?:<strong[^>]*>)?(0?\d+)(?:<\/strong>)?)(?:\s*<\/p>)?\s*<h[34][^>]*>(.*?)<\/h[34]>\s*(?:<p[^>]*>(.*?)<\/p>)?/is', $middle, $cards, PREG_SET_ORDER);
+            if (count($cards) < 2) {
+                preg_match_all('/(?:<p>\s*)?(<svg[^>]*>.*?<\/svg>)(?:\s*<\/p>)?\s*<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>(.*?)<\/p>/is', $middle, $cards, PREG_SET_ORDER);
+            }
             $first_svg_pos = strpos($middle, '<svg');
-            $intro_paragraphs = ($first_svg_pos !== false) ? substr($middle, 0, $first_svg_pos) : '';
+            $first_h3_pos = strpos($middle, '<h3');
+            $split_pos = false;
+            if ($first_svg_pos !== false && $first_h3_pos !== false) {
+                $split_pos = min($first_svg_pos, $first_h3_pos);
+            } elseif ($first_svg_pos !== false) {
+                $split_pos = $first_svg_pos;
+            } elseif ($first_h3_pos !== false) {
+                $split_pos = $first_h3_pos;
+            }
+            $intro_paragraphs = ($split_pos !== false) ? substr($middle, 0, $split_pos) : '';
 
             $cards_html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;">';
             foreach ($cards as $c) {
-                $cards_html .= '<div class="vp-feature-card" style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;padding:28px 24px;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;align-items:flex-start;text-align:left;box-sizing:border-box;">'
-                            . '<div style="margin-bottom:14px;">' . $c[1] . '</div>'
-                            . '<h3 style="margin:0 0 8px;font-size:17.5px;font-weight:700;color:#111827;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' . trim(strip_tags($c[2])) . '</h3>'
-                            . '<p style="margin:0;font-size:13.5px;color:#475569;line-height:1.55;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' . trim(strip_tags($c[3])) . '</p>'
+                $icon_or_num = !empty($c[1]) ? $c[1] : (!empty($c[2]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[2]) . '</div>' : (!empty($c[3]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[3]) . '</div>' : ''));
+                $title = isset($c[4]) ? trim(strip_tags($c[4])) : (isset($c[2]) ? trim(strip_tags($c[2])) : '');
+                $desc  = isset($c[5]) ? trim(strip_tags($c[5])) : (isset($c[3]) ? trim(strip_tags($c[3])) : '');
+                $cards_html .= '<div class="vp-feature-card" style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;padding:26px 22px;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;align-items:flex-start;text-align:left;box-sizing:border-box;">'
+                            . ($icon_or_num !== '' ? '<div style="margin-bottom:12px;">' . $icon_or_num . '</div>' : '')
+                            . '<h3 style="margin:0 0 8px;font-size:17.5px;font-weight:700;color:#111827;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' . $title . '</h3>'
+                            . '<p style="margin:0;font-size:13.5px;color:#475569;line-height:1.55;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' . $desc . '</p>'
                             . '</div>';
             }
             $cards_html .= '</div>';
@@ -376,14 +460,14 @@ function vcpg_clean_content_inline_styles($content) {
                         . '</p></div>'
                         . $cards_html
                         . '</div>'
-                        . '<div><img src="' . esc_url($img_src) . '" alt="About" style="width:100%;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.06);display:block;object-fit:cover;"></div>'
+                        . '<div><img src="' . esc_url($img_src) . '" alt="About" style="width:100%;max-height:520px;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.06);display:block;object-fit:cover;"></div>'
                         . '</div></section>';
 
             $content = vcpg_safe_preg_replace($about_regex, $about_html, $content);
         }
 
         // 9d. Services Section
-        $services_regex = '/(<h2[^>]*>(?:Services of|Our Services).*?<\/h2>)(.*?)(?=<h2[^>]*>(?:Distinct Advantages|Why Choose))/is';
+        $services_regex = '/(<h2[^>]*>(?!(?:Get|Why|Creating|Proven|About|Dedicated|Comprehensive|Transform|Unlock|Strategic|Elevate|Driving)\b)(?:Services of|Our Services|Spectrum of|Vennum of|Suite of|Range of|Offerings of|[^<]*\bServices\b)[^<]*<\/h2>)(.*?)(?=<h2[^>]*>(?:Distinct Advantages|Why Choose|Reasons to Select))/is';
         if (preg_match($services_regex, $content, $m)) {
             $svc_title = trim(strip_tags($m[1]));
             $svc_body = $m[2];
@@ -395,15 +479,19 @@ function vcpg_clean_content_inline_styles($content) {
                 $svc_items_raw = $svc_body;
             }
             preg_match_all('/(?:<p>\s*)?(<svg[^>]*>.*?<\/svg>)(?:\s*<\/p>)?\s*<h3[^>]*>(.*?)<\/h3>\s*(?:<p[^>]*>(.*?)<\/p>\s*)?<p[^>]*>(.*?)<\/p>/is', $svc_items_raw, $services, PREG_SET_ORDER);
+            if (count($services) < 2) {
+                preg_match_all('/<h3[^>]*>(.*?)<\/h3>\s*(?:<p[^>]*>(.*?)<\/p>\s*)?<p[^>]*>(.*?)<\/p>/is', $svc_items_raw, $services, PREG_SET_ORDER);
+            }
 
             $services_cards_html = '';
             foreach ($services as $s) {
-                $stitle = trim(strip_tags($s[2]));
+                $svg_icon = isset($s[1]) && strpos($s[1], '<svg') !== false ? '<div style="margin-bottom:16px;">' . $s[1] . '</div>' : '';
+                $stitle = trim(strip_tags($s[2] ?? ($s[1] ?? '')));
                 $ssub   = isset($s[3]) ? trim(strip_tags($s[3])) : '';
-                $sdesc  = trim(strip_tags($s[4]));
+                $sdesc  = isset($s[4]) ? trim(strip_tags($s[4])) : (isset($s[3]) ? trim(strip_tags($s[3])) : '');
 
                 $services_cards_html .= '<div class="vp-service-card" style="background:#FFFFFF;border-radius:16px;padding:36px 32px;box-shadow:0 10px 30px rgba(0,0,0,0.06);display:flex;flex-direction:column;text-align:left;height:100%;box-sizing:border-box;">'
-                                     . '<div style="margin-bottom:16px;">' . $s[1] . '</div>'
+                                     . $svg_icon
                                      . '<h3 style="margin:0 0 6px;font-size:20px;font-weight:700;color:#000000;">' . $stitle . '</h3>'
                                      . ($ssub !== '' ? '<div style="font-size:14px;font-weight:700;color:#1E293B;margin-bottom:12px;">' . $ssub . '</div>' : '')
                                      . '<p style="color:#475569;font-size:14px;line-height:1.65;margin:0;">' . $sdesc . '</p>'
@@ -422,7 +510,7 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9e. Advantages / Why Choose Section
-        $advantages_regex = '/(<h2[^>]*>(?:Distinct Advantages|Why Choose).*?<\/h2>)(.*?)(?=<h2[^>]*>Ready to get started)/is';
+        $advantages_regex = '/(<h2[^>]*>(?:Distinct Advantages|Why Choose|Reasons to Select).*?<\/h2>)(.*?)(?=<h2[^>]*>Ready to get started)/is';
         if (preg_match($advantages_regex, $content, $m)) {
             $adv_html = '<section class="vp-section vp-why-sec" style="background:#FFFFFF;padding:90px 0;">'
                       . '<div class="vp-container">'
@@ -432,7 +520,7 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9f. CTA Section ("Ready to get started?")
-        $cta_regex = '/<h2[^>]*>Ready to get started\?<\/h2>(.*?)(?=(?:<p>\s*)?<img[^>]*src=[\x22\x27][^\x22\x27]*case-study|<h2[^>]*>Case Study:)/is';
+        $cta_regex = '/<h2[^>]*>Ready to get started\?<\/h2>(.*?)(?=(?:<p[^>]*>\s*)?<img[^>]*src=[\x22\x27][^\x22\x27]*(?:case-study|section-5)|<h[23][^>]*>Case Study:)/is';
         if (preg_match($cta_regex, $content, $m)) {
             $cta_body = $m[1];
             $cta_img = plugins_url('assets/image-1.webp', __FILE__);
@@ -455,24 +543,24 @@ function vcpg_clean_content_inline_styles($content) {
                       . '</p></div>'
                       . '<a href="#contact" class="vp-btn-hero" style="background:#0A3663;color:#FFFFFF;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Claim Your Free Audit</a>'
                       . '</div>'
-                      . '<div><img src="' . esc_url($cta_img) . '" alt="Get Started" style="width:100%;border-radius:24px;display:block;object-fit:cover;"></div>'
+                      . '<div><img src="' . esc_url($cta_img) . '" alt="Get Started" style="width:100%;max-height:380px;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.08);display:block;object-fit:cover;"></div>'
                       . '</div></section>';
 
             $content = vcpg_safe_preg_replace($cta_regex, $cta_html, $content);
         }
 
         // 9g. Case Study Section
-        $cs_regex = '/(?:<p>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*case-study\.[^\x22\x27]*[\x22\x27][^>]*>)(?:\s*<\/p>)?\s*(<h[23][^>]*>Case Study:.*?<\/h[23]>)(.*?)(?=(?:<div[^>]*class=[\x22\x27][^\x22\x27]*marquee|<p>\s*<img[^>]*app-store|<h2[^>]*>What Clients Say))/is';
+        $cs_regex = '/(?:(?:<p[^>]*>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*(?:case-study|demo|section-5)[^\x22\x27]*[\x22\x27][^>]*>)(?:\s*<\/p>)?\s*)?(<h[23][^>]*>Case Study:.*?<\/h[23]>)(.*?)(?=(?:<div[^>]*class=[\x22\x27][^\x22\x27]*marquee|<p[^>]*>\s*<img[^>]*app-store|<h2[^>]*>What Clients Say|<section|<footer))/is';
         if (preg_match($cs_regex, $content, $m)) {
-            $cs_img_tag = $m[1];
+            $cs_img_tag = !empty($m[1]) ? $m[1] : '<img src="' . esc_url(plugins_url('assets/case-study.png', __FILE__)) . '" alt="Case Study" style="width:100%;height:100%;max-height:500px;object-fit:cover;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.08);display:block;">';
             $cs_title = $m[2];
             $cs_body = $m[3];
 
             $cs_html = '<section class="vp-section vp-casestudy-sec" style="background:#FFFFFF;padding:90px 0;">'
-                     . '<div class="vp-container" style="padding:0;">'
+                     . '<div class="vp-container">'
                      . '<div class="vp-casestudy-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:stretch;">'
-                     . '<div style="order:1;display:flex;height:100%;">' . $cs_img_tag . '</div>'
-                     . '<div style="order:2;">' . $cs_title . $cs_body . '</div>'
+                     . '<div style="order:1;display:flex;align-items:center;height:100%;">' . $cs_img_tag . '</div>'
+                     . '<div style="order:2;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:20px;padding:36px;box-shadow:0 4px 20px rgba(0,0,0,0.03);">' . $cs_title . $cs_body . '</div>'
                      . '</div></div></section>';
 
             $content = vcpg_safe_preg_replace($cs_regex, $cs_html, $content);
@@ -590,6 +678,12 @@ function vcpg_clean_content_inline_styles($content) {
             $content = vcpg_safe_preg_replace($contact_regex, $contact_html, $content);
         }
     }
+
+    // Ensure all generated pages end with the standardized modern Vispan footer
+    if (strpos($content, 'vp-footer-grid') === false && strpos($content, 'class="vp-footer"') === false && strpos($content, "class='vp-footer'") === false) {
+        $content .= vcpg_get_standard_footer_html();
+    }
+
     return $content;
 }
 
@@ -614,18 +708,127 @@ function vcpg_output_styles()
     }
 
     echo '<style id="vcpg-brand-overrides">
-    /* Hide legacy custom template header & footer to display single Elementor theme header & footer */
+    /* Hide legacy custom template duplicate header so only the theme header displays */
     html body.vcpg-page .vp-topbar,
     html body.vcpg-page .vp-header,
     html body.vcpg-page header.vp-header,
     html body.vcpg-page .vp-nav,
-    html body.vcpg-page .vp-footer,
-    html body.vcpg-page footer.vp-footer,
     html body.vcpg-page #vcpg-header,
-    html body.vcpg-page .elementor-element-e000003,
-    html body.vcpg-page .elementor-element-e000043,
-    html body.vcpg-page .elementor-element-e000044 {
+    html body.vcpg-page .elementor-element-e000003 {
         display: none !important;
+    }
+
+    /* Standardized modern Vispan footer display */
+    html body.vcpg-page .vp-footer,
+    html body.vcpg-page footer.vp-footer {
+        display: block !important;
+        background: #FFFFFF !important;
+        padding: 70px 0 30px !important;
+        border-top: 1px solid #E2E8F0 !important;
+        font-size: 0.92rem !important;
+        color: #334155 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    html body.vcpg-page .vp-footer-grid {
+        display: grid !important;
+        grid-template-columns: 2fr 1fr 1fr 1.5fr !important;
+        gap: 40px !important;
+    }
+    @media (max-width: 900px) {
+        html body.vcpg-page .vp-footer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+        }
+    }
+    html body.vcpg-page .vp-footer a,
+    html body.vcpg-page footer.vp-footer a {
+        color: #475569 !important;
+        text-decoration: none !important;
+        transition: color 0.2s ease !important;
+    }
+    html body.vcpg-page .vp-footer a:hover,
+    html body.vcpg-page footer.vp-footer a:hover {
+        color: #0A3663 !important;
+    }
+    html body.vcpg-page .vp-footer a[href^="tel:"] {
+        color: #0A3663 !important;
+        font-weight: 700 !important;
+    }
+    html body.vcpg-page .vp-footer a[href^="mailto:"] {
+        color: #0B63F6 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Global Image Sizing & Aspect Ratio Protections */
+    html body.vcpg-page img {
+        max-width: 100%;
+        height: auto;
+    }
+    html body.vcpg-page .vp-about-grid img,
+    html body.vcpg-page .vp-about img {
+        width: 100% !important;
+        max-height: 520px !important;
+        object-fit: cover !important;
+        border-radius: 24px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+        display: block !important;
+    }
+    html body.vcpg-page .vp-cta-sec img {
+        width: 100% !important;
+        max-height: 380px !important;
+        object-fit: cover !important;
+        border-radius: 24px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+        display: block !important;
+    }
+    html body.vcpg-page .vp-casestudy-grid img {
+        width: 100% !important;
+        max-height: 500px !important;
+        object-fit: cover !important;
+        border-radius: 24px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+        display: block !important;
+    }
+
+    /* Tabs & Panels Sizing and Styling */
+    html body.vcpg-page .vp-why-sec {
+        background: #FFFFFF !important;
+        padding: 90px 0 !important;
+    }
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"],
+    html body.vcpg-page .vp-tab-btn {
+        padding: 12px 24px !important;
+        border-radius: 50px !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        border: 1px solid #CBD5E1 !important;
+        background: #F8FAFC !important;
+        color: #0A3663 !important;
+    }
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"].active,
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: #000"],
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background:#000"],
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: rgb(0, 0, 0)"],
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: #0F172A"],
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background:#0F172A"],
+    html body.vcpg-page .vp-tab-active {
+        background: #02426A !important;
+        color: #FFFFFF !important;
+        border-color: #02426A !important;
+    }
+    html body.vcpg-page div[id^="tab-content-"] {
+        background: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 20px !important;
+        padding: 36px 40px !important;
+        margin-top: 24px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+        font-size: 15px !important;
+        line-height: 1.8 !important;
+        color: #334155 !important;
     }
 
     /* Core Layout & Colors for all VCPG pages */
@@ -986,10 +1189,10 @@ function vcpg_output_styles()
         margin-top: 0 !important;
     }
 
-    html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
-    html body.vcpg-page footer.vp-footer a:hover { color: #FFFFFF !important; }
-    html body.vcpg-page .vp-footer a[href^="tel:"] { color: #FFFFFF !important; font-weight: 700 !important; }
-    html body.vcpg-page .vp-footer a[href^="mailto:"] { color: #38BDF8 !important; font-weight: 600 !important; }
+    html body.vcpg-page footer.vp-footer a { color: #475569 !important; text-decoration: none !important; }
+    html body.vcpg-page footer.vp-footer a:hover { color: #0A3663 !important; }
+    html body.vcpg-page .vp-footer a[href^="tel:"] { color: #0A3663 !important; font-weight: 700 !important; }
+    html body.vcpg-page .vp-footer a[href^="mailto:"] { color: #0B63F6 !important; font-weight: 600 !important; }
     /* Fixed Centered Background Video Positioning System */
     html body.vcpg-page .elementor-background-video-container {
         position: absolute !important;
