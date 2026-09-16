@@ -67,12 +67,51 @@ function vcpg_activate_plugin() {
     if (function_exists('wp_clean_plugins_cache')) {
         wp_clean_plugins_cache(true);
     }
+    // Restore Elementor CSS embedding on activation
+    update_option('elementor_css_print_method', 'internal');
+    if (class_exists('\Elementor\Plugin')) {
+        if (isset(\Elementor\Plugin::$instance->files_manager)) {
+            \Elementor\Plugin::$instance->files_manager->clear_cache();
+        }
+        if (isset(\Elementor\Plugin::$instance->posts_css_manager)) {
+            \Elementor\Plugin::$instance->posts_css_manager->clear_cache();
+        }
+    }
 }
 
 register_deactivation_hook(__FILE__, 'vcpg_deactivate_plugin');
 function vcpg_deactivate_plugin() {
     delete_option('vcpg_job_activity');
     delete_transient('vcpg_bulk_job');
+}
+
+/*
+|--------------------------------------------------------------------------
+| Elementor Site CSS Recovery (Restores CSS on all built-in site pages)
+|--------------------------------------------------------------------------
+*/
+add_action('admin_init', 'vcpg_restore_elementor_site_css');
+add_action('init', 'vcpg_restore_elementor_site_css_fallback');
+
+function vcpg_restore_elementor_site_css() {
+    if (!get_option('vcpg_elementor_css_restored_v2')) {
+        update_option('elementor_css_print_method', 'internal');
+        if (class_exists('\Elementor\Plugin')) {
+            if (isset(\Elementor\Plugin::$instance->files_manager)) {
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+            }
+            if (isset(\Elementor\Plugin::$instance->posts_css_manager)) {
+                \Elementor\Plugin::$instance->posts_css_manager->clear_cache();
+            }
+        }
+        update_option('vcpg_elementor_css_restored_v2', time());
+    }
+}
+
+function vcpg_restore_elementor_site_css_fallback() {
+    if (get_option('elementor_css_print_method') !== 'internal') {
+        update_option('elementor_css_print_method', 'internal');
+    }
 }
 
 /*
