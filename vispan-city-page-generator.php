@@ -160,6 +160,22 @@ function vcpg_suppress_hfe_footer($enabled)
     return $enabled;
 }
 
+add_action('admin_init', 'vcpg_cleanup_stray_non_vcpg_meta');
+function vcpg_cleanup_stray_non_vcpg_meta() {
+    if (!get_option('vcpg_stray_meta_cleaned_v1')) {
+        global $wpdb;
+        $wpdb->query("
+            DELETE FROM {$wpdb->postmeta}
+            WHERE meta_key = '_vcpg_page'
+            AND post_id NOT IN (
+                SELECT DISTINCT post_id FROM {$wpdb->postmeta}
+                WHERE meta_key IN ('_vcpg_city', '_vcpg_service', '_vcpg_country', '_vcpg_state')
+            )
+        ");
+        update_option('vcpg_stray_meta_cleaned_v1', time());
+    }
+}
+
 add_filter('body_class', 'vcpg_add_body_class');
 function vcpg_add_body_class($classes)
 {
