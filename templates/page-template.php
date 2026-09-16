@@ -228,42 +228,49 @@ html body.vcpg-page #contact_proposal input[type="submit"] {
 html body.vcpg-page .vp-intro { background: #FFFFFF !important; text-align: center !important; }
 
 /* ABOUT */
-html body.vcpg-page .vp-about { background: #FFFFFF !important; }
+html body.vcpg-page .vp-about { background: #FFFFFF !important; padding: 80px 0 !important; }
 html body.vcpg-page .vp-about-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 60px !important; align-items: center !important; }
-html body.vcpg-page .vp-feature-card { background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important; padding: 18px !important; display: flex !important; gap: 14px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; }
+html body.vcpg-page .vp-feature-card { background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 18px !important; padding: 28px 24px !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; text-align: left !important; box-shadow: 0 6px 24px rgba(0,0,0,0.04) !important; box-sizing: border-box !important; }
 
 /* SERVICES */
-html body.vcpg-page .vp-services-sec { color: #FFFFFF !important; }
+html body.vcpg-page .vp-services-sec { background: #F8FAFC !important; padding: 90px 0 !important; }
 html body.vcpg-page .vp-services-sec .vp-title { color: #0A3663 !important; }
 html body.vcpg-page .vp-services-sec .vp-desc { color: #334155 !important; }
-html body.vcpg-page .vp-service-card { background: #FFFFFF !important; border-radius: 16px !important; padding: 28px !important; color: #0A3663 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important; }
+html body.vcpg-page .vp-service-card { background: #FFFFFF !important; border-radius: 16px !important; padding: 36px 32px !important; color: #0A3663 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important; display: flex !important; flex-direction: column !important; text-align: left !important; height: 100% !important; box-sizing: border-box !important; }
 
 /* WHY CHOOSE */
-html body.vcpg-page .vp-why-sec { background: #FFFFFF !important; }
+html body.vcpg-page .vp-why-sec { background: #FFFFFF !important; padding: 90px 0 !important; }
 html body.vcpg-page .vp-tabs { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: center !important; margin-top: 30px !important; }
 html body.vcpg-page .vp-tab-active { background: #FFFFFF !important; color: #081828 !important; border: 1px solid #CBD5E1 !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 700 !important; }
 html body.vcpg-page .vp-tab-dark { background: #0F172A !important; color: #FFFFFF !important; padding: 10px 20px !important; border-radius: 6px !important; font-weight: 600 !important; }
 
+/* CASE STUDY */
+html body.vcpg-page .vp-casestudy-sec { background: #FFFFFF !important; padding: 90px 0 !important; }
 html body.vcpg-page .vp-casestudy-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px !important; align-items: stretch !important; }
+html body.vcpg-page .vp-casestudy-grid img { width: 100% !important; height: 100% !important; min-height: 100% !important; border-radius: 24px !important; box-shadow: 0 12px 36px rgba(2,66,106,0.12) !important; display: block !important; object-fit: cover !important; margin: 0 !important; }
 
 /* LOGOS */
 html body.vcpg-page .vp-logos-bar { padding: 40px 0 !important; background: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; border-bottom: 1px solid #E2E8F0 !important; }
+html body.vcpg-page .vcpg-marquee-container { width: 100% !important; overflow: hidden !important; position: relative !important; padding: 16px 0 !important; }
+html body.vcpg-page .vcpg-marquee-track { display: flex !important; align-items: center !important; width: max-content !important; }
 
 /* TESTIMONIAL */
-html body.vcpg-page .vp-testi-sec { background: #FFFFFF !important; text-align: center !important; }
+html body.vcpg-page .vp-testi-sec { background: #FFFFFF !important; padding: 80px 0 !important; text-align: center !important; }
 
 /* CERTIFICATIONS */
-html body.vcpg-page .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
+html body.vcpg-page .vp-cert-sec { background: #F8FAFC !important; padding: 80px 0 !important; text-align: center !important; }
 
 /* CONTACT FORM */
+html body.vcpg-page .vp-contact-sec { background: #070D18 !important; padding: 90px 0 !important; }
+html body.vcpg-page .vp-contact-sec .vp-contact-card,
 html body.vcpg-page .vp-contact-card {
     max-width: 760px !important;
-    margin: 80px auto !important;
+    margin: 0 auto !important;
     background: #FFFFFF !important;
     border-radius: 20px !important;
     padding: 48px 36px !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
-    border: 2px solid #02426A !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
     box-sizing: border-box !important;
 }
 html body.vcpg-page .vp-contact-card h2,
