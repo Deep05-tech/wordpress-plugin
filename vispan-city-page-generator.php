@@ -139,18 +139,14 @@ function is_vcpg_generated_page($post_id = 0)
 
 /*
 |--------------------------------------------------------------------------
-| Suppress Elementor Pro & Hello Elementor Theme Global Header/Footer
-| ONLY on VCPG Generated Pages (Preserves VCPG's internal Header & Footer)
+| Elementor Pro & Hello Elementor Theme Global Header/Footer Display
+| (Allows VCPG generated pages to use the site's Elementor Theme Header & Footer)
 |--------------------------------------------------------------------------
 */
 add_filter('elementor/theme/should_render_location', 'vcpg_suppress_elementor_theme_locations', 99999, 3);
 function vcpg_suppress_elementor_theme_locations($should_render, $location_name, $location_manager)
 {
-    if (is_vcpg_generated_page()) {
-        if ($location_name === 'header' || $location_name === 'footer') {
-            return false;
-        }
-    }
+    // Return original $should_render so Elementor Theme headers and footers display natively.
     return $should_render;
 }
 
@@ -159,19 +155,20 @@ add_filter('hello_elementor_header_display', 'vcpg_suppress_hello_header_footer'
 add_filter('hello_elementor_footer_display', 'vcpg_suppress_hello_header_footer', 99999);
 function vcpg_suppress_hello_header_footer($display)
 {
-    return is_vcpg_generated_page() ? false : $display;
+    // Return original $display so Hello Elementor headers and footers display natively.
+    return $display;
 }
 
 add_filter('hfe_header_enabled', 'vcpg_suppress_hfe_header', 99999);
 function vcpg_suppress_hfe_header($enabled)
 {
-    return is_vcpg_generated_page() ? false : $enabled;
+    return $enabled;
 }
 
 add_filter('hfe_footer_enabled', 'vcpg_suppress_hfe_footer', 99999);
 function vcpg_suppress_hfe_footer($enabled)
 {
-    return is_vcpg_generated_page() ? false : $enabled;
+    return $enabled;
 }
 
 add_filter('body_class', 'vcpg_add_body_class');
@@ -249,7 +246,7 @@ function vcpg_output_styles()
     }
 
     echo '<style id="vcpg-brand-overrides">
-    /* Suppress outer Theme & Elementor Pro headers & footers ONLY on VCPG pages */
+    /* Theme & Elementor Pro header & footer display suppression (COMMENTED OUT FOR ELEMENTOR THEME INTEGRATION)
     html body.vcpg-page header,
     html body.vcpg-page #site-header,
     html body.vcpg-page .site-header,
@@ -270,6 +267,7 @@ function vcpg_output_styles()
     #colophon {
         display: none !important;
     }
+    */
 
     html body footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
     html body footer.vp-footer a:hover { color: #FFFFFF !important; }

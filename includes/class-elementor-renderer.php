@@ -36,10 +36,14 @@ class VCPG_Elementor_Renderer
      */
     public function build_elementor_content( array $template_json_content, array $data ): ?array
     {
-        if ( empty( $template_json_content ) ) {
-            error_log( 'VCPG_Elementor_Renderer: empty template_json_content — cannot render.' );
-            return null;
-        }
+        // Filter out custom header section (e000003) and custom footer sections (e000043, e000044)
+        // to use the site's native Elementor Theme header & footer.
+        $template_json_content = array_values( array_filter( $template_json_content, function( $section ) {
+            if ( isset( $section['id'] ) && in_array( $section['id'], array( 'e000003', 'e000043', 'e000044' ), true ) ) {
+                return false;
+            }
+            return true;
+        } ) );
 
         // ------------------------------------------------------------------ //
         // 1.  Enforce expected array lengths for grid slots (slice/pad).

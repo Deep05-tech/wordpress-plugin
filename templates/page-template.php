@@ -1,10 +1,7 @@
 <?php
 defined('ABSPATH') || exit;
-?><!DOCTYPE html>
-<html <?php language_attributes(); ?>>
-<head>
-<meta charset="<?php bloginfo('charset'); ?>">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+get_header();
+?>
 <style>
 html, body { margin: 0; padding: 0; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .elementor-widget-heading .elementor-heading-title { color: #0A3663; font-weight: 800 !important; }
@@ -184,10 +181,6 @@ html.lenis, html.lenis body {
 }
 
 </style>
-<?php wp_head(); ?>
-</head>
-<body <?php body_class(); ?>>
-<?php wp_body_open(); ?>
 <div class="vcpg-custom-cursor-dot"></div>
 <div class="vcpg-custom-cursor-outline"></div>
 
@@ -230,7 +223,7 @@ html.lenis, html.lenis body {
 while(have_posts()): the_post();
     the_content();
 endwhile;
-wp_footer();
+get_footer();
 ?>
 
 <!-- Lenis Smooth Scrolling CDN -->

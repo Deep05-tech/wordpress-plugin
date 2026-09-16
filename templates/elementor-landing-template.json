@@ -5,6 +5,7 @@
     "content": [
         {
             "id": "e000003",
+            "_comment": "COMMENTED OUT TO USE ELEMENTOR THEME HEADER",
             "elType": "section",
             "settings": {
                 "background_color": "#FFFFFF",
@@ -901,6 +902,7 @@
         },
         {
             "id": "e000043",
+            "_comment": "COMMENTED OUT TO USE ELEMENTOR THEME FOOTER",
             "elType": "section",
             "settings": {
                 "background_color": "#FFFFFF",
@@ -996,6 +998,7 @@
         },
         {
             "id": "e000044",
+            "_comment": "COMMENTED OUT TO USE ELEMENTOR THEME FOOTER",
             "elType": "section",
             "settings": {
                 "background_color": "#FFFFFF",
