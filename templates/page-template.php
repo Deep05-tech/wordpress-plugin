@@ -42,6 +42,29 @@ html body.vcpg-page .vp-hero {
     margin-top: 0 !important;
 }
 
+/* Hero inquiry form card border */
+html body.vcpg-page .vp-hero-form-card,
+html body.vcpg-page .vp-hero-right {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 2px solid #02426A !important;
+    border-radius: 30px !important;
+    padding: 35px 30px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+    box-sizing: border-box !important;
+}
+
+/* Suppress unwanted portfolio section */
+html body.vcpg-page .vp-portfolio-sec {
+    display: none !important;
+}
+
+/* Suppress unwanted empty capsule box above hero header */
+html body.vcpg-page .vp-hero div[style*="border-radius:30px"]:empty,
+html body.vcpg-page .vp-hero div[style*="border-radius: 30px"]:empty,
+html body.vcpg-page .vp-hero-city-label {
+    display: none !important;
+}
+
 /* Custom Interactive Cursor Styles */
 .vcpg-custom-cursor-dot {
   display: none !important;

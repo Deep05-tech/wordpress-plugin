@@ -231,6 +231,12 @@ function vcpg_clean_content_inline_styles($content) {
         $content = preg_replace('/<p>\s*<!--\s*VCPG-TEMPLATE.*?-->\s*<!--\s*1\.\s*TOPBAR\s*&\s*HEADER\s*-->\s*<\/p>/is', '', $content);
         $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>\s*(?:<\/p>)?\s*(?:<\/div>\s*){1,3}/is', '', $content);
         $content = preg_replace('/<div>\s*Vispan Solutions Pvt\. Ltd\.\s*<\/div>/is', '', $content);
+        // 6. Strip unwanted portfolio section if present in post_content
+        $content = preg_replace('/<!--\s*8\.\s*PORTFOLIO\s*-->\s*<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
+        $content = preg_replace('/<section[^>]*class=["\'][^"\']*vp-portfolio-sec[^"\']*["\'][^>]*>.*?<\/section>/is', '', $content);
+        // 7. Strip unwanted capsule box above hero header
+        $content = preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
+        $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
     }
     return $content;
 }
@@ -312,6 +318,29 @@ function vcpg_output_styles()
         position: relative !important;
         z-index: 1 !important;
         margin-top: 0 !important;
+    }
+
+    /* Hero inquiry form card border */
+    html body.vcpg-page .vp-hero-form-card,
+    html body.vcpg-page .vp-hero-right {
+        background: rgba(255, 255, 255, 0.92) !important;
+        border: 2px solid #02426A !important;
+        border-radius: 30px !important;
+        padding: 35px 30px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Suppress unwanted portfolio section */
+    html body.vcpg-page .vp-portfolio-sec {
+        display: none !important;
+    }
+
+    /* Suppress unwanted empty capsule box above hero header */
+    html body.vcpg-page .vp-hero div[style*="border-radius:30px"]:empty,
+    html body.vcpg-page .vp-hero div[style*="border-radius: 30px"]:empty,
+    html body.vcpg-page .vp-hero-city-label {
+        display: none !important;
     }
 
     html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
