@@ -293,6 +293,49 @@ html body.vcpg-page .vp-hero-city-label {
     display: none !important;
 }
 
+/* Universal Layout Standards for All Generated Pages */
+html body.vcpg-page .vp-services-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;
+}
+@media (max-width: 768px) {
+    html body.vcpg-page .vp-services-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+html body.vcpg-page .vp-cert-card {
+    max-width: 1180px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 48px !important;
+    box-sizing: border-box !important;
+    padding: 24px 32px !important;
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.04) !important;
+}
+@media (max-width: 900px) {
+    html body.vcpg-page .vp-cert-card {
+        flex-direction: column !important;
+        gap: 24px !important;
+        padding: 20px !important;
+    }
+}
+
+/* Fallback: Ensure partner logos never stack vertically */
+html body.vcpg-page .vp-logos-bar,
+html body.vcpg-page .vcpg-marquee-container {
+    display: flex !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    align-items: center !important;
+}
+
 @media (max-width: 900px) {
   html body.vcpg-page .vp-hero-grid, html body.vcpg-page .vp-about-grid, html body.vcpg-page .vp-footer-grid, html body.vcpg-page .vp-casestudy-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
   html body.vcpg-page .vp-casestudy-grid > div:first-child { order: 1 !important; }
