@@ -67,123 +67,12 @@ function vcpg_activate_plugin() {
     if (function_exists('wp_clean_plugins_cache')) {
         wp_clean_plugins_cache(true);
     }
-    // Restore Elementor CSS embedding on activation
-    update_option('elementor_css_print_method', 'internal');
-    if (class_exists('\Elementor\Plugin')) {
-        if (isset(\Elementor\Plugin::$instance->files_manager)) {
-            \Elementor\Plugin::$instance->files_manager->clear_cache();
-        }
-        if (isset(\Elementor\Plugin::$instance->posts_css_manager)) {
-            \Elementor\Plugin::$instance->posts_css_manager->clear_cache();
-        }
-    }
 }
 
 register_deactivation_hook(__FILE__, 'vcpg_deactivate_plugin');
 function vcpg_deactivate_plugin() {
     delete_option('vcpg_job_activity');
     delete_transient('vcpg_bulk_job');
-}
-
-/*
-|--------------------------------------------------------------------------
-| Elementor Site CSS Recovery (Restores CSS on all built-in site pages)
-|--------------------------------------------------------------------------
-*/
-add_action('admin_init', 'vcpg_restore_elementor_site_css');
-add_action('init', 'vcpg_restore_elementor_site_css_fallback');
-
-function vcpg_restore_elementor_site_css() {
-    if (!get_option('vcpg_elementor_css_restored_v2')) {
-        update_option('elementor_css_print_method', 'internal');
-        if (class_exists('\Elementor\Plugin')) {
-            if (isset(\Elementor\Plugin::$instance->files_manager)) {
-                \Elementor\Plugin::$instance->files_manager->clear_cache();
-            }
-            if (isset(\Elementor\Plugin::$instance->posts_css_manager)) {
-                \Elementor\Plugin::$instance->posts_css_manager->clear_cache();
-            }
-        }
-        update_option('vcpg_elementor_css_restored_v2', time());
-    }
-}
-
-function vcpg_restore_elementor_site_css_fallback() {
-    if (get_option('elementor_css_print_method') !== 'internal') {
-        update_option('elementor_css_print_method', 'internal');
-    }
-}
-
-add_action('admin_init', 'vcpg_auto_restore_builtin_pages');
-function vcpg_auto_restore_builtin_pages() {
-    if (!get_option('vcpg_builtin_pages_restored_v1')) {
-        global $wpdb;
-        
-        // 1. Delete all stray _vcpg_page flags from non-city pages
-        $wpdb->query("
-            DELETE FROM {$wpdb->postmeta}
-            WHERE meta_key = '_vcpg_page'
-            AND post_id NOT IN (
-                SELECT DISTINCT post_id FROM {$wpdb->postmeta}
-                WHERE meta_key IN ('_vcpg_city', '_vcpg_service', '_vcpg_country')
-            )
-        ");
-
-        // 2. Find all non-city pages in wp_posts
-        $non_city_pages = $wpdb->get_results("
-            SELECT ID, post_title, post_name, post_modified
-            FROM {$wpdb->posts}
-            WHERE post_type = 'page'
-            AND post_status IN ('publish', 'draft', 'pending', 'private')
-            AND ID NOT IN (
-                SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_vcpg_city'
-            )
-        ");
-
-        if (!empty($non_city_pages)) {
-            foreach ($non_city_pages as $p) {
-                // Check if this page has revisions
-                $revisions = wp_get_post_revisions($p->ID);
-                if (!empty($revisions)) {
-                    foreach ($revisions as $rev) {
-                        $rev_elem = get_post_meta($rev->ID, '_elementor_data', true);
-                        if (!empty($rev_elem) && is_string($rev_elem)) {
-                            $decoded = json_decode($rev_elem, true);
-                            if (is_array($decoded) && !empty($decoded)) {
-                                // Restore pristine _elementor_data with wp_slash()
-                                update_post_meta($p->ID, '_elementor_data', wp_slash($rev_elem));
-                                
-                                // Restore post_content if revision has it
-                                if (!empty($rev->post_content)) {
-                                    $wpdb->update($wpdb->posts, array('post_content' => $rev->post_content), array('ID' => $p->ID));
-                                }
-
-                                // Restore page settings if present
-                                $rev_settings = get_post_meta($rev->ID, '_elementor_page_settings', true);
-                                if (!empty($rev_settings)) {
-                                    update_post_meta($p->ID, '_elementor_page_settings', $rev_settings);
-                                }
-                                break; // Restored latest valid revision
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. Clear and re-compile Elementor CSS files
-        update_option('elementor_css_print_method', 'internal');
-        if (class_exists('\Elementor\Plugin')) {
-            if (isset(\Elementor\Plugin::$instance->files_manager)) {
-                \Elementor\Plugin::$instance->files_manager->clear_cache();
-            }
-            if (isset(\Elementor\Plugin::$instance->posts_css_manager)) {
-                \Elementor\Plugin::$instance->posts_css_manager->clear_cache();
-            }
-        }
-
-        update_option('vcpg_builtin_pages_restored_v1', time());
-    }
 }
 
 /*
