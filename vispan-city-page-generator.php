@@ -110,53 +110,21 @@ function is_vcpg_generated_page($post_id = 0)
         return false;
     }
 
-    // 1. Direct postmeta check
+    // 1. Direct explicit VCPG postmeta check
     if (get_post_meta($post_id, '_vcpg_page', true) === '1') {
         return true;
     }
+
     // 2. Specific VCPG location meta check
     if (get_post_meta($post_id, '_vcpg_city', true) || get_post_meta($post_id, '_vcpg_service', true) || get_post_meta($post_id, '_vcpg_country', true) || get_post_meta($post_id, '_vcpg_state', true) || get_post_meta($post_id, '_vcpg_county', true)) {
-        update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
+
     // 3. Page Template check
     if (get_post_meta($post_id, '_wp_page_template', true) === 'templates/page-template.php') {
-        update_post_meta($post_id, '_vcpg_page', '1');
         return true;
     }
-    // 4. Strict VCPG container markers check (NO generic domain string checks)
-    $post_obj = get_post($post_id);
-    if ($post_obj && $post_obj->post_type === 'page') {
-        $content = $post_obj->post_content;
-        if (empty($content)) {
-            $elem_data = get_post_meta($post_id, '_elementor_data', true);
-            if (is_array($elem_data)) {
-                $content = wp_json_encode($elem_data);
-            } elseif (is_string($elem_data)) {
-                $content = $elem_data;
-            }
-        }
-        if (is_string($content) && (
-            strpos($content, 'vpg-container') !== false ||
-            strpos($content, 'hero_proposal') !== false ||
-            strpos($content, 'contact_proposal') !== false ||
-            strpos($content, 'vcpg-dual-btn') !== false
-        )) {
-            update_post_meta($post_id, '_vcpg_page', '1');
-            return true;
-        }
-        // 5. Parent page ISO country code slug check with location meta verification
-        if ($post_obj->post_parent > 0) {
-            $parent = get_post($post_obj->post_parent);
-            if ($parent) {
-                $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp');
-                if (in_array(strtolower($parent->post_name), $known_cc) && get_post_meta($parent->ID, '_vcpg_country', true)) {
-                    update_post_meta($post_id, '_vcpg_page', '1');
-                    return true;
-                }
-            }
-        }
-    }
+
     return false;
 }
 
@@ -169,7 +137,6 @@ function is_vcpg_generated_page($post_id = 0)
 add_filter('elementor/theme/should_render_location', 'vcpg_suppress_elementor_theme_locations', 99999, 3);
 function vcpg_suppress_elementor_theme_locations($should_render, $location_name, $location_manager)
 {
-    // Return original $should_render so Elementor Theme headers and footers display natively.
     return $should_render;
 }
 
@@ -178,7 +145,6 @@ add_filter('hello_elementor_header_display', 'vcpg_suppress_hello_header_footer'
 add_filter('hello_elementor_footer_display', 'vcpg_suppress_hello_header_footer', 99999);
 function vcpg_suppress_hello_header_footer($display)
 {
-    // Return original $display so Hello Elementor headers and footers display natively.
     return $display;
 }
 
@@ -202,73 +168,6 @@ function vcpg_add_body_class($classes)
         $classes[] = 'is-vcpg-page';
     }
     return $classes;
-}
-
-/*
-|--------------------------------------------------------------------------
-| One-Time Legacy Metadata Sync Utility for 3500+ Generated Pages
-|--------------------------------------------------------------------------
-*/
-add_action('admin_init', 'vcpg_sync_legacy_page_meta');
-function vcpg_sync_legacy_page_meta()
-{
-    if (!get_option('vcpg_legacy_meta_synced_v1')) {
-        global $wpdb;
-        $wpdb->query("
-            INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value)
-            SELECT DISTINCT post_id, '_vcpg_page', '1'
-            FROM {$wpdb->postmeta}
-            WHERE meta_key IN ('_vcpg_city', '_vcpg_service', '_vcpg_country')
-            AND post_id NOT IN (
-                SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_vcpg_page'
-            )
-        ");
-        update_option('vcpg_legacy_meta_synced_v1', time());
-    }
-}
-
-add_action('admin_init', 'vcpg_clean_db_legacy_header_footer');
-function vcpg_clean_db_legacy_header_footer()
-{
-    if (!get_option('vcpg_db_cleaned_header_footer_v1')) {
-        global $wpdb;
-        $posts = $wpdb->get_col("
-            SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_vcpg_page' AND meta_value = '1'
-        ");
-        if (!empty($posts)) {
-            foreach ($posts as $pid) {
-                $pid = (int)$pid;
-                $elem_raw = get_post_meta($pid, '_elementor_data', true);
-                if (!empty($elem_raw)) {
-                    $elem_data = is_array($elem_raw) ? $elem_raw : json_decode($elem_raw, true);
-                    if (is_array($elem_data)) {
-                        $filtered = array_values(array_filter($elem_data, function($section) {
-                            if (isset($section['id']) && in_array($section['id'], array('e000003', 'e000043', 'e000044'), true)) {
-                                return false;
-                            }
-                            return true;
-                        }));
-                        update_post_meta($pid, '_elementor_data', wp_json_encode($filtered));
-                    }
-                }
-                $post = get_post($pid);
-                if ($post && !empty($post->post_content)) {
-                    $content = $post->post_content;
-                    $orig_len = strlen($content);
-                    $content = preg_replace('/<div[^>]*class=["\'][^"\']*vp-topbar[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
-                    $content = preg_replace('/<header[^>]*class=["\'][^"\']*vp-header[^"\']*["\'][^>]*>.*?<\/header>/is', '', $content);
-                    $content = preg_replace('/<section[^>]*data-id=["\']e000003["\'][^>]*>.*?<\/section>/is', '', $content);
-                    $content = preg_replace('/<footer[^>]*class=["\'][^"\']*vp-footer[^"\']*["\'][^>]*>.*?<\/footer>/is', '', $content);
-                    $content = preg_replace('/<section[^>]*data-id=["\']e000043["\'][^>]*>.*?<\/section>/is', '', $content);
-                    $content = preg_replace('/<section[^>]*data-id=["\']e000044["\'][^>]*>.*?<\/section>/is', '', $content);
-                    if (strlen($content) !== $orig_len) {
-                        $wpdb->update($wpdb->posts, array('post_content' => $content), array('ID' => $pid));
-                    }
-                }
-            }
-        }
-        update_option('vcpg_db_cleaned_header_footer_v1', time());
-    }
 }
 
 /*
@@ -344,12 +243,12 @@ function vcpg_output_styles()
     }
     */
 
-    html body footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
-    html body footer.vp-footer a:hover { color: #FFFFFF !important; }
-    html body .vp-footer a[href^="tel:"] { color: #FFFFFF !important; font-weight: 700 !important; }
-    html body .vp-footer a[href^="mailto:"] { color: #38BDF8 !important; font-weight: 600 !important; }
+    html body.vcpg-page footer.vp-footer a { color: #CBD5E1 !important; text-decoration: none !important; }
+    html body.vcpg-page footer.vp-footer a:hover { color: #FFFFFF !important; }
+    html body.vcpg-page .vp-footer a[href^="tel:"] { color: #FFFFFF !important; font-weight: 700 !important; }
+    html body.vcpg-page .vp-footer a[href^="mailto:"] { color: #38BDF8 !important; font-weight: 600 !important; }
     /* Fixed Centered Background Video Positioning System */
-    .elementor-background-video-container {
+    html body.vcpg-page .elementor-background-video-container {
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
@@ -361,9 +260,9 @@ function vcpg_output_styles()
         z-index: 0 !important;
         pointer-events: none !important;
     }
-    .elementor-background-video-hosted,
-    .elementor-background-video,
-    video.elementor-background-video-hosted {
+    html body.vcpg-page .elementor-background-video-hosted,
+    html body.vcpg-page .elementor-background-video,
+    html body.vcpg-page video.elementor-background-video-hosted {
         position: absolute !important;
         top: 50% !important;
         left: 50% !important;
@@ -377,12 +276,12 @@ function vcpg_output_styles()
         pointer-events: none !important;
         display: block !important;
     }
-    .elementor-element-e00000b {
+    html body.vcpg-page .elementor-element-e00000b {
         position: relative !important;
         z-index: 1 !important;
         padding-top: 190px !important;
     }
-    .elementor-element-e00000b .elementor-container {
+    html body.vcpg-page .elementor-element-e00000b .elementor-container {
         position: relative !important;
         z-index: 2 !important;
     }
@@ -394,34 +293,34 @@ function vcpg_output_styles()
     }
     
     /* Typography Spacing Legibility Overrides */
-    html body h1, html body h2, html body h3, html body h4, html body h5, html body h6 {
+    html body.vcpg-page h1, html body.vcpg-page h2, html body.vcpg-page h3, html body.vcpg-page h4, html body.vcpg-page h5, html body.vcpg-page h6 {
         letter-spacing: 0.02em !important;
         word-spacing: 0.08em !important;
     }
-    html body p, html body li, html body label, html body input, html body textarea, html body select {
+    html body.vcpg-page p, html body.vcpg-page li, html body.vcpg-page label, html body.vcpg-page input, html body.vcpg-page textarea, html body.vcpg-page select {
         letter-spacing: 0.01em !important;
         word-spacing: 0.05em !important;
     }
     
-    .vp-casestudy-grid {
+    html body.vcpg-page .vp-casestudy-grid {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 50px !important;
         align-items: stretch !important;
     }
     @media (max-width: 900px) {
-        .vp-casestudy-grid {
+        html body.vcpg-page .vp-casestudy-grid {
             grid-template-columns: 1fr !important;
             gap: 40px !important;
         }
-        .vp-casestudy-grid > div:first-child { order: 1 !important; }
-        .vp-casestudy-grid > div:last-child { order: 2 !important; }
+        html body.vcpg-page .vp-casestudy-grid > div:first-child { order: 1 !important; }
+        html body.vcpg-page .vp-casestudy-grid > div:last-child { order: 2 !important; }
     }
 
     /* ==========================================================================
        Global Nav Item Safety - Prevent Text Line-Wrapping inside Nav Links
        ========================================================================== */
-    .vcpg-nav-link {
+    html body.vcpg-page .vcpg-nav-link {
         white-space: nowrap !important;
         word-break: keep-all !important;
     }
