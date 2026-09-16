@@ -379,18 +379,29 @@ html body.vcpg-page .vp-casestudy img {
     object-fit: cover !important;
 }
 
-/* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
+/* Smooth scrolling enabled for page */
+html.vcpg-page,
+html body.vcpg-page {
+    scroll-behavior: smooth !important;
+}
+
+/* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
 html body.vcpg-page .ekit-template-content-header,
 html body.vcpg-page header.elementskit-menu-container,
 html body.vcpg-page .elementor-location-header,
 html body.vcpg-page .elementor-35930 {
-    position: relative !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     z-index: 999999 !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     background-color: #FFFFFF !important;
-    width: 100% !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+    transform: none !important;
 }
 html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb9496 {
     position: relative !important;
@@ -399,17 +410,20 @@ html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb949
     visibility: visible !important;
     opacity: 1 !important;
     width: 100% !important;
+    transform: none !important;
 }
 html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     background-color: #FFFFFF !important;
+    transform: none !important;
 }
 html body.vcpg-page .vp-hero {
     position: relative !important;
     z-index: 1 !important;
     margin-top: 0 !important;
+    padding-top: 190px !important;
 }
 
 /* Custom Interactive Cursor Styles */
@@ -829,41 +843,90 @@ document.addEventListener('DOMContentLoaded', () => {
   observer.observe(document.body, { childList: true, subtree: true });
 });
 
-// Scroll Progress and Back-to-Top Logic
+// Header Controller & Smooth Scrolling Handler
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Ensure Elementor / ElementsKit header is visible immediately at scroll 0 & pinned to top
+  const header = document.querySelector('.ekit-template-content-header, .elementor-35930, header.elementskit-menu-container');
+  if (header) {
+    header.style.position = 'fixed';
+    header.style.top = '0';
+    header.style.left = '0';
+    header.style.width = '100%';
+    header.style.zIndex = '999999';
+    header.style.display = 'block';
+    header.style.visibility = 'visible';
+    header.style.opacity = '1';
+    header.style.backgroundColor = '#FFFFFF';
+
+    // If smooth-wrapper is used by GSAP ScrollSmoother, move header outside to prevent transform clipping
+    const smoothWrapper = document.getElementById('smooth-wrapper');
+    if (smoothWrapper && smoothWrapper.contains(header)) {
+      document.body.prepend(header);
+    }
+  }
+
+  // 2. Smooth scrolling for all internal anchor links (#contact, #about, #services, etc.)
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      if (!href || href === '#' || href === '#0') return;
+      const target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        const curHeader = document.querySelector('.ekit-template-content-header, .elementor-35930, header');
+        const headerH = curHeader ? curHeader.getBoundingClientRect().height : 100;
+        const targetTop = target.getBoundingClientRect().top + window.pageYOffset - headerH;
+
+        if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
+          ScrollSmoother.get().scrollTo(target, true, 'top ' + headerH + 'px');
+        } else {
+          window.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: 'smooth'
+          });
+        }
+      }
+    });
+  });
+
+  // 3. Scroll Progress and Back-to-Top Logic
   const backToTop = document.querySelector('.vcpg-back-to-top');
   const progressBar = document.querySelector('.vcpg-progress-bar');
   
-  if (!backToTop || !progressBar) return;
+  if (backToTop && progressBar) {
+    const totalLength = 276.46; // 2 * PI * r
+    progressBar.style.strokeDasharray = totalLength;
+    progressBar.style.strokeDashoffset = totalLength;
 
-  const totalLength = 276.46; // 2 * PI * r
-  progressBar.style.strokeDasharray = totalLength;
-  progressBar.style.strokeDashoffset = totalLength;
+    const updateScrollProgress = () => {
+      const scrollPosition = window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+      
+      if (documentHeight > 0) {
+        const progress = scrollPosition / documentHeight;
+        const offset = totalLength - (progress * totalLength);
+        progressBar.style.strokeDashoffset = offset;
+      }
 
-  const updateScrollProgress = () => {
-    const scrollPosition = window.scrollY;
-    const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
-    
-    if (documentHeight > 0) {
-      const progress = scrollPosition / documentHeight;
-      const offset = totalLength - (progress * totalLength);
-      progressBar.style.strokeDashoffset = offset;
-    }
+      if (scrollPosition > 150) {
+        backToTop.classList.add('is-active');
+      } else {
+        backToTop.classList.remove('is-active');
+      }
+    };
 
-    if (scrollPosition > 150) {
-      backToTop.classList.add('is-active');
-    } else {
-      backToTop.classList.remove('is-active');
-    }
-  };
+    window.addEventListener('scroll', updateScrollProgress);
+    window.addEventListener('resize', updateScrollProgress);
+    updateScrollProgress();
 
-  window.addEventListener('scroll', updateScrollProgress);
-  window.addEventListener('resize', updateScrollProgress);
-  updateScrollProgress();
-
-  backToTop.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+    backToTop.addEventListener('click', () => {
+      if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
+        ScrollSmoother.get().scrollTo(0, true);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
 });
 </script>
 <?php

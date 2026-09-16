@@ -400,6 +400,52 @@ function vcpg_output_styles()
         display: none !important;
     }
 
+    /* Smooth scrolling enabled for page */
+    html.vcpg-page,
+    html body.vcpg-page {
+        scroll-behavior: smooth !important;
+    }
+
+    /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
+    html body.vcpg-page .ekit-template-content-header,
+    html body.vcpg-page header.elementskit-menu-container,
+    html body.vcpg-page .elementor-location-header,
+    html body.vcpg-page .elementor-35930 {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 999999 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+        transform: none !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb9496 {
+        position: relative !important;
+        z-index: 999999 !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        transform: none !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #FFFFFF !important;
+        transform: none !important;
+    }
+    html body.vcpg-page .vp-hero {
+        position: relative !important;
+        z-index: 1 !important;
+        margin-top: 0 !important;
+        padding-top: 190px !important;
+    }
 
     /* Global Image Sizing & Aspect Ratio Protections */
     html body.vcpg-page img {
@@ -797,18 +843,29 @@ function vcpg_output_styles()
       html body.vcpg-page .vp-casestudy-grid > div:last-child { order: 2 !important; }
     }
 
-    /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 */
+    /* Smooth scrolling enabled for page */
+    html.vcpg-page,
+    html body.vcpg-page {
+        scroll-behavior: smooth !important;
+    }
+
+    /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
     html body.vcpg-page .ekit-template-content-header,
     html body.vcpg-page header.elementskit-menu-container,
     html body.vcpg-page .elementor-location-header,
     html body.vcpg-page .elementor-35930 {
-        position: relative !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
         z-index: 999999 !important;
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
         background-color: #FFFFFF !important;
-        width: 100% !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+        transform: none !important;
     }
     html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8eb9496 {
         position: relative !important;
@@ -817,17 +874,20 @@ function vcpg_output_styles()
         visibility: visible !important;
         opacity: 1 !important;
         width: 100% !important;
+        transform: none !important;
     }
     html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 {
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
         background-color: #FFFFFF !important;
+        transform: none !important;
     }
     html body.vcpg-page .vp-hero {
         position: relative !important;
         z-index: 1 !important;
         margin-top: 0 !important;
+        padding-top: 190px !important;
     }
 
     /* Fixed Centered Background Video Positioning System */
