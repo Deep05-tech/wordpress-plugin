@@ -56,6 +56,13 @@ $inquiry_handler  = new VCPG_Inquiry_Handler();
 | Plugin Activation & Deactivation Hooks
 |--------------------------------------------------------------------------
 */
+register_activation_hook(__FILE__, 'vcpg_activate_plugin');
+function vcpg_activate_plugin() {
+    if (function_exists('wp_clean_plugins_cache')) {
+        wp_clean_plugins_cache(true);
+    }
+}
+
 register_deactivation_hook(__FILE__, 'vcpg_deactivate_plugin');
 function vcpg_deactivate_plugin() {
     delete_option('vcpg_job_activity');
