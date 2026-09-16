@@ -8,6 +8,8 @@
  * Requires PHP: 7.4
  * Author: Vispan Solutions
  * Author URI: https://vispansolutions.com
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: vispan-city-page-generator
  */
 
