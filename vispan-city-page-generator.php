@@ -263,14 +263,24 @@ function vcpg_clean_content_inline_styles($content) {
         // 8. Strip unwanted capsule box above hero header
         $content = vcpg_safe_preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
         $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
-        // 9. Format legacy unwrapped hero elements and proposal form
+        // 9. Format legacy unwrapped hero elements with background video and proposal form
         if (strpos($content, 'vp-hero-grid') === false && strpos($content, 'hero_proposal') !== false) {
             $hero_regex = '/(<h1[^>]*>.*?)(<h3[^>]*>Request A Marketing Proposal<\/h3>\s*<form id=[\x22\x27]hero_proposal[\x22\x27].*?<\/form>)/is';
             if (preg_match($hero_regex, $content, $m)) {
-                $left = '<div class="vp-hero-left">' . $m[1] . '</div>';
-                $right = '<div class="vp-hero-form-card vp-hero-right" style="background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:35px 30px;box-shadow:0 10px 30px rgba(0,0,0,0.1);box-sizing:border-box;">' . $m[2] . '</div>';
-                $hero_html = '<section class="vp-hero" style="position:relative;padding:90px 0;overflow:hidden;background:#FFFFFF;"><div class="vp-container vp-hero-grid" style="position:relative;z-index:1;">' . $left . $right . '</div></section><div class="vp-container vp-legacy-content" style="max-width:1200px;margin:0 auto;padding:40px 24px;">';
+                $video_url = plugins_url('assets/vispan-banner.webm', __FILE__);
+                $video_html = '<div style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:0;pointer-events:none;"><video autoplay muted playsinline loop style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%) scale(1.4);min-width:100%;min-height:100%;width:auto;height:auto;object-fit:cover;opacity:1;"><source src="' . esc_url($video_url) . '" type="video/webm"></video></div>';
+                $left = '<div class="vp-hero-left" style="position:relative;z-index:1;">' . $m[1] . '</div>';
+                $right = '<div class="vp-hero-form-card vp-hero-right" style="position:relative;z-index:1;background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:40px 30px;box-shadow:0 10px 30px rgba(0,0,0,0.1);box-sizing:border-box;">' . $m[2] . '</div>';
+                $hero_html = '<section class="vp-hero" style="position:relative;padding:190px 0 90px;overflow:hidden;background:#FFFFFF;">' . $video_html . '<div class="vp-container vp-hero-grid" style="position:relative;z-index:1;">' . $left . $right . '</div></section><div class="vp-container vp-legacy-content" style="max-width:1200px;margin:0 auto;padding:60px 24px 100px;">';
                 $content = vcpg_safe_preg_replace($hero_regex, $hero_html, $content) . '</div>';
+            }
+        }
+        // 10. Wrap bottom contact proposal into card
+        if (strpos($content, 'vp-contact-card') === false && strpos($content, 'contact_proposal') !== false) {
+            $contact_regex = '/(<h2[^>]*>Request A Marketing Proposal<\/h2>\s*<form id=[\x22\x27]contact_proposal[\x22\x27].*?<\/form>)/is';
+            if (preg_match($contact_regex, $content, $m)) {
+                $card_html = '<div class="vp-contact-card" style="max-width:760px;margin:80px auto;background:#FFFFFF;border-radius:20px;padding:48px 36px;box-shadow:0 20px 60px rgba(0,0,0,0.12);border:2px solid #02426A;box-sizing:border-box;">' . $m[1] . '</div>';
+                $content = vcpg_safe_preg_replace($contact_regex, $card_html, $content);
             }
         }
     }
@@ -423,23 +433,47 @@ function vcpg_output_styles()
     .vp-legacy-content {
         max-width: 1200px !important;
         margin: 0 auto !important;
-        padding: 40px 24px !important;
+        padding: 60px 24px 100px !important;
         font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif !important;
         color: #334155 !important;
         line-height: 1.8 !important;
+        box-sizing: border-box !important;
     }
     .vp-legacy-content h2 {
         color: #0A3663 !important;
-        font-size: 2.2rem !important;
+        font-size: 2.3rem !important;
         font-weight: 800 !important;
         line-height: 1.25 !important;
-        margin: 40px 0 20px !important;
+        margin-top: 80px !important;
+        margin-bottom: 24px !important;
+        text-align: center !important;
+    }
+    .vp-legacy-content h2:first-of-type {
+        margin-top: 30px !important;
+    }
+    .vp-legacy-content h2 + p {
+        font-size: 1.05rem !important;
+        color: #334155 !important;
+        line-height: 1.8 !important;
+        max-width: 860px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        margin-bottom: 35px !important;
+        text-align: center !important;
     }
     .vp-legacy-content h3 {
         color: #02426A !important;
-        font-size: 1.6rem !important;
+        font-size: 1.5rem !important;
         font-weight: 700 !important;
-        margin: 30px 0 16px !important;
+        margin-top: 36px !important;
+        margin-bottom: 12px !important;
+    }
+    .vp-legacy-content h4 {
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+        color: #02426A !important;
+        margin-top: 28px !important;
+        margin-bottom: 10px !important;
     }
     .vp-legacy-content p {
         font-size: 1.05rem !important;
@@ -447,9 +481,36 @@ function vcpg_output_styles()
         line-height: 1.8 !important;
         margin-bottom: 20px !important;
     }
+    .vp-legacy-content svg[width="40"],
+    .vp-legacy-content svg[width="42"] {
+        display: inline-block !important;
+        padding: 12px !important;
+        background: #EFF6FF !important;
+        border-radius: 12px !important;
+        stroke: #02426A !important;
+        margin-top: 24px !important;
+        margin-bottom: 10px !important;
+    }
+    .vp-legacy-content img {
+        max-width: 100% !important;
+        height: auto !important;
+        border-radius: 20px !important;
+        margin: 35px auto !important;
+        display: block !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    }
+    .vp-legacy-content p:has(> button[onclick*="vcpgSwitchTab"]),
+    .vp-legacy-content p:has(button) {
+        display: flex !important;
+        gap: 12px !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        margin: 35px 0 !important;
+    }
 
     /* Proposal form styling */
-    #hero_proposal {
+    #hero_proposal,
+    #contact_proposal {
         display: flex !important;
         flex-direction: column !important;
         gap: 16px !important;
@@ -458,7 +519,12 @@ function vcpg_output_styles()
     #hero_proposal input[type="email"],
     #hero_proposal input[type="tel"],
     #hero_proposal textarea,
-    #hero_proposal select {
+    #hero_proposal select,
+    #contact_proposal input[type="text"],
+    #contact_proposal input[type="email"],
+    #contact_proposal input[type="tel"],
+    #contact_proposal textarea,
+    #contact_proposal select {
         width: 100% !important;
         padding: 13px 22px !important;
         border-radius: 50px !important;
@@ -470,7 +536,9 @@ function vcpg_output_styles()
         outline: none !important;
     }
     #hero_proposal button[type="submit"],
-    #hero_proposal input[type="submit"] {
+    #hero_proposal input[type="submit"],
+    #contact_proposal button[type="submit"],
+    #contact_proposal input[type="submit"] {
         width: 100% !important;
         padding: 15px !important;
         border-radius: 50px !important;
@@ -514,7 +582,23 @@ function vcpg_output_styles()
     .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
 
     /* CONTACT FORM */
-    .vp-contact-card { max-width: 760px !important; margin: 0 auto !important; background: #FFFFFF !important; border-radius: 20px !important; padding: 44px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important; }
+    .vp-contact-card {
+        max-width: 760px !important;
+        margin: 80px auto !important;
+        background: #FFFFFF !important;
+        border-radius: 20px !important;
+        padding: 48px 36px !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
+        border: 2px solid #02426A !important;
+        box-sizing: border-box !important;
+    }
+    .vp-contact-card h2,
+    .vp-contact-card h3 {
+        text-align: center !important;
+        color: #02426A !important;
+        margin-top: 0 !important;
+        margin-bottom: 24px !important;
+    }
 
     /* Suppress unwanted portfolio section */
     .vp-portfolio-sec {

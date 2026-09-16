@@ -113,23 +113,47 @@ html body.vcpg-page .elementor-element-e000044 {
 .vp-legacy-content {
     max-width: 1200px !important;
     margin: 0 auto !important;
-    padding: 40px 24px !important;
+    padding: 60px 24px 100px !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
     color: #334155 !important;
     line-height: 1.8 !important;
+    box-sizing: border-box !important;
 }
 .vp-legacy-content h2 {
     color: #0A3663 !important;
-    font-size: 2.2rem !important;
+    font-size: 2.3rem !important;
     font-weight: 800 !important;
     line-height: 1.25 !important;
-    margin: 40px 0 20px !important;
+    margin-top: 80px !important;
+    margin-bottom: 24px !important;
+    text-align: center !important;
+}
+.vp-legacy-content h2:first-of-type {
+    margin-top: 30px !important;
+}
+.vp-legacy-content h2 + p {
+    font-size: 1.05rem !important;
+    color: #334155 !important;
+    line-height: 1.8 !important;
+    max-width: 860px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 35px !important;
+    text-align: center !important;
 }
 .vp-legacy-content h3 {
     color: #02426A !important;
-    font-size: 1.6rem !important;
+    font-size: 1.5rem !important;
     font-weight: 700 !important;
-    margin: 30px 0 16px !important;
+    margin-top: 36px !important;
+    margin-bottom: 12px !important;
+}
+.vp-legacy-content h4 {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #02426A !important;
+    margin-top: 28px !important;
+    margin-bottom: 10px !important;
 }
 .vp-legacy-content p {
     font-size: 1.05rem !important;
@@ -137,9 +161,36 @@ html body.vcpg-page .elementor-element-e000044 {
     line-height: 1.8 !important;
     margin-bottom: 20px !important;
 }
+.vp-legacy-content svg[width="40"],
+.vp-legacy-content svg[width="42"] {
+    display: inline-block !important;
+    padding: 12px !important;
+    background: #EFF6FF !important;
+    border-radius: 12px !important;
+    stroke: #02426A !important;
+    margin-top: 24px !important;
+    margin-bottom: 10px !important;
+}
+.vp-legacy-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 20px !important;
+    margin: 35px auto !important;
+    display: block !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+.vp-legacy-content p:has(> button[onclick*="vcpgSwitchTab"]),
+.vp-legacy-content p:has(button) {
+    display: flex !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    margin: 35px 0 !important;
+}
 
 /* Proposal form styling */
-#hero_proposal {
+#hero_proposal,
+#contact_proposal {
     display: flex !important;
     flex-direction: column !important;
     gap: 16px !important;
@@ -148,7 +199,12 @@ html body.vcpg-page .elementor-element-e000044 {
 #hero_proposal input[type="email"],
 #hero_proposal input[type="tel"],
 #hero_proposal textarea,
-#hero_proposal select {
+#hero_proposal select,
+#contact_proposal input[type="text"],
+#contact_proposal input[type="email"],
+#contact_proposal input[type="tel"],
+#contact_proposal textarea,
+#contact_proposal select {
     width: 100% !important;
     padding: 13px 22px !important;
     border-radius: 50px !important;
@@ -160,7 +216,9 @@ html body.vcpg-page .elementor-element-e000044 {
     outline: none !important;
 }
 #hero_proposal button[type="submit"],
-#hero_proposal input[type="submit"] {
+#hero_proposal input[type="submit"],
+#contact_proposal button[type="submit"],
+#contact_proposal input[type="submit"] {
     width: 100% !important;
     padding: 15px !important;
     border-radius: 50px !important;
@@ -204,7 +262,23 @@ html body.vcpg-page .elementor-element-e000044 {
 .vp-cert-sec { background: #F8FAFC !important; text-align: center !important; }
 
 /* CONTACT FORM */
-.vp-contact-card { max-width: 760px !important; margin: 0 auto !important; background: #FFFFFF !important; border-radius: 20px !important; padding: 44px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important; }
+.vp-contact-card {
+    max-width: 760px !important;
+    margin: 80px auto !important;
+    background: #FFFFFF !important;
+    border-radius: 20px !important;
+    padding: 48px 36px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
+    border: 2px solid #02426A !important;
+    box-sizing: border-box !important;
+}
+.vp-contact-card h2,
+.vp-contact-card h3 {
+    text-align: center !important;
+    color: #02426A !important;
+    margin-top: 0 !important;
+    margin-bottom: 24px !important;
+}
 
 /* Suppress unwanted portfolio section */
 .vp-portfolio-sec {
