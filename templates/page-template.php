@@ -11,9 +11,14 @@ html body.vcpg-page .vp-nav,
 html body.vcpg-page .vp-footer,
 html body.vcpg-page footer.vp-footer,
 html body.vcpg-page #vcpg-header,
+html body.vcpg-page #vcpg-footer,
+html body.vcpg-page footer#vcpg-footer,
+html body.vcpg-page .vcpg-footer,
 html body.vcpg-page .elementor-element-e000003,
 html body.vcpg-page .elementor-element-e000043,
-html body.vcpg-page .elementor-element-e000044 {
+html body.vcpg-page .elementor-element-e000044,
+html body.vcpg-page [data-id="e000043"],
+html body.vcpg-page [data-id="e000044"] {
     display: none !important;
 }
 
@@ -602,8 +607,140 @@ html body.vcpg-page .vcpg-recaptcha-logo-wrapper {
 <main class="vcpg-page-content is-vcpg-page">
 <?php
 remove_filter('the_content', 'wpautop');
+
+if (!class_exists('VCPG_Elementor_Template_Builder')) {
+    $builder_file = dirname(__DIR__) . '/includes/class-elementor-template-builder.php';
+    if (file_exists($builder_file)) {
+        require_once $builder_file;
+    }
+}
+if (!class_exists('VCPG_Page_Generator')) {
+    $gen_file = dirname(__DIR__) . '/includes/class-page-generator.php';
+    if (file_exists($gen_file)) {
+        require_once $gen_file;
+    }
+}
+
 while(have_posts()): the_post();
-    the_content();
+    $post_id     = get_the_ID();
+    $raw_content = get_the_content();
+
+    // If content is already built with the modern unified template (contains VCPG marker or all major grid sections), output it directly
+    if (strpos($raw_content, '<!-- VCPG-TEMPLATE') !== false || (strpos($raw_content, 'vp-hero-grid') !== false && strpos($raw_content, 'vp-about-grid') !== false && strpos($raw_content, 'vp-casestudy-sec') !== false)) {
+        echo do_shortcode($raw_content);
+    } else {
+        // Render earlier generated page using the unified template engine!
+        $city         = get_post_meta($post_id, '_vcpg_city', true);
+        $state        = get_post_meta($post_id, '_vcpg_state', true);
+        $country      = get_post_meta($post_id, '_vcpg_country', true);
+        $country_code = get_post_meta($post_id, '_vcpg_country_code', true);
+        $service      = get_post_meta($post_id, '_vcpg_service', true);
+        $faq          = get_post_meta($post_id, '_vcpg_faq', true);
+
+        global $post;
+        $title = $post ? $post->post_title : get_the_title();
+        $slug  = $post ? $post->post_name : '';
+
+        // Derive country from parent page if empty
+        if (empty($country) && $post && $post->post_parent > 0) {
+            $parent = get_post($post->post_parent);
+            if ($parent) {
+                $parent_slug = strtolower($parent->post_name);
+                if ($parent_slug === 'us' || $parent_slug === 'united-states') {
+                    $country      = 'United States';
+                    $country_code = 'us';
+                } elseif ($parent_slug === 'in' || $parent_slug === 'india') {
+                    $country      = 'India';
+                    $country_code = 'in';
+                } else {
+                    $country      = ucwords(str_replace('-', ' ', $parent_slug));
+                    $country_code = $parent_slug;
+                }
+            }
+        }
+
+        // Derive service and city if empty
+        if (empty($service) || empty($city)) {
+            if (strpos($slug, '-in-') !== false) {
+                list($svc_part, $loc_part) = explode('-in-', $slug, 2);
+                if (empty($service)) {
+                    $service = ucwords(str_replace('-', ' ', $svc_part));
+                }
+                if (empty($city)) {
+                    $loc_words = explode('-', $loc_part);
+                    $city = ucwords($loc_words[0]);
+                    if (empty($state) && count($loc_words) > 1) {
+                        $state = ucwords($loc_words[1]);
+                    }
+                }
+            } elseif (preg_match('/^(.*?)\s+(?:in|for)\s+([A-Za-z\s]+)(?:,\s*([A-Za-z\s]+))?$/i', $title, $tm)) {
+                if (empty($service)) {
+                    $service = trim($tm[1]);
+                }
+                if (empty($city)) {
+                    $city = trim($tm[2]);
+                }
+                if (empty($state) && !empty($tm[3])) {
+                    $state = trim($tm[3]);
+                }
+            }
+        }
+
+        if (empty($service)) $service = 'Digital Marketing Services';
+        if (empty($city)) $city = 'Your City';
+
+        $data = array(
+            'service'      => $service,
+            'city'         => $city,
+            'state'        => $state,
+            'country'      => !empty($country) ? $country : 'United States',
+            'country_code' => !empty($country_code) ? $country_code : 'us',
+        );
+        if (!empty($faq)) {
+            $data['faq'] = $faq;
+        }
+
+        // Check if database has cached AI content for this service & city
+        global $wpdb;
+        $table = $wpdb->prefix . 'vcpg_ai_content';
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) === $table) {
+            $cached_ai = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT content FROM $table WHERE service = %s AND city = %s LIMIT 1",
+                    $service,
+                    $city
+                )
+            );
+            if ($cached_ai && !empty($cached_ai->content)) {
+                $decoded = json_decode($cached_ai->content, true);
+                if (is_array($decoded)) {
+                    $data = array_merge($data, $decoded);
+                }
+            }
+        }
+
+        // Extract custom headlines from existing page content if not already populated
+        if (empty($data['hero_title']) && preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $raw_content, $m)) {
+            $data['hero_title'] = trim(strip_tags($m[1]));
+        }
+        if (empty($data['hero_subtitle']) && preg_match('/<h3[^>]*>(.*?)<\/h3>/is', $raw_content, $m)) {
+            $data['hero_subtitle'] = trim(strip_tags($m[1]));
+        }
+        if (empty($data['intro_title']) && preg_match('/<h2[^>]*>((?:Get|Why|Elevate).*?)<\/h2>(.*?)(?=<h2)/is', $raw_content, $m)) {
+            $data['intro_title']   = trim(strip_tags($m[1]));
+            $data['intro_content'] = trim($m[2]);
+        }
+        if (empty($data['about_title']) && preg_match('/<h2[^>]*>((?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?)<\/h2>/is', $raw_content, $m)) {
+            $data['about_title'] = trim(strip_tags($m[1]));
+        }
+
+        if (class_exists('VCPG_Elementor_Template_Builder')) {
+            $builder = new VCPG_Elementor_Template_Builder();
+            echo $builder->build_html($data);
+        } else {
+            the_content();
+        }
+    }
 endwhile;
 ?>
 </main>
