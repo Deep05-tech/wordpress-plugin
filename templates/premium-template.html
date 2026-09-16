@@ -70,13 +70,7 @@ html body.vcpg-page { font-family: var(--vp-font); color: var(--vp-text); line-h
 /* CONTACT FORM */
 .vp-contact-sec { background: linear-gradient(rgba(11, 11, 26, 0.85), rgba(11, 11, 26, 0.85)), url('{{contact_bg}}') center/cover no-repeat; padding: 90px 0; }
 .vp-contact-card { max-width: 760px; margin: 0 auto; background: #FFFFFF; border-radius: 20px; padding: 44px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-/* FOOTER */
-.vp-footer { background: #FFFFFF; padding: 70px 0 30px; border-top: 1px solid var(--vp-border); font-size: 0.92rem; color: #334155; position: relative; z-index: 10; }
-.vp-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 40px; }
-.vp-footer a { color: #475569; text-decoration: none; transition: color 0.2s ease; }
-.vp-footer a:hover { color: #0A3663; }
-.vp-footer a[href^="tel:"] { color: #0A3663; font-weight: 700; }
-.vp-footer a[href^="mailto:"] { color: #0B63F6; font-weight: 600; }
+
 
 .vp-about-grid img { max-height: 520px; width: auto; max-width: 100%; object-fit: cover; display: block; margin: 0 auto; }
 .vp-casestudy-grid img { max-height: 500px; width: 100%; object-fit: cover; }
@@ -228,30 +222,6 @@ html body.vcpg-page { font-family: var(--vp-font); color: var(--vp-text); line-h
   </div>
 </section>
 
-<!-- 13. FOOTER -->
-<footer class="vp-footer" style="background:#FFFFFF;padding:70px 0 30px;border-top:1px solid #E2E8F0;font-size:0.92rem;color:#334155;position:relative;z-index:10;">
-  <div class="vp-container vp-footer-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:40px;">
-    <div>
-      <a href="{{home_url}}" class="vp-logo" style="text-decoration:none;"><img src="{{footer_logo}}" alt="Vispan Solutions" style="max-height:40px;height:auto;margin-bottom:16px;" onerror="this.outerHTML='<span style=\'font-size:24px;font-weight:900;color:#0A3663;letter-spacing:-0.5px;\'>vispan</span>';"></a>
-      <p style="margin:16px 0;color:#475569;line-height:1.6;">{{footer_about}}</p>
-      <div>{{social_icons}}</div>
-    </div>
-    <div>
-      <h4 style="margin-bottom:18px;color:#0A3663;font-weight:700;font-size:1.05rem;">Services</h4>
-      <ul style="padding:0;list-style:none;line-height:2;">{{footer_services}}</ul>
-    </div>
-    <div>
-      <h4 style="margin-bottom:18px;color:#0A3663;font-weight:700;font-size:1.05rem;">Quick Links</h4>
-      <ul style="padding:0;list-style:none;line-height:2;">{{footer_links}}</ul>
-    </div>
-    <div>
-      <h4 style="margin-bottom:18px;color:#0A3663;font-weight:700;font-size:1.05rem;">Reach Us</h4>
-      <div style="line-height:1.8;color:#475569;">{{footer_contact}}</div>
-    </div>
-  </div>
-  <div class="vp-container" style="margin-top:50px;padding-top:20px;border-top:1px solid #F1F5F9;text-align:center;color:#64748B;font-size:0.85rem;">
-    &copy; 2026 Vispan Solutions Pvt. Ltd. All rights reserved.
-  </div>
-</footer>
+
 
 

@@ -8,6 +8,8 @@ html body.vcpg-page .vp-topbar,
 html body.vcpg-page .vp-header,
 html body.vcpg-page header.vp-header,
 html body.vcpg-page .vp-nav,
+html body.vcpg-page .vp-footer,
+html body.vcpg-page footer.vp-footer,
 html body.vcpg-page #vcpg-header,
 html body.vcpg-page .elementor-element-e000003,
 html body.vcpg-page .elementor-element-e000043,
@@ -342,47 +344,7 @@ html body.vcpg-page .vcpg-marquee-container {
 
 html body.vcpg-page .elementor-widget-heading .elementor-heading-title { color: #0A3663; font-weight: 800 !important; }
 html body.vcpg-page h1.elementor-heading-title, html body.vcpg-page .vp-hero .elementor-heading-title { color: #02426A !important; }
-/* Standardized modern Vispan footer display */
-html body.vcpg-page .vp-footer,
-html body.vcpg-page footer.vp-footer {
-    display: block !important;
-    background: #FFFFFF !important;
-    padding: 70px 0 30px !important;
-    border-top: 1px solid #E2E8F0 !important;
-    font-size: 0.92rem !important;
-    color: #334155 !important;
-    position: relative !important;
-    z-index: 10 !important;
-}
-html body.vcpg-page .vp-footer-grid {
-    display: grid !important;
-    grid-template-columns: 2fr 1fr 1fr 1.5fr !important;
-    gap: 40px !important;
-}
-@media (max-width: 900px) {
-    html body.vcpg-page .vp-footer-grid {
-        grid-template-columns: 1fr !important;
-        gap: 32px !important;
-    }
-}
-html body.vcpg-page .vp-footer a,
-html body.vcpg-page footer.vp-footer a {
-    color: #475569 !important;
-    text-decoration: none !important;
-    transition: color 0.2s ease !important;
-}
-html body.vcpg-page .vp-footer a:hover,
-html body.vcpg-page footer.vp-footer a:hover {
-    color: #0A3663 !important;
-}
-html body.vcpg-page .vp-footer a[href^="tel:"] {
-    color: #0A3663 !important;
-    font-weight: 700 !important;
-}
-html body.vcpg-page .vp-footer a[href^="mailto:"] {
-    color: #0B63F6 !important;
-    font-weight: 600 !important;
-}
+
 
 /* Global Image Sizing & Aspect Ratio Protections */
 html body.vcpg-page img {

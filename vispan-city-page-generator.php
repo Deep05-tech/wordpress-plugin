@@ -362,38 +362,82 @@ function vcpg_clean_content_inline_styles($content) {
     $has_modern_grid = preg_match('/<div[^>]*class=[\x22\x27][^\x22\x27]*\bvp-about-grid\b/i', $content);
     if (!$has_modern_grid) {
         // 9a. Hero Section
-        if (strpos($content, 'vp-hero-grid') === false && strpos($content, 'hero_proposal') !== false) {
-            $hero_regex = '/(<h1[^>]*>.*?)(<h3[^>]*>Request A Marketing Proposal<\/h3>\s*<form id=[\x22\x27]hero_proposal[\x22\x27].*?<\/form>)/is';
-            if (preg_match($hero_regex, $content, $m)) {
-                $video_url = plugins_url('assets/vispan-banner.webm', __FILE__);
-                $video_html = '<div style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:0;pointer-events:none;"><video autoplay muted playsinline loop style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%) scale(1.4);min-width:100%;min-height:100%;width:auto;height:auto;object-fit:cover;opacity:1;"><source src="' . esc_url($video_url) . '" type="video/webm"></video></div>';
-                
-                $left_raw = $m[1];
-                $h1_title = ''; $h2_sub = ''; $hero_desc = '';
-                if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $left_raw, $h1m)) $h1_title = trim(strip_tags($h1m[1]));
-                if (preg_match('/<h3[^>]*>(.*?)<\/h3>/is', $left_raw, $h3m)) $h2_sub = trim(strip_tags($h3m[1]));
-                if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $left_raw, $pm)) $hero_desc = trim(strip_tags($pm[1]));
+        if (strpos($content, 'vp-hero-grid') === false) {
+            $video_url = plugins_url('assets/vispan-banner.webm', __FILE__);
+            $video_html = '<div style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:0;pointer-events:none;"><video autoplay muted playsinline loop style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%) scale(1.4);min-width:100%;min-height:100%;width:auto;height:auto;object-fit:cover;opacity:1;"><source src="' . esc_url($video_url) . '" type="video/webm"></video></div>';
+            
+            $hero_form_default = '<form id="hero_proposal" class="vp-inquiry-form" method="post" action="#contact" style="display:flex;flex-direction:column;gap:14px;">'
+                               . '<input type="text" name="full_name" placeholder="Full Name *" required style="width:100%;padding:14px 18px;border:1px solid #CBD5E1;border-radius:10px;font-size:14px;box-sizing:border-box;">'
+                               . '<input type="email" name="email" placeholder="Email Address *" required style="width:100%;padding:14px 18px;border:1px solid #CBD5E1;border-radius:10px;font-size:14px;box-sizing:border-box;">'
+                               . '<input type="tel" name="phone" placeholder="Phone Number *" required style="width:100%;padding:14px 18px;border:1px solid #CBD5E1;border-radius:10px;font-size:14px;box-sizing:border-box;">'
+                               . '<textarea name="message" placeholder="How can we help your business grow? *" rows="3" required style="width:100%;padding:14px 18px;border:1px solid #CBD5E1;border-radius:10px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>'
+                               . '<button type="submit" style="background:#02426A;color:#FFFFFF;padding:16px;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;width:100%;transition:background 0.2s ease;">Request A Proposal</button>'
+                               . '</form>';
 
-                $left_html = '<div class="vp-hero-left" style="position:relative;z-index:1;">'
-                           . ($h1_title !== '' ? '<h1 style="font-size:3.2rem;font-weight:800;line-height:1.15;color:#02426A;margin-bottom:10px;">' . esc_html($h1_title) . '</h1>' : '')
-                           . ($h2_sub !== '' ? '<h2 style="font-size:1.6rem;font-weight:500;color:#000000;margin-bottom:20px;line-height:1.3;">' . esc_html($h2_sub) . '</h2>' : '')
-                           . ($hero_desc !== '' ? '<p style="font-size:1.1rem;line-height:1.65;color:#334155;margin-bottom:30px;font-family:\'Plus Jakarta Sans\',sans-serif;">' . esc_html($hero_desc) . '</p>' : '')
-                           . '<div style="display:flex;gap:16px;">'
-                           . '<a href="#contact" class="vp-btn-hero" style="background:#02426A;color:#FFFFFF;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Get Started</a>'
-                           . '<a href="#about" class="vp-btn-hero" style="background:transparent;color:#02426A;border:2px solid #02426A;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Learn More</a>'
-                           . '</div></div>';
+            if (strpos($content, 'hero_proposal') !== false) {
+                $hero_regex = '/(<h1[^>]*>.*?)(<h3[^>]*>Request A Marketing Proposal<\/h3>\s*<form id=[\x22\x27]hero_proposal[\x22\x27].*?<\/form>)/is';
+                if (preg_match($hero_regex, $content, $m)) {
+                    $left_raw = $m[1];
+                    $h1_title = ''; $h2_sub = ''; $hero_desc = '';
+                    if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $left_raw, $h1m)) $h1_title = trim(strip_tags($h1m[1]));
+                    if (preg_match('/<h3[^>]*>(.*?)<\/h3>/is', $left_raw, $h3m)) $h2_sub = trim(strip_tags($h3m[1]));
+                    if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $left_raw, $pm)) $hero_desc = trim(strip_tags($pm[1]));
 
-                $right_html = '<div class="vp-hero-form-card vp-hero-right" style="position:relative;z-index:1;background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:40px 30px;color:#000000;box-sizing:border-box;box-shadow:0 10px 30px rgba(0,0,0,0.1);">'
-                            . '<h3 style="font-size:28px;font-weight:700;margin-bottom:24px;text-align:left;color:#02426A;font-family:\'DM Sans\',sans-serif;">Request A Marketing Proposal</h3>'
-                            . preg_replace('/<h3[^>]*>.*?<\/h3>\s*/is', '', $m[2])
-                            . '</div>';
+                    $left_html = '<div class="vp-hero-left" style="position:relative;z-index:1;">'
+                               . ($h1_title !== '' ? '<h1 style="font-size:3.2rem;font-weight:800;line-height:1.15;color:#02426A;margin-bottom:10px;">' . esc_html($h1_title) . '</h1>' : '')
+                               . ($h2_sub !== '' ? '<h2 style="font-size:1.6rem;font-weight:500;color:#000000;margin-bottom:20px;line-height:1.3;">' . esc_html($h2_sub) . '</h2>' : '')
+                               . ($hero_desc !== '' ? '<p style="font-size:1.1rem;line-height:1.65;color:#334155;margin-bottom:30px;font-family:\'Plus Jakarta Sans\',sans-serif;">' . esc_html($hero_desc) . '</p>' : '')
+                               . '<div style="display:flex;gap:16px;">'
+                               . '<a href="#contact" class="vp-btn-hero" style="background:#02426A;color:#FFFFFF;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Get Started</a>'
+                               . '<a href="#about" class="vp-btn-hero" style="background:transparent;color:#02426A;border:2px solid #02426A;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Learn More</a>'
+                               . '</div></div>';
 
-                $hero_html = '<section class="vp-hero" style="position:relative;padding:190px 0 90px;overflow:hidden;background:#FFFFFF;">'
-                           . $video_html
-                           . '<div class="vp-container vp-hero-grid" style="display:grid;grid-template-columns:1fr 480px;gap:60px;align-items:center;position:relative;z-index:1;">'
-                           . $left_html . $right_html
-                           . '</div></section>';
-                $content = vcpg_safe_preg_replace($hero_regex, $hero_html, $content);
+                    $right_html = '<div class="vp-hero-form-card vp-hero-right" style="position:relative;z-index:1;background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:40px 30px;color:#000000;box-sizing:border-box;box-shadow:0 10px 30px rgba(0,0,0,0.1);">'
+                                . '<h3 style="font-size:28px;font-weight:700;margin-bottom:24px;text-align:left;color:#02426A;font-family:\'DM Sans\',sans-serif;">Request A Marketing Proposal</h3>'
+                                . preg_replace('/<h3[^>]*>.*?<\/h3>\s*/is', '', $m[2])
+                                . '</div>';
+
+                    $hero_html = '<section class="vp-hero" style="position:relative;padding:190px 0 90px;overflow:hidden;background:#FFFFFF;">'
+                               . $video_html
+                               . '<div class="vp-container vp-hero-grid" style="display:grid;grid-template-columns:1fr 480px;gap:60px;align-items:center;position:relative;z-index:1;">'
+                               . $left_html . $right_html
+                               . '</div></section>';
+                    $content = vcpg_safe_preg_replace($hero_regex, $hero_html, $content);
+                }
+            } elseif (preg_match('/<h1[^>]*>.*?<\/h1>/is', $content)) {
+                $hero_regex_alt = '/(<h1[^>]*>.*?<\/h1>)(.*?)(?=<h2|<section|$)/is';
+                if (preg_match($hero_regex_alt, $content, $m)) {
+                    $h1_title = trim(strip_tags($m[1]));
+                    $below_h1 = $m[2];
+                    $h2_sub = ''; $hero_desc = '';
+                    if (preg_match('/<h[23][^>]*>(.*?)<\/h[23]>/is', $below_h1, $h2m)) {
+                        $h2_sub = trim(strip_tags($h2m[1]));
+                    }
+                    if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $below_h1, $pm)) {
+                        $hero_desc = trim(strip_tags($pm[1]));
+                    }
+
+                    $left_html = '<div class="vp-hero-left" style="position:relative;z-index:1;">'
+                               . '<h1 style="font-size:3.2rem;font-weight:800;line-height:1.15;color:#02426A;margin-bottom:10px;">' . esc_html($h1_title) . '</h1>'
+                               . ($h2_sub !== '' ? '<h2 style="font-size:1.6rem;font-weight:500;color:#000000;margin-bottom:20px;line-height:1.3;">' . esc_html($h2_sub) . '</h2>' : '')
+                               . ($hero_desc !== '' ? '<p style="font-size:1.1rem;line-height:1.65;color:#334155;margin-bottom:30px;font-family:\'Plus Jakarta Sans\',sans-serif;">' . esc_html($hero_desc) . '</p>' : '')
+                               . '<div style="display:flex;gap:16px;">'
+                               . '<a href="#contact" class="vp-btn-hero" style="background:#02426A;color:#FFFFFF;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Get Started</a>'
+                               . '<a href="#about" class="vp-btn-hero" style="background:transparent;color:#02426A;border:2px solid #02426A;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">Learn More</a>'
+                               . '</div></div>';
+
+                    $right_html = '<div class="vp-hero-form-card vp-hero-right" style="position:relative;z-index:1;background:rgba(255,255,255,0.92);border:2px solid #02426A;border-radius:30px;padding:40px 30px;color:#000000;box-sizing:border-box;box-shadow:0 10px 30px rgba(0,0,0,0.1);">'
+                                . '<h3 style="font-size:28px;font-weight:700;margin-bottom:24px;text-align:left;color:#02426A;font-family:\'DM Sans\',sans-serif;">Request A Marketing Proposal</h3>'
+                                . $hero_form_default
+                                . '</div>';
+
+                    $hero_html = '<section class="vp-hero" style="position:relative;padding:190px 0 90px;overflow:hidden;background:#FFFFFF;">'
+                               . $video_html
+                               . '<div class="vp-container vp-hero-grid" style="display:grid;grid-template-columns:1fr 480px;gap:60px;align-items:center;position:relative;z-index:1;">'
+                               . $left_html . $right_html
+                               . '</div></section>';
+                    $content = vcpg_safe_preg_replace($hero_regex_alt, $hero_html, $content);
+                }
             }
         }
 
@@ -424,6 +468,26 @@ function vcpg_clean_content_inline_styles($content) {
             if (count($cards) < 2) {
                 preg_match_all('/(?:<p>\s*)?(<svg[^>]*>.*?<\/svg>)(?:\s*<\/p>)?\s*<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>(.*?)<\/p>/is', $middle, $cards, PREG_SET_ORDER);
             }
+            if (count($cards) < 2) {
+                preg_match_all('/<h[34][^>]*>(.*?)<\/h[34]>\s*<p[^>]*>(.*?)<\/p>/is', $middle, $cards, PREG_SET_ORDER);
+            }
+            if (count($cards) < 2) {
+                preg_match_all('/<p[^>]*>\s*(?:<strong>|<b>)(.*?)(?:<\/strong>|<\/b>)\s*[-–:]?\s*(.*?)<\/p>/is', $middle, $p_cards, PREG_SET_ORDER);
+                if (!empty($p_cards)) {
+                    $cards = array();
+                    foreach ($p_cards as $pc) {
+                        $cards[] = array('', '', '', '', $pc[1], $pc[2]);
+                    }
+                }
+            }
+            if (count($cards) < 2) {
+                $cards = array(
+                    array('', '', '', '', 'Increase appointments', 'Convert online interest into confirmed bookings and a growing client base through online marketing.'),
+                    array('', '', '', '', 'Build Trust and Credibility', 'Showcase your expertise, advanced technology, and client-centric approach.'),
+                    array('', '', '', '', 'Enhance client engagement', 'Connect with clients through educational content and timely communications.'),
+                    array('', '', '', '', 'Boost Online visibility', 'Rise to the top of local search results where high-intent prospects look for services.'),
+                );
+            }
             $first_svg_pos = strpos($middle, '<svg');
             $first_h3_pos = strpos($middle, '<h3');
             $split_pos = false;
@@ -437,8 +501,9 @@ function vcpg_clean_content_inline_styles($content) {
             $intro_paragraphs = ($split_pos !== false) ? substr($middle, 0, $split_pos) : '';
 
             $cards_html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;">';
-            foreach ($cards as $c) {
-                $icon_or_num = !empty($c[1]) ? $c[1] : (!empty($c[2]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[2]) . '</div>' : (!empty($c[3]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[3]) . '</div>' : ''));
+            foreach ($cards as $idx => $c) {
+                $card_num = str_pad($idx + 1, 2, '0', STR_PAD_LEFT);
+                $icon_or_num = !empty($c[1]) ? $c[1] : (!empty($c[2]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[2]) . '</div>' : (!empty($c[3]) ? '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . esc_html($c[3]) . '</div>' : '<div style="width:36px;height:36px;border-radius:50%;background:#02426A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;margin-bottom:12px;">' . $card_num . '</div>'));
                 $title = isset($c[4]) ? trim(strip_tags($c[4])) : (isset($c[2]) ? trim(strip_tags($c[2])) : '');
                 $desc  = isset($c[5]) ? trim(strip_tags($c[5])) : (isset($c[3]) ? trim(strip_tags($c[3])) : '');
                 $cards_html .= '<div class="vp-feature-card" style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;padding:26px 22px;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;align-items:flex-start;text-align:left;box-sizing:border-box;">'
@@ -510,7 +575,7 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9e. Advantages / Why Choose Section
-        $advantages_regex = '/(<h2[^>]*>(?:Distinct Advantages|Why Choose|Reasons to Select).*?<\/h2>)(.*?)(?=<h2[^>]*>Ready to get started)/is';
+        $advantages_regex = '/(<h2[^>]*>(?:Distinct Advantages|Why Choose|Reasons to Select).*?<\/h2>)(.*?)(?=<h[23][^>]*>Ready to get started)/is';
         if (preg_match($advantages_regex, $content, $m)) {
             $adv_html = '<section class="vp-section vp-why-sec" style="background:#FFFFFF;padding:90px 0;">'
                       . '<div class="vp-container">'
@@ -520,11 +585,13 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9f. CTA Section ("Ready to get started?")
-        $cta_regex = '/<h2[^>]*>Ready to get started\?<\/h2>(.*?)(?=(?:<p[^>]*>\s*)?<img[^>]*src=[\x22\x27][^\x22\x27]*(?:case-study|section-5)|<h[23][^>]*>Case Study:)/is';
+        $cta_regex = '/<h[23][^>]*>Ready to get started\?<\/h[23]>(.*?)(?:<p[^>]*>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*(?:section-5|image-1|image-2|demo)[^\x22\x27]*[\x22\x27][^>]*>)?(?:\s*<\/p>)?(.*?)(?=(?:<h[23][^>]*>Case Study:|<section|<footer|$))/is';
         if (preg_match($cta_regex, $content, $m)) {
-            $cta_body = $m[1];
+            $cta_body = $m[1] . ' ' . ($m[3] ?? '');
             $cta_img = plugins_url('assets/image-1.webp', __FILE__);
-            if (preg_match('/<img[^>]*src=[\x22\x27]([^\x22\x27]*section-5\.[^\x22\x27]*)[\x22\x27][^>]*>/is', $cta_body, $im)) {
+            if (!empty($m[2]) && preg_match('/src=[\x22\x27]([^\x22\x27]+)[\x22\x27]/i', $m[2], $im)) {
+                $cta_img = $im[1];
+            } elseif (preg_match('/<img[^>]*src=[\x22\x27]([^\x22\x27]*section-5\.[^\x22\x27]*)[\x22\x27][^>]*>/is', $cta_body, $im)) {
                 $cta_img = $im[1];
             }
             $cta_text = '';
@@ -550,7 +617,7 @@ function vcpg_clean_content_inline_styles($content) {
         }
 
         // 9g. Case Study Section
-        $cs_regex = '/(?:(?:<p[^>]*>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*(?:case-study|demo|section-5)[^\x22\x27]*[\x22\x27][^>]*>)(?:\s*<\/p>)?\s*)?(<h[23][^>]*>Case Study:.*?<\/h[23]>)(.*?)(?=(?:<div[^>]*class=[\x22\x27][^\x22\x27]*marquee|<p[^>]*>\s*<img[^>]*app-store|<h2[^>]*>What Clients Say|<section|<footer))/is';
+        $cs_regex = '/(?:(?:<p[^>]*>\s*)?(<img[^>]*src=[\x22\x27][^\x22\x27]*(?:case-study|demo|section-5)[^\x22\x27]*[\x22\x27][^>]*>)(?:\s*<\/p>)?\s*)?(<h[23][^>]*>Case Study:.*?<\/h[23]>)(.*?)(?=(?:<div[^>]*class=[\x22\x27][^\x22\x27]*(?:marquee|vp-logos)|(?:<p[^>]*>\s*)?<img[^>]*src=[\x22\x27][^\x22\x27]*(?:clickfunnels|app-store|555-|Twitter|snapchat|WooCommerce|mad-mimi|WordPress|Customer-Data|LinkedIn|Google|YouTube|Instagram|Facebook)|<h2[^>]*>What Clients Say|<section|<footer))/is';
         if (preg_match($cs_regex, $content, $m)) {
             $cs_img_tag = !empty($m[1]) ? $m[1] : '<img src="' . esc_url(plugins_url('assets/case-study.png', __FILE__)) . '" alt="Case Study" style="width:100%;height:100%;max-height:500px;object-fit:cover;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.08);display:block;">';
             $cs_title = $m[2];
@@ -679,11 +746,6 @@ function vcpg_clean_content_inline_styles($content) {
         }
     }
 
-    // Ensure all generated pages end with the standardized modern Vispan footer
-    if (strpos($content, 'vp-footer-grid') === false && strpos($content, 'class="vp-footer"') === false && strpos($content, "class='vp-footer'") === false) {
-        $content .= vcpg_get_standard_footer_html();
-    }
-
     return $content;
 }
 
@@ -708,57 +770,18 @@ function vcpg_output_styles()
     }
 
     echo '<style id="vcpg-brand-overrides">
-    /* Hide legacy custom template duplicate header so only the theme header displays */
+    /* Hide legacy custom template header & plugin footer — use Elementor theme header & footer only */
     html body.vcpg-page .vp-topbar,
     html body.vcpg-page .vp-header,
     html body.vcpg-page header.vp-header,
     html body.vcpg-page .vp-nav,
+    html body.vcpg-page .vp-footer,
+    html body.vcpg-page footer.vp-footer,
     html body.vcpg-page #vcpg-header,
     html body.vcpg-page .elementor-element-e000003 {
         display: none !important;
     }
 
-    /* Standardized modern Vispan footer display */
-    html body.vcpg-page .vp-footer,
-    html body.vcpg-page footer.vp-footer {
-        display: block !important;
-        background: #FFFFFF !important;
-        padding: 70px 0 30px !important;
-        border-top: 1px solid #E2E8F0 !important;
-        font-size: 0.92rem !important;
-        color: #334155 !important;
-        position: relative !important;
-        z-index: 10 !important;
-    }
-    html body.vcpg-page .vp-footer-grid {
-        display: grid !important;
-        grid-template-columns: 2fr 1fr 1fr 1.5fr !important;
-        gap: 40px !important;
-    }
-    @media (max-width: 900px) {
-        html body.vcpg-page .vp-footer-grid {
-            grid-template-columns: 1fr !important;
-            gap: 32px !important;
-        }
-    }
-    html body.vcpg-page .vp-footer a,
-    html body.vcpg-page footer.vp-footer a {
-        color: #475569 !important;
-        text-decoration: none !important;
-        transition: color 0.2s ease !important;
-    }
-    html body.vcpg-page .vp-footer a:hover,
-    html body.vcpg-page footer.vp-footer a:hover {
-        color: #0A3663 !important;
-    }
-    html body.vcpg-page .vp-footer a[href^="tel:"] {
-        color: #0A3663 !important;
-        font-weight: 700 !important;
-    }
-    html body.vcpg-page .vp-footer a[href^="mailto:"] {
-        color: #0B63F6 !important;
-        font-weight: 600 !important;
-    }
 
     /* Global Image Sizing & Aspect Ratio Protections */
     html body.vcpg-page img {
@@ -1189,10 +1212,6 @@ function vcpg_output_styles()
         margin-top: 0 !important;
     }
 
-    html body.vcpg-page footer.vp-footer a { color: #475569 !important; text-decoration: none !important; }
-    html body.vcpg-page footer.vp-footer a:hover { color: #0A3663 !important; }
-    html body.vcpg-page .vp-footer a[href^="tel:"] { color: #0A3663 !important; font-weight: 700 !important; }
-    html body.vcpg-page .vp-footer a[href^="mailto:"] { color: #0B63F6 !important; font-weight: 600 !important; }
     /* Fixed Centered Background Video Positioning System */
     html body.vcpg-page .elementor-background-video-container {
         position: absolute !important;
