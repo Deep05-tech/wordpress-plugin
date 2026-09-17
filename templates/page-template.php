@@ -823,15 +823,50 @@ while(have_posts()): the_post();
                 $data['hero_description'] = trim(strip_tags($m[1]));
             }
         }
-        if (empty($data['intro_title']) && preg_match('/<h2[^>]*>((?:Get|Why|Elevate).*?)<\/h2>(.*?)(?=<h2)/is', $raw_content, $m)) {
-            $data['intro_title']   = trim(strip_tags($m[1]));
-            $data['intro_content'] = trim($m[2]);
+        if (empty($data['intro_title']) || empty($data['intro_content'])) {
+            if (preg_match('/<section[^>]*class=["\'][^"\']*vp-intro[^"\']*["\'][^>]*>.*?<h2[^>]*>(.*?)<\/h2>.*?<div[^>]*class=["\'][^"\']*vp-desc[^"\']*["\'][^>]*>(.*?)<\/div>\s*<\/div>\s*<\/section>/is', $raw_content, $im)) {
+                if (empty($data['intro_title'])) {
+                    $data['intro_title'] = trim(strip_tags($im[1]));
+                }
+                if (empty($data['intro_content'])) {
+                    $data['intro_content'] = trim($im[2]);
+                }
+            } elseif (preg_match('/<h2[^>]*>((?:Get|Why|Elevate).*?)<\/h2>(.*?)(?:<\/div>\s*<\/div>\s*<\/section>|<section|<!--\s*4|<div[^>]*class=["\'][^"\']*vp-about|<h2|\z)/is', $raw_content, $im)) {
+                if (empty($data['intro_title'])) {
+                    $data['intro_title'] = trim(strip_tags($im[1]));
+                }
+                if (empty($data['intro_content'])) {
+                    $data['intro_content'] = trim($im[2]);
+                }
+            }
+        }
+        if (!empty($data['intro_content'])) {
+            $clean_intro = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $data['intro_content']);
+            $clean_intro = preg_replace('/<br\s*\/?>/i', "\n", $clean_intro);
+            $clean_intro = strip_tags($clean_intro);
+            $clean_intro = html_entity_decode($clean_intro, ENT_QUOTES, 'UTF-8');
+            $data['intro_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_intro));
         }
         if (empty($data['about_title']) && preg_match('/<h2[^>]*>((?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?)<\/h2>/is', $raw_content, $m)) {
             $data['about_title'] = trim(strip_tags($m[1]));
         }
         if (empty($data['about_content_html']) && preg_match('/<div[^>]*class=["\'][^"\']*vp-about-grid[^"\']*["\'][^>]*>.*?<div[^>]*class=["\'][^"\']*vp-desc[^"\']*["\'][^>]*>(.*?)<\/div>/is', $raw_content, $am)) {
             $data['about_content_html'] = vcpg_strip_wikipedia_and_standards(trim($am[1]));
+        }
+        if (empty($data['about_content'])) {
+            if (!empty($data['about_content_html'])) {
+                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $data['about_content_html']);
+                $clean_about = preg_replace('/<br\s*\/?>/i', "\n", $clean_about);
+                $clean_about = strip_tags($clean_about);
+                $clean_about = html_entity_decode($clean_about, ENT_QUOTES, 'UTF-8');
+                $data['about_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_about));
+            } elseif (preg_match('/<h2[^>]*>(?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?<\/h2>(.*?)(?=<h2)/is', $raw_content, $am)) {
+                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $am[1]);
+                $clean_about = preg_replace('/<br\s*\/?>/i', "\n", $clean_about);
+                $clean_about = strip_tags($clean_about);
+                $clean_about = html_entity_decode($clean_about, ENT_QUOTES, 'UTF-8');
+                $data['about_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_about));
+            }
         }
         if (empty($data['faq']) && preg_match_all('/<summary[^>]*>(.*?)<\/summary>\s*<div[^>]*class=["\'][^"\']*vp-faq-ans[^"\']*["\'][^>]*>(.*?)<\/div>/is', $raw_content, $faqs_match)) {
             $extracted_faqs = array();

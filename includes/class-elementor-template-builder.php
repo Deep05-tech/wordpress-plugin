@@ -106,6 +106,15 @@ class VCPG_Elementor_Template_Builder
             return '';
         }
 
+        // Convert HTML tags to plain text before paragraph processing
+        if (strpos($value, '<') !== false) {
+            $value = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $value);
+            $value = preg_replace('/<br\s*\/?>/i', "\n", $value);
+            $value = strip_tags($value);
+            $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+            $value = preg_replace("/\n{3,}/", "\n\n", trim($value));
+        }
+
         // 1. Split on existing double-newlines (author-defined paragraphs).
         $raw_paragraphs = preg_split('/\n\s*\n/', $value);
 
@@ -252,6 +261,13 @@ class VCPG_Elementor_Template_Builder
         }
 
         $about_content = $this->t(isset($data['about_content']) ? $data['about_content'] : '');
+        if (strpos($about_content, '<') !== false) {
+            $about_content = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $about_content);
+            $about_content = preg_replace('/<br\s*\/?>/i', "\n", $about_content);
+            $about_content = strip_tags($about_content);
+            $about_content = html_entity_decode($about_content, ENT_QUOTES, 'UTF-8');
+            $about_content = preg_replace("/\n{3,}/", "\n\n", trim($about_content));
+        }
         if(empty($about_content))
         {
             $about_content = "Enhance your business's online presence in " . $city . " with customized online marketing solutions tailored to your " . $nouns['business_type'] . ". We specialize in optimizing your website for search engines and engaging " . $nouns['client_type'] . "s through various social media platforms.\n\nOur comprehensive outreach services focus on attracting new clients while fostering loyalty among your current clientele. Partner with us to transform your business and achieve lasting success in the competitive virtual landscape.\n\nReach out to us to navigate the complexities of online marketing and realize sustained growth for your " . $nouns['business_type'] . ", utilizing our proven expertise in advertising, web design, SEO strategies, and social media marketing. Together, we can build a thriving online presence for your business.";
@@ -273,6 +289,13 @@ class VCPG_Elementor_Template_Builder
         }
 
         $intro_content = $this->t(isset($data['intro_content']) ? $data['intro_content'] : '');
+        if (strpos($intro_content, '<') !== false) {
+            $intro_content = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $intro_content);
+            $intro_content = preg_replace('/<br\s*\/?>/i', "\n", $intro_content);
+            $intro_content = strip_tags($intro_content);
+            $intro_content = html_entity_decode($intro_content, ENT_QUOTES, 'UTF-8');
+            $intro_content = preg_replace("/\n{3,}/", "\n\n", trim($intro_content));
+        }
         if(empty($intro_content))
         {
             $intro_content = "Unlock the modern revolution in " . strtolower($svc) . " and discover why your " . $nouns['business_type'] . " must embrace online promotions. Our specialized visibility services are designed to enhance your " . $nouns['business_type'] . "'s reach and attract new " . $nouns['client_type'] . "s. In today's competitive landscape, having a strong online presence is crucial for growth and " . $nouns['client_type'] . " engagement.\n\nWe excel in local search optimization, ensuring your " . $nouns['business_type'] . " stands out in local queries. As a leading growth partner, we offer tailored strategies that incorporate social platforms and effective advertising. Our goal is to help you connect with potential " . $nouns['client_type'] . "s in your area and build a loyal base.\n\nStrengthen your brand with our expert optimization techniques, which are specifically designed to maximize exposure. We provide targeted solutions that include enhancing layouts and optimizing your website to ensure it effectively attracts and retains visitors.\n\nTransform your " . $nouns['business_type'] . " in " . $city . " by partnering with us. Our comprehensive services, from innovative search techniques to strategic outreach campaigns, will revolutionize your organization. With our expertise, your website will not only shine with captivating layouts but will also leverage smart campaigns to drive sustained growth and success in the competitive market.";
@@ -303,6 +326,13 @@ class VCPG_Elementor_Template_Builder
         }
 
         $cta_description = $this->t(isset($data['cta_content']) ? $data['cta_content'] : '');
+        if (strpos($cta_description, '<') !== false) {
+            $cta_description = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $cta_description);
+            $cta_description = preg_replace('/<br\s*\/?>/i', "\n", $cta_description);
+            $cta_description = strip_tags($cta_description);
+            $cta_description = html_entity_decode($cta_description, ENT_QUOTES, 'UTF-8');
+            $cta_description = preg_replace("/\n{3,}/", "\n\n", trim($cta_description));
+        }
         if(empty($cta_description))
         {
             $cta_description = "Don't let your brand get lost in the virtual world of " . $city . ". Our comprehensive outreach agency can help you attract new visitors, build a strong online presence, and ultimately achieve your growth goals.\n\nContact us today for a free consultation and discuss how we can help your team thrive in the modern age.";
