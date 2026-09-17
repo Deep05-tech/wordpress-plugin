@@ -460,6 +460,22 @@ html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba
     opacity: 1 !important;
     background-color: #FFFFFF !important;
     transform: none !important;
+    width: 100% !important;
+}
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 .e-con-inner {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-f9bcb88,
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-89c9354,
+html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8d5cbab {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 html body.vcpg-page .vp-hero {
     position: relative !important;
@@ -701,23 +717,13 @@ while(have_posts()): the_post();
     // 1. Clean any unwanted Wikipedia / W3C paragraph from content immediately!
     $raw_content = vcpg_strip_wikipedia_and_standards($raw_content);
 
-    // If content is already built with the modern unified template (contains VCPG marker or all major grid sections), output it directly
-    if (strpos($raw_content, '<!-- VCPG-TEMPLATE') !== false || (strpos($raw_content, 'vp-hero-grid') !== false && strpos($raw_content, 'vp-about-grid') !== false && strpos($raw_content, 'vp-casestudy-sec') !== false)) {
-        // Strip any old inline vcpgSwitchTab scripts from raw_content so our modern unified handler takes full control
-        $raw_content = preg_replace('/<script[^>]*>\s*function vcpgSwitchTab.*?<\/script>/is', '', $raw_content);
-        // Ensure first tab panel has active class if none have it
-        if (strpos($raw_content, 'vcpg-tab-panel active') === false && preg_match('/<div[^>]*class=["\']vcpg-tab-panel["\'][^>]*style=["\'][^"\']*display:\s*block[^"\']*["\']/i', $raw_content)) {
-            $raw_content = preg_replace('/(<div[^>]*class=["\'])vcpg-tab-panel(["\'][^>]*style=["\'][^"\']*display:\s*block)/i', '$1vcpg-tab-panel active$2', $raw_content, 1);
-        }
-        echo do_shortcode($raw_content);
-    } else {
-        // Render earlier generated page using the unified template engine!
-        $city         = get_post_meta($post_id, '_vcpg_city', true);
-        $state        = get_post_meta($post_id, '_vcpg_state', true);
-        $country      = get_post_meta($post_id, '_vcpg_country', true);
-        $country_code = get_post_meta($post_id, '_vcpg_country_code', true);
-        $service      = get_post_meta($post_id, '_vcpg_service', true);
-        $faq          = get_post_meta($post_id, '_vcpg_faq', true);
+    // Unify all generated pages to use the single modern template builder
+    $city         = get_post_meta($post_id, '_vcpg_city', true);
+    $state        = get_post_meta($post_id, '_vcpg_state', true);
+    $country      = get_post_meta($post_id, '_vcpg_country', true);
+    $country_code = get_post_meta($post_id, '_vcpg_country_code', true);
+    $service      = get_post_meta($post_id, '_vcpg_service', true);
+    $faq          = get_post_meta($post_id, '_vcpg_faq', true);
 
         global $post;
         $title = $post ? $post->post_title : get_the_title();
@@ -801,12 +807,21 @@ while(have_posts()): the_post();
             }
         }
 
-        // Extract custom headlines from existing page content if not already populated
+        // Extract custom headlines and text from existing page content if not already populated
         if (empty($data['hero_title']) && preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $raw_content, $m)) {
             $data['hero_title'] = trim(strip_tags($m[1]));
         }
-        if (empty($data['hero_subtitle']) && preg_match('/<h3[^>]*>(.*?)<\/h3>/is', $raw_content, $m)) {
-            $data['hero_subtitle'] = trim(strip_tags($m[1]));
+        if (empty($data['hero_subtitle'])) {
+            if (preg_match('/<section[^>]*class=["\'][^"\']*vp-hero[^"\']*["\'][^>]*>.*?<h2[^>]*>(.*?)<\/h2>/is', $raw_content, $m)) {
+                $data['hero_subtitle'] = trim(strip_tags($m[1]));
+            } elseif (preg_match('/<h3[^>]*>(.*?)<\/h3>/is', $raw_content, $m)) {
+                $data['hero_subtitle'] = trim(strip_tags($m[1]));
+            }
+        }
+        if (empty($data['hero_description'])) {
+            if (preg_match('/<section[^>]*class=["\'][^"\']*vp-hero[^"\']*["\'][^>]*>.*?<p[^>]*>(.*?)<\/p>/is', $raw_content, $m)) {
+                $data['hero_description'] = trim(strip_tags($m[1]));
+            }
         }
         if (empty($data['intro_title']) && preg_match('/<h2[^>]*>((?:Get|Why|Elevate).*?)<\/h2>(.*?)(?=<h2)/is', $raw_content, $m)) {
             $data['intro_title']   = trim(strip_tags($m[1]));
@@ -814,6 +829,22 @@ while(have_posts()): the_post();
         }
         if (empty($data['about_title']) && preg_match('/<h2[^>]*>((?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?)<\/h2>/is', $raw_content, $m)) {
             $data['about_title'] = trim(strip_tags($m[1]));
+        }
+        if (empty($data['about_content_html']) && preg_match('/<div[^>]*class=["\'][^"\']*vp-about-grid[^"\']*["\'][^>]*>.*?<div[^>]*class=["\'][^"\']*vp-desc[^"\']*["\'][^>]*>(.*?)<\/div>/is', $raw_content, $am)) {
+            $data['about_content_html'] = vcpg_strip_wikipedia_and_standards(trim($am[1]));
+        }
+        if (empty($data['faq']) && preg_match_all('/<summary[^>]*>(.*?)<\/summary>\s*<div[^>]*class=["\'][^"\']*vp-faq-ans[^"\']*["\'][^>]*>(.*?)<\/div>/is', $raw_content, $faqs_match)) {
+            $extracted_faqs = array();
+            for ($fi = 0; $fi < count($faqs_match[1]); $fi++) {
+                $q = trim(strip_tags($faqs_match[1][$fi]));
+                $a = trim(strip_tags($faqs_match[2][$fi]));
+                if (!empty($q) && !empty($a)) {
+                    $extracted_faqs[] = array('question' => $q, 'answer' => $a);
+                }
+            }
+            if (!empty($extracted_faqs)) {
+                $data['faq'] = $extracted_faqs;
+            }
         }
 
         // Clean any unwanted Wikipedia / W3C paragraph from about content
@@ -828,7 +859,6 @@ while(have_posts()): the_post();
         } else {
             the_content();
         }
-    }
 endwhile;
 ?>
 </main>

@@ -471,6 +471,22 @@ function vcpg_output_styles()
         opacity: 1 !important;
         background-color: #FFFFFF !important;
         transform: none !important;
+        width: 100% !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8602ba9 .e-con-inner {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-f9bcb88,
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-89c9354,
+    html body.vcpg-page .elementor-35930 .elementor-element.elementor-element-8d5cbab {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
     html body.vcpg-page .vp-hero {
         position: relative !important;
