@@ -363,9 +363,26 @@ function vcpg_clean_content_inline_styles($content) {
     $content = vcpg_safe_preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
     $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
     // 9. Strip unwanted Wikipedia and W3C industry standards text
-    $content = vcpg_safe_preg_replace('/<p[^>]*>\s*Learn more about industry standards on\s*<a[^>]*href=[^>]*wikipedia[^>]*>[^<]*<\/a>\s*or consult the\s*<a[^>]*href=[^>]*w3\.org[^>]*>[^<]*<\/a>\.?\s*<\/p>/is', '', $content);
+    $content = vcpg_strip_wikipedia_and_standards($content);
 
     return $content;
+}
+
+if (!function_exists('vcpg_strip_wikipedia_and_standards')) {
+    function vcpg_strip_wikipedia_and_standards($content) {
+        if (empty($content)) {
+            return $content;
+        }
+        // 1. Remove paragraph containing wikipedia or w3c, non-greedy on surrounding tags
+        $content = preg_replace('/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?(?:wikipedia\.org|w3\.org)(?:(?!<\/p>)[\s\S])*?<\/p>/is', '', $content);
+        // 2. Remove paragraph containing industry standards on Wikipedia
+        $content = preg_replace('/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?Learn more about industry standards(?:(?!<\/p>)[\s\S])*?<\/p>/is', '', $content);
+        // 3. Remove raw text snippet if outside paragraph
+        $content = preg_replace('/Learn more about industry standards on\s*<a[^>]*>.*?<\/a>\s*or consult the\s*<a[^>]*>.*?<\/a>\.?/is', '', $content);
+        // 4. Remove any remaining anchor link to wikipedia or w3c
+        $content = preg_replace('/<a\s+[^>]*href=["\'][^"\']*(?:wikipedia\.org|w3\.org)[^"\']*["\'][^>]*>.*?<\/a>/is', '', $content);
+        return $content;
+    }
 }
 
 function vcpg_output_styles()
@@ -374,12 +391,11 @@ function vcpg_output_styles()
     if ($already_output) {
         return;
     }
-
-    if (!function_exists('is_singular') || !is_singular('page') || !is_vcpg_generated_page()) {
-        return; // ZERO CSS output on built-in website pages!
-    }
-
     $already_output = true;
+
+    if (!is_vcpg_generated_page()) {
+        return;
+    }
 
     if(!empty($GLOBALS['vcpg_inline_styles']))
     {
@@ -388,8 +404,8 @@ function vcpg_output_styles()
         echo $clean_captured;
     }
 
-    echo '<style id="vcpg-brand-overrides">
-    /* Hide legacy custom template header & plugin footer — use Elementor theme header & footer only */
+    echo '<style id="vcpg-unified-styles">
+    /* Suppress duplicate Elementor / Theme headers and footers ONLY on VCPG city pages */
     html body.vcpg-page .vp-topbar,
     html body.vcpg-page .vp-header,
     html body.vcpg-page header.vp-header,
@@ -408,13 +424,18 @@ function vcpg_output_styles()
         display: none !important;
     }
 
-    /* Force scroll-behavior: auto so Lenis smooth scroll engine does not stutter or fight browser interpolation */
+    /* Safety net to prevent any Wikipedia or W3C links from ever rendering */
+    html body.vcpg-page p:has(a[href*="wikipedia"]),
+    html body.vcpg-page p:has(a[href*="w3.org"]),
+    html body.vcpg-page a[href*="wikipedia.org"],
+    html body.vcpg-page a[href*="w3.org"] {
+        display: none !important;
+    }
+
+    /* Only set scroll-behavior: auto when Lenis is active on non-ScrollSmoother pages */
     html.lenis,
-    html.lenis body,
-    html.vcpg-page,
-    html body.vcpg-page {
-        scroll-behavior: auto !important;
-        height: auto !important;
+    html.lenis body {
+        scroll-behavior: auto;
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
@@ -523,7 +544,9 @@ function vcpg_output_styles()
     html body.vcpg-page .vcpg-tab-panel {
         display: none;
     }
-    html body.vcpg-page .vcpg-tab-panel.active {
+    html body.vcpg-page .vcpg-tab-panel.active,
+    html body.vcpg-page .vcpg-tab-panel[style*="display: block"],
+    html body.vcpg-page .vcpg-tab-panel[style*="display:block"] {
         display: block !important;
     }
     html body.vcpg-page div[id^="tab-content-"] {

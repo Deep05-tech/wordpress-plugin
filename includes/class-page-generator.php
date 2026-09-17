@@ -528,6 +528,10 @@ class VCPG_Page_Generator
             $html_content = $this->ai_generator->sanitize_html_content( $html_content, $data );
         }
 
+        if ( function_exists('vcpg_strip_wikipedia_and_standards') && !empty( $html_content ) ) {
+            $html_content = vcpg_strip_wikipedia_and_standards( $html_content );
+        }
+
         update_option('vcpg_job_activity', 'Saving generated page to WordPress database...');
 
         $page_id = wp_insert_post(

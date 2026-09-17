@@ -22,6 +22,14 @@ html body.vcpg-page [data-id="e000044"] {
     display: none !important;
 }
 
+/* Safety net to prevent any Wikipedia or W3C links from ever rendering */
+html body.vcpg-page p:has(a[href*="wikipedia"]),
+html body.vcpg-page p:has(a[href*="w3.org"]),
+html body.vcpg-page a[href*="wikipedia.org"],
+html body.vcpg-page a[href*="w3.org"] {
+    display: none !important;
+}
+
 /* Core Layout & Colors for all VCPG pages */
 html body.vcpg-page {
   --vp-primary: #0B63F6;
@@ -379,13 +387,10 @@ html body.vcpg-page .vp-casestudy img {
     object-fit: cover !important;
 }
 
-/* Force scroll-behavior: auto so Lenis smooth scroll engine does not stutter or fight browser interpolation */
+/* Only set scroll-behavior: auto when Lenis is active on non-ScrollSmoother pages */
 html.lenis,
-html.lenis body,
-html.vcpg-page,
-html body.vcpg-page {
-    scroll-behavior: auto !important;
-    height: auto !important;
+html.lenis body {
+    scroll-behavior: auto;
 }
 
 /* Tabs & Panels Sizing and Styling */
@@ -416,7 +421,9 @@ html body.vcpg-page .vp-tab-active {
 html body.vcpg-page .vcpg-tab-panel {
     display: none;
 }
-html body.vcpg-page .vcpg-tab-panel.active {
+html body.vcpg-page .vcpg-tab-panel.active,
+html body.vcpg-page .vcpg-tab-panel[style*="display: block"],
+html body.vcpg-page .vcpg-tab-panel[style*="display:block"] {
     display: block !important;
 }
 
@@ -670,12 +677,38 @@ if (!class_exists('VCPG_Page_Generator')) {
     }
 }
 
+if (!function_exists('vcpg_strip_wikipedia_and_standards')) {
+    function vcpg_strip_wikipedia_and_standards($content) {
+        if (empty($content)) {
+            return $content;
+        }
+        // 1. Remove paragraph containing wikipedia or w3c, non-greedy on surrounding tags
+        $content = preg_replace('/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?(?:wikipedia\.org|w3\.org)(?:(?!<\/p>)[\s\S])*?<\/p>/is', '', $content);
+        // 2. Remove paragraph containing industry standards on Wikipedia
+        $content = preg_replace('/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?Learn more about industry standards(?:(?!<\/p>)[\s\S])*?<\/p>/is', '', $content);
+        // 3. Remove raw text snippet if outside paragraph
+        $content = preg_replace('/Learn more about industry standards on\s*<a[^>]*>.*?<\/a>\s*or consult the\s*<a[^>]*>.*?<\/a>\.?/is', '', $content);
+        // 4. Remove any remaining anchor link to wikipedia or w3c
+        $content = preg_replace('/<a\s+[^>]*href=["\'][^"\']*(?:wikipedia\.org|w3\.org)[^"\']*["\'][^>]*>.*?<\/a>/is', '', $content);
+        return $content;
+    }
+}
+
 while(have_posts()): the_post();
     $post_id     = get_the_ID();
     $raw_content = get_the_content();
 
+    // 1. Clean any unwanted Wikipedia / W3C paragraph from content immediately!
+    $raw_content = vcpg_strip_wikipedia_and_standards($raw_content);
+
     // If content is already built with the modern unified template (contains VCPG marker or all major grid sections), output it directly
     if (strpos($raw_content, '<!-- VCPG-TEMPLATE') !== false || (strpos($raw_content, 'vp-hero-grid') !== false && strpos($raw_content, 'vp-about-grid') !== false && strpos($raw_content, 'vp-casestudy-sec') !== false)) {
+        // Strip any old inline vcpgSwitchTab scripts from raw_content so our modern unified handler takes full control
+        $raw_content = preg_replace('/<script[^>]*>\s*function vcpgSwitchTab.*?<\/script>/is', '', $raw_content);
+        // Ensure first tab panel has active class if none have it
+        if (strpos($raw_content, 'vcpg-tab-panel active') === false && preg_match('/<div[^>]*class=["\']vcpg-tab-panel["\'][^>]*style=["\'][^"\']*display:\s*block[^"\']*["\']/i', $raw_content)) {
+            $raw_content = preg_replace('/(<div[^>]*class=["\'])vcpg-tab-panel(["\'][^>]*style=["\'][^"\']*display:\s*block)/i', '$1vcpg-tab-panel active$2', $raw_content, 1);
+        }
         echo do_shortcode($raw_content);
     } else {
         // Render earlier generated page using the unified template engine!
@@ -784,14 +817,14 @@ while(have_posts()): the_post();
         }
 
         // Clean any unwanted Wikipedia / W3C paragraph from about content
-        $raw_content = preg_replace('/<p[^>]*>\s*Learn more about industry standards on.*?<\/p>/is', '', $raw_content);
         if (!empty($data['about_content_html'])) {
-            $data['about_content_html'] = preg_replace('/<p[^>]*>\s*Learn more about industry standards on.*?<\/p>/is', '', $data['about_content_html']);
+            $data['about_content_html'] = vcpg_strip_wikipedia_and_standards($data['about_content_html']);
         }
 
         if (class_exists('VCPG_Elementor_Template_Builder')) {
             $builder = new VCPG_Elementor_Template_Builder();
-            echo $builder->build_html($data);
+            $built_html = $builder->build_html($data);
+            echo do_shortcode(vcpg_strip_wikipedia_and_standards($built_html));
         } else {
             the_content();
         }
@@ -891,6 +924,64 @@ document.addEventListener('DOMContentLoaded', () => {
   observer.observe(document.body, { childList: true, subtree: true });
 });
 
+// Global Tab Switching Handler (immediately available before DOMContentLoaded)
+window.vcpgSwitchTab = function(idx, btnEl) {
+  var btns = document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"], .vp-tab-btn');
+  var panels = document.querySelectorAll('.vcpg-tab-panel, div[id^="tab-content-"]');
+  
+  btns.forEach(function(btn, i) {
+    if (i === idx) {
+      btn.classList.add('active', 'vp-tab-active');
+      btn.style.setProperty('background', '#FFFFFF', 'important');
+      btn.style.setProperty('color', '#02426A', 'important');
+      btn.style.setProperty('border', '1px solid #02426A', 'important');
+      btn.style.setProperty('box-shadow', '0 2px 8px rgba(0,0,0,0.08)', 'important');
+    } else {
+      btn.classList.remove('active', 'vp-tab-active');
+      btn.style.setProperty('background', '#02426A', 'important');
+      btn.style.setProperty('color', '#FFFFFF', 'important');
+      btn.style.setProperty('border', '1px solid #02426A', 'important');
+      btn.style.setProperty('box-shadow', 'none', 'important');
+    }
+  });
+
+  panels.forEach(function(panel, i) {
+    if (i === idx) {
+      panel.classList.add('active');
+      panel.style.setProperty('display', 'block', 'important');
+      panel.style.display = 'block';
+    } else {
+      panel.classList.remove('active');
+      panel.style.setProperty('display', 'none', 'important');
+      panel.style.display = 'none';
+    }
+  });
+};
+
+// Global capture-phase listener for tab clicks
+document.addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest ? e.target.closest('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"], .vp-tab-btn') : null;
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  var btns = Array.from(document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"], .vp-tab-btn'));
+  var targetIdx = btns.indexOf(btn);
+  if (targetIdx === -1 && btn.getAttribute('data-tab-index')) {
+    targetIdx = parseInt(btn.getAttribute('data-tab-index'), 10);
+  }
+  if (targetIdx >= 0) {
+    window.vcpgSwitchTab(targetIdx, btn);
+  }
+}, true);
+
+// Refresh GSAP ScrollTrigger after page assets load
+window.addEventListener('load', function() {
+  if (typeof ScrollTrigger !== 'undefined' && typeof ScrollTrigger.refresh === 'function') {
+    ScrollTrigger.refresh();
+  }
+});
+
 // Lenis Smooth Inertial Scrolling Engine for recent & generated pages
 (function() {
   // If GSAP ScrollSmoother or #smooth-wrapper is already running, yield to ScrollSmoother to prevent collisions
@@ -919,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })();
 
-// Header Controller, Tabs & Smooth Scrolling Handler
+// Header Controller & Smooth Scrolling Handler
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Ensure Elementor / ElementsKit header is visible immediately at scroll 0 & pinned to top
   const header = document.querySelector('.ekit-template-content-header, .elementor-35930, header.elementskit-menu-container');
@@ -933,65 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
     header.style.visibility = 'visible';
     header.style.opacity = '1';
     header.style.backgroundColor = '#FFFFFF';
-
-    // If smooth-wrapper is used by GSAP ScrollSmoother, move header outside to prevent transform clipping
-    const smoothWrapper = document.getElementById('smooth-wrapper');
-    if (smoothWrapper && smoothWrapper.contains(header)) {
-      document.body.prepend(header);
-    }
   }
-
-  // 2. Tab Switching Handler (for Why Choose Us tabs across all generated pages)
-  window.vcpgSwitchTab = function(idx) {
-    var btns = document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
-    var panels = document.querySelectorAll('.vcpg-tab-panel, div[id^="tab-content-"]');
-    
-    btns.forEach(function(btn, i) {
-      if (i === idx) {
-        btn.classList.add('active', 'vp-tab-active');
-        btn.style.setProperty('background', '#FFFFFF', 'important');
-        btn.style.setProperty('color', '#02426A', 'important');
-        btn.style.setProperty('border', '1px solid #02426A', 'important');
-        btn.style.setProperty('box-shadow', '0 2px 8px rgba(0,0,0,0.08)', 'important');
-      } else {
-        btn.classList.remove('active', 'vp-tab-active');
-        btn.style.setProperty('background', '#02426A', 'important');
-        btn.style.setProperty('color', '#FFFFFF', 'important');
-        btn.style.setProperty('border', '1px solid #02426A', 'important');
-        btn.style.setProperty('box-shadow', 'none', 'important');
-      }
-    });
-
-    panels.forEach(function(panel, i) {
-      if (i === idx) {
-        panel.classList.add('active');
-        panel.style.setProperty('display', 'block', 'important');
-      } else {
-        panel.classList.remove('active');
-        panel.style.setProperty('display', 'none', 'important');
-      }
-    });
-  };
-
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
-    if (!btn) return;
-    e.preventDefault();
-
-    var btns = document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
-    var targetIdx = -1;
-    btns.forEach(function(b, idx) {
-      if (b === btn) targetIdx = idx;
-    });
-
-    if (targetIdx === -1 && btn.getAttribute('data-tab-index')) {
-      targetIdx = parseInt(btn.getAttribute('data-tab-index'), 10);
-    }
-
-    if (targetIdx >= 0) {
-      window.vcpgSwitchTab(targetIdx);
-    }
-  });
 
   // 3. Smooth scrolling for all internal anchor links (#contact, #about, #services, etc.)
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {

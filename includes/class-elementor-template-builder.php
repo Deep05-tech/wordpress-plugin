@@ -59,7 +59,11 @@ class VCPG_Elementor_Template_Builder
         }
         $html = file_get_contents($tpl_path);
         $map  = $this->build_map($data);
-        return strtr($html, $map);
+        $output = strtr($html, $map);
+        if (function_exists('vcpg_strip_wikipedia_and_standards')) {
+            $output = vcpg_strip_wikipedia_and_standards($output);
+        }
+        return $output;
     }
 
     private function fill($node, $map)
