@@ -167,29 +167,24 @@ function is_vcpg_generated_page($post_id = 0)
         return false;
     }
 
-    // 4. Parent page ISO country code check
-    // ALL generated city pages (modern and legacy like 48349) are child pages of a country slug ('us', 'in', etc.)
-    if ($post_obj->post_parent > 0) {
+    // 4. Legacy generated city pages check:
+    // ALL generated city pages are child pages of a country slug ('us', 'in', etc.)
+    // AND must contain distinct city page markers (such as hero_proposal / contact_proposal / vcpgSwitchTab / VCPG-TEMPLATE)
+    // NEVER match on parent country alone or loose plugin name strings, to ensure built-in child pages are NEVER hijacked!
+    if ($post_obj->post_parent > 0 && !empty($post_obj->post_content)) {
         $parent = get_post($post_obj->post_parent);
         if ($parent) {
             $known_cc = array('in', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'br', 'mx', 'za', 'ae', 'sg', 'jp', 'united-states', 'india', 'australia', 'canada', 'united-kingdom');
             if (in_array(strtolower($parent->post_name), $known_cc, true)) {
-                $cache[$post_id] = true;
-                return true;
+                if (strpos($post_obj->post_content, 'hero_proposal') !== false ||
+                    strpos($post_obj->post_content, 'contact_proposal') !== false ||
+                    strpos($post_obj->post_content, 'vcpgSwitchTab') !== false ||
+                    strpos($post_obj->post_content, 'vcpg-tab-') !== false ||
+                    strpos($post_obj->post_content, 'VCPG-TEMPLATE') !== false) {
+                    $cache[$post_id] = true;
+                    return true;
+                }
             }
-        }
-    }
-
-    // 5. Child page content marker check (for legacy pages whose parent might be a state or non-standard slug)
-    // Root pages (post_parent == 0) and blacklisted slugs are already excluded above.
-    if ($post_obj->post_parent > 0 && !empty($post_obj->post_content)) {
-        if (strpos($post_obj->post_content, 'hero_proposal') !== false ||
-            strpos($post_obj->post_content, 'contact_proposal') !== false ||
-            strpos($post_obj->post_content, 'vispan-banner') !== false ||
-            strpos($post_obj->post_content, 'VCPG-TEMPLATE') !== false ||
-            strpos($post_obj->post_content, 'vispan-city-page-generator') !== false) {
-            $cache[$post_id] = true;
-            return true;
         }
     }
 
@@ -200,7 +195,7 @@ function is_vcpg_generated_page($post_id = 0)
 add_filter('body_class', 'vcpg_add_body_class');
 function vcpg_add_body_class($classes)
 {
-    if (is_vcpg_generated_page()) {
+    if (function_exists('is_singular') && is_singular('page') && is_vcpg_generated_page()) {
         $classes[] = 'vcpg-page';
         $classes[] = 'is-vcpg-page';
     }
@@ -312,6 +307,10 @@ function vcpg_get_standard_footer_html() {
 add_filter('the_content', 'vcpg_clean_content_inline_styles', 99999);
 function vcpg_clean_content_inline_styles($content) {
     if (!is_string($content) || empty($content)) {
+        return $content;
+    }
+
+    if (!function_exists('is_singular') || !is_singular('page')) {
         return $content;
     }
 
