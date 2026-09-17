@@ -379,6 +379,47 @@ html body.vcpg-page .vp-casestudy img {
     object-fit: cover !important;
 }
 
+/* Force scroll-behavior: auto so Lenis smooth scroll engine does not stutter or fight browser interpolation */
+html.lenis,
+html.lenis body,
+html.vcpg-page,
+html body.vcpg-page {
+    scroll-behavior: auto !important;
+    height: auto !important;
+}
+
+/* Tabs & Panels Sizing and Styling */
+html body.vcpg-page .vcpg-tab-btn,
+html body.vcpg-page button[onclick*="vcpgSwitchTab"],
+html body.vcpg-page .vp-tab-btn {
+    padding: 12px 16px !important;
+    border-radius: 50px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid #02426A !important;
+    background: #02426A !important;
+    color: #FFFFFF !important;
+    outline: none !important;
+}
+html body.vcpg-page .vcpg-tab-btn.active,
+html body.vcpg-page .vcpg-tab-btn.vp-tab-active,
+html body.vcpg-page button[onclick*="vcpgSwitchTab"].active,
+html body.vcpg-page button[onclick*="vcpgSwitchTab"].vp-tab-active,
+html body.vcpg-page .vp-tab-active {
+    background: #FFFFFF !important;
+    color: #02426A !important;
+    border: 1px solid #02426A !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+html body.vcpg-page .vcpg-tab-panel {
+    display: none;
+}
+html body.vcpg-page .vcpg-tab-panel.active {
+    display: block !important;
+}
+
 /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
 html body.vcpg-page .ekit-template-content-header,
 html body.vcpg-page header.elementskit-menu-container,
@@ -742,6 +783,12 @@ while(have_posts()): the_post();
             $data['about_title'] = trim(strip_tags($m[1]));
         }
 
+        // Clean any unwanted Wikipedia / W3C paragraph from about content
+        $raw_content = preg_replace('/<p[^>]*>\s*Learn more about industry standards on.*?<\/p>/is', '', $raw_content);
+        if (!empty($data['about_content_html'])) {
+            $data['about_content_html'] = preg_replace('/<p[^>]*>\s*Learn more about industry standards on.*?<\/p>/is', '', $data['about_content_html']);
+        }
+
         if (class_exists('VCPG_Elementor_Template_Builder')) {
             $builder = new VCPG_Elementor_Template_Builder();
             echo $builder->build_html($data);
@@ -846,21 +893,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Lenis Smooth Inertial Scrolling Engine for recent & generated pages
 (function() {
-  // If GSAP ScrollSmoother is already running (e.g. earlier Elementor builder pages), let it handle scrolling
-  if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
+  // If GSAP ScrollSmoother or #smooth-wrapper is already running, yield to ScrollSmoother to prevent collisions
+  if (document.getElementById('smooth-wrapper') || 
+      (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) ||
+      typeof WCF_ADDONS_JS !== 'undefined') {
     return;
   }
   if (typeof Lenis !== 'undefined') {
     const lenis = new Lenis({
-      duration: 1.25,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      direction: 'vertical',
-      gestureDirection: 'vertical',
-      smooth: true,
-      mouseMultiplier: 1,
-      smoothTouch: false,
-      touchMultiplier: 2,
-      infinite: false,
+      lerp: 0.08,
+      smoothWheel: true,
+      syncTouch: false,
+      wheelMultiplier: 1,
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      autoResize: true,
     });
     window.vcpgLenis = lenis;
 
@@ -872,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })();
 
-// Header Controller & Smooth Scrolling Handler
+// Header Controller, Tabs & Smooth Scrolling Handler
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Ensure Elementor / ElementsKit header is visible immediately at scroll 0 & pinned to top
   const header = document.querySelector('.ekit-template-content-header, .elementor-35930, header.elementskit-menu-container');
@@ -894,7 +941,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 2. Smooth scrolling for all internal anchor links (#contact, #about, #services, etc.)
+  // 2. Tab Switching Handler (for Why Choose Us tabs across all generated pages)
+  window.vcpgSwitchTab = function(idx) {
+    var btns = document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
+    var panels = document.querySelectorAll('.vcpg-tab-panel, div[id^="tab-content-"]');
+    
+    btns.forEach(function(btn, i) {
+      if (i === idx) {
+        btn.classList.add('active', 'vp-tab-active');
+        btn.style.setProperty('background', '#FFFFFF', 'important');
+        btn.style.setProperty('color', '#02426A', 'important');
+        btn.style.setProperty('border', '1px solid #02426A', 'important');
+        btn.style.setProperty('box-shadow', '0 2px 8px rgba(0,0,0,0.08)', 'important');
+      } else {
+        btn.classList.remove('active', 'vp-tab-active');
+        btn.style.setProperty('background', '#02426A', 'important');
+        btn.style.setProperty('color', '#FFFFFF', 'important');
+        btn.style.setProperty('border', '1px solid #02426A', 'important');
+        btn.style.setProperty('box-shadow', 'none', 'important');
+      }
+    });
+
+    panels.forEach(function(panel, i) {
+      if (i === idx) {
+        panel.classList.add('active');
+        panel.style.setProperty('display', 'block', 'important');
+      } else {
+        panel.classList.remove('active');
+        panel.style.setProperty('display', 'none', 'important');
+      }
+    });
+  };
+
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
+    if (!btn) return;
+    e.preventDefault();
+
+    var btns = document.querySelectorAll('.vcpg-tab-btn, button[onclick*="vcpgSwitchTab"]');
+    var targetIdx = -1;
+    btns.forEach(function(b, idx) {
+      if (b === btn) targetIdx = idx;
+    });
+
+    if (targetIdx === -1 && btn.getAttribute('data-tab-index')) {
+      targetIdx = parseInt(btn.getAttribute('data-tab-index'), 10);
+    }
+
+    if (targetIdx >= 0) {
+      window.vcpgSwitchTab(targetIdx);
+    }
+  });
+
+  // 3. Smooth scrolling for all internal anchor links (#contact, #about, #services, etc.)
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
       const href = this.getAttribute('href');
@@ -909,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
           ScrollSmoother.get().scrollTo(target, true, 'top ' + headerH + 'px');
         } else if (window.vcpgLenis) {
-          window.vcpgLenis.scrollTo(target, { offset: -headerH, duration: 1.25 });
+          window.vcpgLenis.scrollTo(target, { offset: -headerH, duration: 1.2 });
         } else {
           window.scrollTo({
             top: Math.max(0, targetTop),
@@ -920,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. Scroll Progress and Back-to-Top Logic
+  // 4. Scroll Progress and Back-to-Top Logic
   const backToTop = document.querySelector('.vcpg-back-to-top');
   const progressBar = document.querySelector('.vcpg-progress-bar');
   
@@ -958,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
         ScrollSmoother.get().scrollTo(0, true);
       } else if (window.vcpgLenis) {
-        window.vcpgLenis.scrollTo(0, { duration: 1.25 });
+        window.vcpgLenis.scrollTo(0, { duration: 1.2 });
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }

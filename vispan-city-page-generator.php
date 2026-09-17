@@ -362,6 +362,8 @@ function vcpg_clean_content_inline_styles($content) {
     // 8. Strip unwanted capsule box above hero header
     $content = vcpg_safe_preg_replace('/<div[^>]*padding:\s*6px\s*16px[^>]*>.*?<\/div>/is', '', $content);
     $content = vcpg_safe_preg_replace('/<div[^>]*class=["\'][^"\']*vp-hero-city-label[^"\']*["\'][^>]*>.*?<\/div>/is', '', $content);
+    // 9. Strip unwanted Wikipedia and W3C industry standards text
+    $content = vcpg_safe_preg_replace('/<p[^>]*>\s*Learn more about industry standards on\s*<a[^>]*href=[^>]*wikipedia[^>]*>[^<]*<\/a>\s*or consult the\s*<a[^>]*href=[^>]*w3\.org[^>]*>[^<]*<\/a>\.?\s*<\/p>/is', '', $content);
 
     return $content;
 }
@@ -404,6 +406,15 @@ function vcpg_output_styles()
     html body.vcpg-page [data-id="e000043"],
     html body.vcpg-page [data-id="e000044"] {
         display: none !important;
+    }
+
+    /* Force scroll-behavior: auto so Lenis smooth scroll engine does not stutter or fight browser interpolation */
+    html.lenis,
+    html.lenis body,
+    html.vcpg-page,
+    html body.vcpg-page {
+        scroll-behavior: auto !important;
+        height: auto !important;
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
@@ -483,28 +494,37 @@ function vcpg_output_styles()
         background: #FFFFFF !important;
         padding: 90px 0 !important;
     }
+    html body.vcpg-page .vcpg-tab-btn,
     html body.vcpg-page button[onclick*="vcpgSwitchTab"],
     html body.vcpg-page .vp-tab-btn {
-        padding: 12px 24px !important;
+        padding: 12px 16px !important;
         border-radius: 50px !important;
-        font-size: 14px !important;
-        font-weight: 700 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
-        border: 1px solid #CBD5E1 !important;
-        background: #F8FAFC !important;
-        color: #0A3663 !important;
-    }
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"].active,
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: #000"],
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background:#000"],
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: rgb(0, 0, 0)"],
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background: #0F172A"],
-    html body.vcpg-page button[onclick*="vcpgSwitchTab"][style*="background:#0F172A"],
-    html body.vcpg-page .vp-tab-active {
+        border: 1px solid #02426A !important;
         background: #02426A !important;
         color: #FFFFFF !important;
-        border-color: #02426A !important;
+        outline: none !important;
+    }
+    /* Active tab button: White background with dark navy text */
+    html body.vcpg-page .vcpg-tab-btn.active,
+    html body.vcpg-page .vcpg-tab-btn.vp-tab-active,
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"].active,
+    html body.vcpg-page button[onclick*="vcpgSwitchTab"].vp-tab-active,
+    html body.vcpg-page .vp-tab-active {
+        background: #FFFFFF !important;
+        color: #02426A !important;
+        border: 1px solid #02426A !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    /* Tab panels */
+    html body.vcpg-page .vcpg-tab-panel {
+        display: none;
+    }
+    html body.vcpg-page .vcpg-tab-panel.active {
+        display: block !important;
     }
     html body.vcpg-page div[id^="tab-content-"] {
         background: #F8FAFC !important;

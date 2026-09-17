@@ -737,10 +737,10 @@ class VCPG_Elementor_Template_Builder
 
         $html  = '<div style="max-width:1100px;margin:0 auto;font-family:inherit;">';
         $html .= '  <div style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:28px;width:100%;">';
-        $html .= '    <button onclick="vcpgSwitchTab(0)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#FFFFFF;color:#1E293B;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all 0.2s;text-align:center;">Strategic AI Implementation</button>';
-        $html .= '    <button onclick="vcpgSwitchTab(1)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Dedicated Industry Specialists</button>';
-        $html .= '    <button onclick="vcpgSwitchTab(2)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Holistic Campaign Management</button>';
-        $html .= '    <button onclick="vcpgSwitchTab(3)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Advanced Attribution Modeling</button>';
+        $html .= '    <button type="button" data-tab-index="0" onclick="vcpgSwitchTab(0)" class="vcpg-tab-btn active vp-tab-active" style="flex:1;min-width:0;white-space:nowrap;background:#FFFFFF;color:#1E293B;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all 0.2s;text-align:center;">Strategic AI Implementation</button>';
+        $html .= '    <button type="button" data-tab-index="1" onclick="vcpgSwitchTab(1)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Dedicated Industry Specialists</button>';
+        $html .= '    <button type="button" data-tab-index="2" onclick="vcpgSwitchTab(2)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Holistic Campaign Management</button>';
+        $html .= '    <button type="button" data-tab-index="3" onclick="vcpgSwitchTab(3)" class="vcpg-tab-btn" style="flex:1;min-width:0;white-space:nowrap;background:#0F172A;color:#FFFFFF;padding:12px 10px;border-radius:4px;font-weight:600;font-size:13px;border:1px solid #0F172A;cursor:pointer;box-shadow:none;transition:all 0.2s;text-align:center;">Advanced Attribution Modeling</button>';
         $html .= '  </div>';
 
         // Tab Panels Box
@@ -756,7 +756,8 @@ class VCPG_Elementor_Template_Builder
 
         for ($i = 0; $i < 4; $i++) {
             $display = ($i === 0) ? 'block' : 'none';
-            $html .= '    <div class="vcpg-tab-panel" style="display:' . $display . ';">';
+            $cls = ($i === 0) ? 'vcpg-tab-panel active' : 'vcpg-tab-panel';
+            $html .= '    <div class="' . $cls . '" style="display:' . $display . ';">';
             $html .= '      <p style="margin:0;font-size:1.05rem;color:#121212;line-height:1.75;">' . $panel_texts[$i] . '</p>';
             $html .= '    </div>';
         }
@@ -764,25 +765,38 @@ class VCPG_Elementor_Template_Builder
         $html .= '  </div>';
 
         $html .= '<script>
-function vcpgSwitchTab(idx) {
-  var btns = document.querySelectorAll(".vcpg-tab-btn");
-  var panels = document.querySelectorAll(".vcpg-tab-panel");
+window.vcpgSwitchTab = function(idx) {
+  var btns = document.querySelectorAll(".vcpg-tab-btn, button[onclick*=\"vcpgSwitchTab\"]");
+  var panels = document.querySelectorAll(".vcpg-tab-panel, div[id^=\"tab-content-\"]");
   btns.forEach(function(btn, i) {
     if(i === idx) {
-      btn.style.background = "#FFFFFF";
-      btn.style.color = "#1E293B";
-      btn.style.border = "1px solid #0F172A";
-      btn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+      btn.classList.add("active", "vp-tab-active");
+      btn.style.setProperty("background", "#FFFFFF", "important");
+      btn.style.setProperty("color", "#1E293B", "important");
+      btn.style.setProperty("border", "1px solid #0F172A", "important");
+      btn.style.setProperty("box-shadow", "0 1px 3px rgba(0,0,0,0.05)", "important");
     } else {
-      btn.style.background = "#0F172A";
-      btn.style.color = "#FFFFFF";
-      btn.style.border = "1px solid #0F172A";
-      btn.style.boxShadow = "none";
+      btn.classList.remove("active", "vp-tab-active");
+      btn.style.setProperty("background", "#0F172A", "important");
+      btn.style.setProperty("color", "#FFFFFF", "important");
+      btn.style.setProperty("border", "1px solid #0F172A", "important");
+      btn.style.setProperty("box-shadow", "none", "important");
     }
   });
   panels.forEach(function(panel, i) {
-    panel.style.display = (i === idx) ? "block" : "none";
+    if(i === idx) {
+      panel.classList.add("active");
+      panel.style.setProperty("display", "block", "important");
+    } else {
+      panel.classList.remove("active");
+      panel.style.setProperty("display", "none", "important");
+    }
   });
+};
+function vcpgSwitchTab(idx) {
+  if (typeof window.vcpgSwitchTab === "function") {
+    window.vcpgSwitchTab(idx);
+  }
 }
 </script>';
         $html .= '</div>';
