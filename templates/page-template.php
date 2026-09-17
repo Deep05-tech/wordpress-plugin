@@ -379,12 +379,6 @@ html body.vcpg-page .vp-casestudy img {
     object-fit: cover !important;
 }
 
-/* Smooth scrolling enabled for page */
-html.vcpg-page,
-html body.vcpg-page {
-    scroll-behavior: smooth !important;
-}
-
 /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
 html body.vcpg-page .ekit-template-content-header,
 html body.vcpg-page header.elementskit-menu-container,
@@ -759,6 +753,13 @@ endwhile;
 ?>
 </main>
 
+<?php
+$vcpg_lenis_url = defined('VCPG_PLUGIN_URL') 
+    ? VCPG_PLUGIN_URL . 'assets/lenis.min.js' 
+    : plugins_url('assets/lenis.min.js', dirname(__DIR__) . '/vispan-city-page-generator.php');
+?>
+<!-- Lenis Smooth Inertial Scrolling Engine -->
+<script src="<?php echo esc_url($vcpg_lenis_url); ?>"></script>
 <script>
 // Custom Interactive Cursor Script
 document.addEventListener('DOMContentLoaded', () => {
@@ -843,6 +844,34 @@ document.addEventListener('DOMContentLoaded', () => {
   observer.observe(document.body, { childList: true, subtree: true });
 });
 
+// Lenis Smooth Inertial Scrolling Engine for recent & generated pages
+(function() {
+  // If GSAP ScrollSmoother is already running (e.g. earlier Elementor builder pages), let it handle scrolling
+  if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
+    return;
+  }
+  if (typeof Lenis !== 'undefined') {
+    const lenis = new Lenis({
+      duration: 1.25,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: false,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+    window.vcpgLenis = lenis;
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  }
+})();
+
 // Header Controller & Smooth Scrolling Handler
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Ensure Elementor / ElementsKit header is visible immediately at scroll 0 & pinned to top
@@ -879,6 +908,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
           ScrollSmoother.get().scrollTo(target, true, 'top ' + headerH + 'px');
+        } else if (window.vcpgLenis) {
+          window.vcpgLenis.scrollTo(target, { offset: -headerH, duration: 1.25 });
         } else {
           window.scrollTo({
             top: Math.max(0, targetTop),
@@ -917,11 +948,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('scroll', updateScrollProgress);
     window.addEventListener('resize', updateScrollProgress);
+    if (window.vcpgLenis) {
+      window.vcpgLenis.on('scroll', updateScrollProgress);
+    }
     updateScrollProgress();
 
-    backToTop.addEventListener('click', () => {
+    backToTop.addEventListener('click', (e) => {
+      e.preventDefault();
       if (typeof ScrollSmoother !== 'undefined' && typeof ScrollSmoother.get === 'function' && ScrollSmoother.get()) {
         ScrollSmoother.get().scrollTo(0, true);
+      } else if (window.vcpgLenis) {
+        window.vcpgLenis.scrollTo(0, { duration: 1.25 });
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }

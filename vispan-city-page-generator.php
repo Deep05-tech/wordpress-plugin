@@ -15,6 +15,13 @@
 
 defined('ABSPATH') || exit;
 
+if (!defined('VCPG_PLUGIN_FILE')) {
+    define('VCPG_PLUGIN_FILE', __FILE__);
+}
+if (!defined('VCPG_PLUGIN_URL')) {
+    define('VCPG_PLUGIN_URL', plugin_dir_url(__FILE__));
+}
+
 /*
 |--------------------------------------------------------------------------
 | Load Classes
@@ -397,12 +404,6 @@ function vcpg_output_styles()
     html body.vcpg-page [data-id="e000043"],
     html body.vcpg-page [data-id="e000044"] {
         display: none !important;
-    }
-
-    /* Smooth scrolling enabled for page */
-    html.vcpg-page,
-    html body.vcpg-page {
-        scroll-behavior: smooth !important;
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
@@ -840,12 +841,6 @@ function vcpg_output_styles()
       html body.vcpg-page .vp-hero-grid, html body.vcpg-page .vp-about-grid, html body.vcpg-page .vp-footer-grid, html body.vcpg-page .vp-casestudy-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
       html body.vcpg-page .vp-casestudy-grid > div:first-child { order: 1 !important; }
       html body.vcpg-page .vp-casestudy-grid > div:last-child { order: 2 !important; }
-    }
-
-    /* Smooth scrolling enabled for page */
-    html.vcpg-page,
-    html body.vcpg-page {
-        scroll-behavior: smooth !important;
     }
 
     /* Ensure Theme & ElementsKit Header is 100% visible at scroll 0 and while scrolling */
