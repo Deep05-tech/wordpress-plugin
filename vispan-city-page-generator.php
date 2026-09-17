@@ -381,6 +381,8 @@ if (!function_exists('vcpg_strip_wikipedia_and_standards')) {
         $content = preg_replace('/Learn more about industry standards on\s*<a[^>]*>.*?<\/a>\s*or consult the\s*<a[^>]*>.*?<\/a>\.?/is', '', $content);
         // 4. Remove any remaining anchor link to wikipedia or w3c
         $content = preg_replace('/<a\s+[^>]*href=["\'][^"\']*(?:wikipedia\.org|w3\.org)[^"\']*["\'][^>]*>.*?<\/a>/is', '', $content);
+        // 5. Remove any raw leaked Elementor CSS rules displayed as text
+        $content = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $content);
         return $content;
     }
 }

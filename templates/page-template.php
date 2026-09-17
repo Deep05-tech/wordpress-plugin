@@ -706,6 +706,8 @@ if (!function_exists('vcpg_strip_wikipedia_and_standards')) {
         $content = preg_replace('/Learn more about industry standards on\s*<a[^>]*>.*?<\/a>\s*or consult the\s*<a[^>]*>.*?<\/a>\.?/is', '', $content);
         // 4. Remove any remaining anchor link to wikipedia or w3c
         $content = preg_replace('/<a\s+[^>]*href=["\'][^"\']*(?:wikipedia\.org|w3\.org)[^"\']*["\'][^>]*>.*?<\/a>/is', '', $content);
+        // 5. Remove any raw leaked Elementor CSS rules displayed as text
+        $content = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $content);
         return $content;
     }
 }
@@ -841,10 +843,13 @@ while(have_posts()): the_post();
             }
         }
         if (!empty($data['intro_content'])) {
-            $clean_intro = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $data['intro_content']);
+            $clean_intro = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $data['intro_content']);
+            $clean_intro = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $clean_intro);
+            $clean_intro = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $clean_intro);
             $clean_intro = preg_replace('/<br\s*\/?>/i', "\n", $clean_intro);
             $clean_intro = strip_tags($clean_intro);
             $clean_intro = html_entity_decode($clean_intro, ENT_QUOTES, 'UTF-8');
+            $clean_intro = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $clean_intro);
             $data['intro_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_intro));
         }
         if (empty($data['about_title']) && preg_match('/<h2[^>]*>((?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?)<\/h2>/is', $raw_content, $m)) {
@@ -855,16 +860,22 @@ while(have_posts()): the_post();
         }
         if (empty($data['about_content'])) {
             if (!empty($data['about_content_html'])) {
-                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $data['about_content_html']);
+                $clean_about = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $data['about_content_html']);
+                $clean_about = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $clean_about);
+                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $clean_about);
                 $clean_about = preg_replace('/<br\s*\/?>/i', "\n", $clean_about);
                 $clean_about = strip_tags($clean_about);
                 $clean_about = html_entity_decode($clean_about, ENT_QUOTES, 'UTF-8');
+                $clean_about = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $clean_about);
                 $data['about_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_about));
-            } elseif (preg_match('/<h2[^>]*>(?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?<\/h2>(.*?)(?=<h2)/is', $raw_content, $am)) {
-                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $am[1]);
+            } elseif (preg_match('/<h2[^>]*>(?:Creating|About|Proven|Dedicated|Transform|Unlock|Strategic).*?<\/h2>(.*?)(?=<h3|<svg|<style|<img|<h2|\z)/is', $raw_content, $am)) {
+                $clean_about = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $am[1]);
+                $clean_about = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $clean_about);
+                $clean_about = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $clean_about);
                 $clean_about = preg_replace('/<br\s*\/?>/i', "\n", $clean_about);
                 $clean_about = strip_tags($clean_about);
                 $clean_about = html_entity_decode($clean_about, ENT_QUOTES, 'UTF-8');
+                $clean_about = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $clean_about);
                 $data['about_content'] = preg_replace("/\n{3,}/", "\n\n", trim($clean_about));
             }
         }

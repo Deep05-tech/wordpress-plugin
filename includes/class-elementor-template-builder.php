@@ -107,11 +107,14 @@ class VCPG_Elementor_Template_Builder
         }
 
         // Convert HTML tags to plain text before paragraph processing
-        if (strpos($value, '<') !== false) {
+        if (strpos($value, '<') !== false || strpos($value, '{') !== false) {
+            $value = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $value);
+            $value = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $value);
             $value = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $value);
             $value = preg_replace('/<br\s*\/?>/i', "\n", $value);
             $value = strip_tags($value);
             $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+            $value = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $value);
             $value = preg_replace("/\n{3,}/", "\n\n", trim($value));
         }
 
@@ -261,11 +264,14 @@ class VCPG_Elementor_Template_Builder
         }
 
         $about_content = $this->t(isset($data['about_content']) ? $data['about_content'] : '');
-        if (strpos($about_content, '<') !== false) {
+        if (strpos($about_content, '<') !== false || strpos($about_content, '{') !== false) {
+            $about_content = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $about_content);
+            $about_content = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $about_content);
             $about_content = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $about_content);
             $about_content = preg_replace('/<br\s*\/?>/i', "\n", $about_content);
             $about_content = strip_tags($about_content);
             $about_content = html_entity_decode($about_content, ENT_QUOTES, 'UTF-8');
+            $about_content = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $about_content);
             $about_content = preg_replace("/\n{3,}/", "\n\n", trim($about_content));
         }
         if(empty($about_content))
@@ -289,11 +295,14 @@ class VCPG_Elementor_Template_Builder
         }
 
         $intro_content = $this->t(isset($data['intro_content']) ? $data['intro_content'] : '');
-        if (strpos($intro_content, '<') !== false) {
+        if (strpos($intro_content, '<') !== false || strpos($intro_content, '{') !== false) {
+            $intro_content = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $intro_content);
+            $intro_content = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $intro_content);
             $intro_content = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $intro_content);
             $intro_content = preg_replace('/<br\s*\/?>/i', "\n", $intro_content);
             $intro_content = strip_tags($intro_content);
             $intro_content = html_entity_decode($intro_content, ENT_QUOTES, 'UTF-8');
+            $intro_content = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $intro_content);
             $intro_content = preg_replace("/\n{3,}/", "\n\n", trim($intro_content));
         }
         if(empty($intro_content))
@@ -326,11 +335,14 @@ class VCPG_Elementor_Template_Builder
         }
 
         $cta_description = $this->t(isset($data['cta_content']) ? $data['cta_content'] : '');
-        if (strpos($cta_description, '<') !== false) {
+        if (strpos($cta_description, '<') !== false || strpos($cta_description, '{') !== false) {
+            $cta_description = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $cta_description);
+            $cta_description = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $cta_description);
             $cta_description = preg_replace('/<\/(?:p|div|h[1-6]|li)>/i', "\n\n", $cta_description);
             $cta_description = preg_replace('/<br\s*\/?>/i', "\n", $cta_description);
             $cta_description = strip_tags($cta_description);
             $cta_description = html_entity_decode($cta_description, ENT_QUOTES, 'UTF-8');
+            $cta_description = preg_replace('/(?:\.elementor-element-[a-zA-Z0-9_-]+|\.elementor-container|\.elementor-widget-wrap|\.elementor-widget-html)[^{]*\{[^}]*\}/is', '', $cta_description);
             $cta_description = preg_replace("/\n{3,}/", "\n\n", trim($cta_description));
         }
         if(empty($cta_description))
